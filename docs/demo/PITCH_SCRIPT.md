@@ -1,0 +1,12 @@
+# Kịch Bản Thuyết Trình NovaWay Demo (Thời lượng: 3 Phút)
+
+*Kịch bản này được thiết kế để khớp từng lời nói của bạn với thao tác tay trên màn hình.*
+
+| Thời gian | Hành động trên màn hình (Thao tác tay) | Lời thoại (Kịch bản thuyết trình) |
+| :--- | :--- | :--- |
+| **0:00 - 0:30** | Mở trang Login. Nhập email. Bấm Đăng nhập. FaceScanner quét mặt ~3s (kèm badge Demo Simulation). Màn hình loading "Đang chuẩn bị hành trình" hiện lên rồi vào Dashboard. | "Xin chào ban giám khảo, chào mừng đến với NovaWay. Vấn đề lớn nhất của các ứng dụng xe công nghệ hiện nay là nạn cho mượn tài khoản. Để giải quyết, NovaWay yêu cầu tài xế phải xác thực Sinh trắc học ngay từ lúc mở app. Hệ thống sẽ khóa tài khoản ngay nếu phát hiện khuôn mặt không khớp." |
+| **0:30 - 1:00** | Ở màn hình Garage, chọn 1 xe. Click chọn "Xe máy SH 150i". Chuyển sang quét mặt xác thực chủ xe. | "Điểm khác biệt của chúng tôi là **Gắn định danh sinh trắc với phương tiện**. Nếu tôi đăng ký chạy xe máy SH, hệ thống sẽ xác thực xem khuôn mặt tôi có quyền lái chiếc xe này hay không, dựa trên giấy tờ đã nộp từ trước." |
+| **1:00 - 1:45** | Chuyển sang màn hình Driving Map Cockpit. Bấm nút Play, sau đó bấm nút tua nhanh **[x5]**. Xe lao nhanh. Modal màu cam cảnh báo hiện lên, đếm ngược 10s. | "Bây giờ chuyến đi bắt đầu. Giả sử tôi đang chạy ô tô nhưng lại khai báo là xe máy để lấy cuốc ngắn. Hệ thống liên tục đo đạc tốc độ. Vượt 80km/h! Lập tức một cảnh báo thân thiện hiện ra. Chúng tôi không kết tội gian lận, chúng tôi chỉ **Nhắc nhở và Ghi nhận**. Mọi tọa độ đã được lưu lại làm bằng chứng." |
+| **1:45 - 2:15** | Xe tiếp tục chạy tới tọa độ ổ gà/người đi bộ. Giao diện chớp đỏ, AR Grid quét qua. Loa phát tiếng Việt - Anh. | "Tuyệt vời hơn nữa, với kính AR hoặc Camera gắn ngoài, hệ thống Computer Vision của NovaWay liên tục quét vật thể xung quanh. (Loa kêu). Bạn vừa thấy hệ thống nhắc nhở chướng ngại vật cực kỳ trực quan, giúp tăng cường an toàn tuyệt đối cho tài xế." |
+| **2:15 - 2:40** | Gạt công tắc mạng trên Map sang Offline. Bấm tắt chuyến đi để ra màn hình Summary. | "Thế nếu xe đi vào vùng đèo núi mất sóng thì sao? Mọi cảnh báo vừa rồi không hề bị mất. Chúng được lưu vào Offline Queue và tự động đồng bộ khi có mạng. Và đây là màn hình Tổng kết chuyến đi, cung cấp Điểm An Toàn tự động dựa trên các sự kiện vừa diễn ra." |
+| **2:40 - 3:00** | Mỉm cười, hướng tay về phía Ban giám khảo. | "Đó là NovaWay - Lớp xác thực di chuyển tin cậy và minh bạch. Xin cảm ơn ban giám khảo đã lắng nghe!" |
