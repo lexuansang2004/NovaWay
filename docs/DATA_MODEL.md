@@ -1,0 +1,243 @@
+# NovaWay — Data Model v0.1
+
+> Step D0.4. Cụ thể hoá `DATA_REQUIREMENTS.md` (D0.2) thành schema gần với DDL thật — kiểu dữ liệu, khoá, index, ràng buộc. Vẫn là **thiết kế**, không phải migration thật (migration thuộc step `1.2 feat/database-schema`). PostgreSQL + PostGIS (TDR-001).
+
+## 1. Quy ước chung
+
+- Khoá chính: `UUID DEFAULT gen_random_uuid()` cho hầu hết bảng (dùng extension `pgcrypto` hoặc `uuid-ossp`), trừ `raw_gps_events` có thể cân nhắc `BIGSERIAL` nếu insert rate cao (quyết định ở step `1.2`).
+- Toạ độ: `GEOGRAPHY(Point, 4326)` cho điểm đơn (tính khoảng cách chính xác trên mặt cầu); `GEOMETRY(LineString, 4326)` cho `route_geometry` (hiển thị, không cần tính khoảng cách chính xác cao).
+- Mọi bảng có `created_at TIMESTAMPTZ DEFAULT now()`. Bảng có vòng đời thay đổi trạng thái có thêm `updated_at`.
+- Dùng `TIMESTAMPTZ`, không dùng `TIMESTAMP` trần, để tránh nhầm timezone.
+
+## 2. Bảng chính
+
+### 2.1. `users`
+
+```sql
+CREATE TABLE users (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+### 2.2. `vehicles`
+
+```sql
+CREATE TYPE vehicle_type AS ENUM ('motorbike', 'car');
+
+CREATE TABLE vehicles (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type          vehicle_type NOT NULL,
+  license_plate VARCHAR(20) NOT NULL,
+  brand_model   VARCHAR(100),
+  is_active     BOOLEAN NOT NULL DEFAULT false,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_vehicles_user_id ON vehicles(user_id);
+-- Chỉ 1 xe active tại 1 thời điểm cho mỗi user (FR-VEHICLE-03):
+CREATE UNIQUE INDEX uniq_vehicles_active_per_user
+  ON vehicles(user_id) WHERE is_active = true;
+```
+
+### 2.3. `vehicle_authorizations`
+
+```sql
+CREATE TYPE authorization_status AS ENUM ('active', 'expired', 'revoked');
+
+CREATE TABLE vehicle_authorizations (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id  UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  owner_id    UUID NOT NULL REFERENCES users(id),
+  borrower_id UUID NOT NULL REFERENCES users(id),
+  granted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at  TIMESTAMPTZ NOT NULL,
+  revoked_at  TIMESTAMPTZ,
+  status      authorization_status NOT NULL DEFAULT 'active',
+  CHECK (expires_at > granted_at),
+  CHECK (owner_id <> borrower_id)
+);
+
+CREATE INDEX idx_vehicle_authorizations_vehicle_id ON vehicle_authorizations(vehicle_id);
+CREATE INDEX idx_vehicle_authorizations_borrower_id ON vehicle_authorizations(borrower_id);
+```
+
+*Ràng buộc "không chồng thời gian giữa 2 borrower cho cùng 1 xe" (EDGE_CASES.md §2.1) đề xuất dùng PostgreSQL exclusion constraint (cần extension `btree_gist`):*
+
+```sql
+ALTER TABLE vehicle_authorizations ADD CONSTRAINT no_overlapping_active_authz
+  EXCLUDE USING gist (
+    vehicle_id WITH =,
+    tstzrange(granted_at, expires_at) WITH &&
+  ) WHERE (status = 'active');
+```
+
+*(Xác nhận tính khả thi/hiệu năng constraint này ở step `1.2` — nếu phức tạp, fallback: enforce ở application layer trong `VehicleAuthorizationModule`.)*
+
+### 2.4. `biometric_verifications`
+
+```sql
+CREATE TYPE verification_result AS ENUM ('success', 'failed');
+
+CREATE TABLE biometric_verifications (
+  id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                   UUID NOT NULL REFERENCES users(id),
+  vehicle_id                UUID NOT NULL REFERENCES vehicles(id),
+  vehicle_authorization_id  UUID REFERENCES vehicle_authorizations(id),
+  result                    verification_result NOT NULL,
+  provider                  VARCHAR(50) NOT NULL,
+  verified_at               TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_biometric_verifications_user_vehicle ON biometric_verifications(user_id, vehicle_id);
+```
+
+**Không có cột lưu ảnh/binary khuôn mặt trong bảng này hoặc bất kỳ bảng nào khác** (NFR-PRIVACY-03, FR-BIOMETRIC-04) — đây là ràng buộc thiết kế, không chỉ quy ước code.
+
+### 2.5. `trips`
+
+```sql
+CREATE TYPE trip_status AS ENUM ('active', 'ended');
+
+CREATE TABLE trips (
+  id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                     UUID NOT NULL REFERENCES users(id),
+  vehicle_id                  UUID NOT NULL REFERENCES vehicles(id),
+  biometric_verification_id   UUID NOT NULL REFERENCES biometric_verifications(id),
+  status                      trip_status NOT NULL DEFAULT 'active',
+  consent_at                  TIMESTAMPTZ NOT NULL,
+  started_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at                    TIMESTAMPTZ
+);
+
+CREATE INDEX idx_trips_user_id ON trips(user_id);
+CREATE INDEX idx_trips_vehicle_id ON trips(vehicle_id);
+-- Chỉ 1 trip active tại 1 thời điểm cho mỗi user (Edge Case §2 — 2 phiên cùng lúc):
+CREATE UNIQUE INDEX uniq_trips_active_per_user
+  ON trips(user_id) WHERE status = 'active';
+```
+
+### 2.6. `trip_logs` (Trip Summary)
+
+```sql
+CREATE TABLE trip_logs (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id               UUID NOT NULL UNIQUE REFERENCES trips(id),
+  user_id               UUID NOT NULL REFERENCES users(id),
+  vehicle_id            UUID NOT NULL REFERENCES vehicles(id),
+  distance_km           DOUBLE PRECISION NOT NULL DEFAULT 0,
+  duration_minutes      INTEGER NOT NULL DEFAULT 0,
+  route_geometry        GEOMETRY(LineString, 4326),
+  mismatch_warning_count INTEGER NOT NULL DEFAULT 0,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_trip_logs_user_id ON trip_logs(user_id);
+CREATE INDEX idx_trip_logs_vehicle_id ON trip_logs(vehicle_id);
+```
+
+### 2.7. `raw_gps_events` (partitioned)
+
+```sql
+CREATE TYPE gps_source AS ENUM ('gps');
+CREATE TYPE sync_channel AS ENUM ('realtime', 'batch');
+
+CREATE TABLE raw_gps_events (
+  id               BIGSERIAL,
+  trip_id          UUID NOT NULL REFERENCES trips(id),
+  vehicle_id       UUID NOT NULL,
+  user_id          UUID NOT NULL,
+  client_event_id  UUID NOT NULL,
+  location         GEOGRAPHY(Point, 4326) NOT NULL,
+  speed_kmh        REAL,
+  accuracy_m       REAL,
+  source           gps_source NOT NULL DEFAULT 'gps',
+  sync_channel     sync_channel NOT NULL,
+  event_timestamp  TIMESTAMPTZ NOT NULL,
+  received_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id, received_at)
+) PARTITION BY RANGE (received_at);
+
+-- Idempotency (NFR-SEC-03) — áp dụng bất kể qua realtime hay batch:
+CREATE UNIQUE INDEX uniq_raw_gps_user_client_event
+  ON raw_gps_events(user_id, client_event_id, received_at);
+
+CREATE INDEX idx_raw_gps_trip_id ON raw_gps_events(trip_id, received_at);
+
+-- Ví dụ partition theo tháng (job tạo partition mới + xoá partition cũ >30 ngày chạy định kỳ):
+CREATE TABLE raw_gps_events_2026_07 PARTITION OF raw_gps_events
+  FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
+```
+
+*Lưu ý:* unique index bao gồm `received_at` vì đây là bảng partition theo range trên chính cột đó (PostgreSQL yêu cầu partition key nằm trong mọi unique constraint). Ràng buộc idempotency thực chất vẫn theo `(user_id, client_event_id)` ở tầng nghiệp vụ — cần kiểm tra kỹ ở step `1.2` xem có cần thêm cơ chế phụ (advisory lock hoặc bảng dedup nhỏ không partition) để tránh race condition ở biên hai partition.
+
+### 2.8. `vehicle_mismatch_warnings`
+
+```sql
+CREATE TYPE mismatch_response AS ENUM ('confirmed', 'changed_vehicle', 'no_response');
+
+CREATE TABLE vehicle_mismatch_warnings (
+  id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id                   UUID NOT NULL REFERENCES trips(id),
+  detected_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
+  declared_vehicle_type      vehicle_type NOT NULL,
+  observed_behavior_summary  TEXT NOT NULL,
+  user_response               mismatch_response NOT NULL DEFAULT 'no_response',
+  resolved_at                 TIMESTAMPTZ
+);
+
+CREATE INDEX idx_mismatch_warnings_trip_id ON vehicle_mismatch_warnings(trip_id);
+```
+
+### 2.9. `terrain_warnings`
+
+```sql
+CREATE TYPE warning_severity AS ENUM ('warning', 'danger');
+CREATE TYPE warning_source AS ENUM ('mock_seed', 'computer_vision');
+
+CREATE TABLE terrain_warnings (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reported_by_trip_id   UUID REFERENCES trips(id),
+  location              GEOGRAPHY(Point, 4326) NOT NULL,
+  severity              warning_severity NOT NULL,
+  description           TEXT,
+  source                warning_source NOT NULL DEFAULT 'mock_seed',
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_terrain_warnings_location ON terrain_warnings USING GIST(location);
+```
+
+## 3. Migration Order (step `1.2`)
+
+```text
+1. users
+2. vehicles
+3. vehicle_authorizations
+4. biometric_verifications
+5. trips (FK tới biometric_verifications)
+6. trip_logs
+7. raw_gps_events (+ partition đầu tiên)
+8. vehicle_mismatch_warnings
+9. terrain_warnings (+ seed data mock ban đầu)
+```
+
+## 4. TTL / Cleanup Job (liên quan step `1.2`, `9.1`)
+
+```text
+Job "raw_gps_cleanup" (chạy daily):
+  - Tạo partition tháng tiếp theo nếu chưa có.
+  - DROP các partition có upper bound < now() - 30 ngày.
+  - Log số dòng/partition đã xoá vào observability (NFR-OBS-01).
+```
+
+Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `DATA_REQUIREMENTS.md` để tránh khoá bảng lớn.
+
+## 5. Open Items for D0.7
+
+- Xác nhận extension `btree_gist` khả dụng trên môi trường hosting đã chọn (ảnh hưởng constraint ở §2.3).
+- Xác nhận chiến lược partition `raw_gps_events`: theo tháng (đề xuất ở đây) hay theo tuần nếu ước tính insert rate cao hơn dự kiến.
+- Cách xử lý race condition idempotency ở biên partition (§2.7) — cần benchmark trước khi coi là "đã giải quyết".
