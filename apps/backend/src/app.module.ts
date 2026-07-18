@@ -1,21 +1,36 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
-// Domain modules (AuthModule, VehiclesModule, VehicleAuthorizationModule,
+// Remaining domain modules (VehiclesModule, VehicleAuthorizationModule,
 // BiometricModule, TripsModule, RealtimeGatewayModule, SyncModule,
 // MismatchDetectionModule, TerrainWarningsModule — see docs/ARCHITECTURE.md
-// §3.1) are added incrementally in their own micro-steps (1.2 onward), not here.
+// §3.1) are added incrementally in their own micro-steps (1.4 onward), not here.
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envValidationSchema,
     }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: false,
+      }),
+    }),
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
