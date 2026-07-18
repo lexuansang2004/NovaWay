@@ -83,3 +83,13 @@ Bản đầu của `DATA_MODEL.md` §2.7 (`raw_gps_events`) dùng `CREATE UNIQUE
 **Sửa:** tách idempotency ra một bảng riêng, không partition — `gps_event_dedup (user_id, client_event_id) PRIMARY KEY` — insert dùng `ON CONFLICT DO NOTHING` để phát hiện trùng trước khi ghi vào `raw_gps_events`. Cách này giữ đúng ràng buộc "không thêm Redis ở MVP" (TDR-004) vì chỉ dùng thêm 1 bảng Postgres nhỏ, không phải cache layer mới. Đã cập nhật `DATA_MODEL.md` §2.7 và §4 (cleanup job phải dọn cả bảng dedup).
 
 Đây là ví dụ cụ thể cho lý do D0.5 (review) cần làm cả ở mức Architecture/Data Model, không chỉ ở mức PRD/SRS — lỗi kiểu này chỉ lộ ra khi viết DDL thật, không thấy được ở mức "yêu cầu" (`DATA_REQUIREMENTS.md` D0.2 chỉ nói "unique theo (user_id, client_event_id)" — đúng về mặt yêu cầu, nhưng cách hiện thực hoá ban đầu ở D0.4 lại sai).
+
+## 12. ✅ Đã sửa — Tự rà trước khi code step 1.2: FK sequencing sai giữa `trip_logs` và `trips`
+
+`NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `1.2` (trước khi sửa) ghi Target là "Migration users, vehicles, trip_logs draft". Nhưng `trip_logs.trip_id` là `NOT NULL UNIQUE REFERENCES trips(id)` (`DATA_MODEL.md` §2.6), và bảng `trips` lại `NOT NULL REFERENCES biometric_verifications(id)` (`DATA_MODEL.md` §2.5) — bảng `biometric_verifications` chỉ được migrate ở step `1.6`. Nghĩa là nếu làm đúng Target gốc của `1.2`, việc migrate `trip_logs` sẽ tạo FK trỏ tới bảng `trips` chưa hề tồn tại tại thời điểm đó → migration lỗi ngay khi chạy.
+
+Cột **Commit** của chính dòng `1.2` đã ghi sẵn `"feat: add database schema for users and vehicles"` — không nhắc `trip_logs` — cho thấy đây là lỗi soạn thảo ở cột Target, không phải chủ đích ban đầu.
+
+**Sửa:** `1.2` chỉ còn migrate `users` + `vehicles` (khớp đúng commit message có sẵn). `trips` + `trip_logs` dời sang migrate chung ở step `7.1 feat/trip-logs-api` — đúng lúc `trips` lần đầu được tạo (sau khi `vehicle_authorizations` ở `1.5` và `biometric_verifications` ở `1.6` đã tồn tại). Đã cập nhật `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` (dòng `1.2`, `7.1`, và callout đầu file) và `DATA_MODEL.md` §3 (bảng ánh xạ step cho từng bảng, thay vì gộp cả 9 bảng vào step `1.2`). Ba bảng còn lại chưa có FK bị treo (`raw_gps_events`, `vehicle_mismatch_warnings`, `terrain_warnings`) vẫn để "step chưa chốt" — sẽ xác nhận khi tới gần các step tương ứng, không chặn baseline.
+
+Người dùng đã xác nhận hướng sửa này trước khi code step `1.2`.
