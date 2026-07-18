@@ -36,16 +36,45 @@ Liên quan: FR-AUTH-01 → FR-AUTH-04.
 
 Liên quan: FR-VEHICLE-01 → FR-VEHICLE-04. Ownership check bắt buộc cho toàn bộ endpoint có `:id`.
 
+## 2.1. Vehicle Authorization API
+
+> Mới — theo quyết định D0.6 (`REVIEW_NOTES.md` §1). Chỉ chủ xe (`owner_id` trùng `vehicles.user_id`) mới gọi được các endpoint tạo/thu hồi.
+
+| Method | Path | Mục đích | Auth |
+|---|---|---|---|
+| POST | `/api/vehicles/:id/authorizations` | Chủ xe cấp quyền sử dụng cho một borrower, kèm `expires_at` | Có |
+| GET | `/api/vehicles/:id/authorizations` | Chủ xe xem danh sách uỷ quyền đã cấp cho xe này | Có |
+| DELETE | `/api/vehicles/:id/authorizations/:authId` | Chủ xe thu hồi một uỷ quyền | Có |
+| GET | `/api/authorizations/me` | Borrower xem danh sách xe mình đang được uỷ quyền sử dụng (kèm thời hạn) | Có |
+
+**Request tạo** (draft): `{ "borrower_email": string, "expires_at": "2026-07-01T00:00:00.000Z" }`
+
+Liên quan: FR-AUTHZ-01 → FR-AUTHZ-06.
+
+## 2.2. Biometric Verification API
+
+> Mới — theo quyết định D0.6. Gọi ngay trước `POST /api/trips/start` trong luồng UI.
+
+| Method | Path | Mục đích | Auth |
+|---|---|---|---|
+| POST | `/api/vehicles/:id/verify` | Gửi dữ liệu xác thực khuôn mặt cho phương tiện đã chọn, trả kết quả | Có |
+
+**Response** (draft): `{ "verification_id": uuid, "result": "success" | "failed" }` — response **không** echo lại ảnh hay dữ liệu sinh trắc thô (FR-BIOMETRIC-04).
+
+Server tự kiểm tra quyền (chủ xe hoặc `vehicle_authorizations` còn hiệu lực) **trước khi** xử lý xác thực — nếu không có quyền, trả lỗi ngay (`403`), không tốn chi phí gọi dịch vụ xác thực khuôn mặt bên thứ ba (FR-BIOMETRIC-02).
+
+Liên quan: FR-BIOMETRIC-01 → FR-BIOMETRIC-05.
+
 ## 3. Trip API
 
 | Method | Path | Mục đích | Auth |
 |---|---|---|---|
-| POST | `/api/trips/start` | Bắt đầu chuyến đi (yêu cầu có xe active + consent) | Có |
+| POST | `/api/trips/start` | Bắt đầu chuyến đi (yêu cầu có xe active + consent + `verification_id` hợp lệ, gần đây) | Có |
 | POST | `/api/trips/:id/end` | Kết thúc chuyến đi, tạo `trip_logs` | Có |
 | GET | `/api/trips` | Danh sách chuyến đi của user (filter theo `vehicle_id` tuỳ chọn) | Có |
 | GET | `/api/trips/:id` | Chi tiết một chuyến đi + warnings liên quan | Có |
 
-**Request `start`** (draft): `{ "vehicle_id": uuid, "consent": true }` — server từ chối nếu `consent` không phải `true` hoặc `vehicle_id` không phải xe active của user.
+**Request `start`** (draft): `{ "vehicle_id": uuid, "consent": true, "verification_id": uuid }` — server từ chối nếu `consent` không phải `true`, `vehicle_id` không phải xe active của user, hoặc `verification_id` không hợp lệ/không phải `result: success`/đã quá cũ (ngưỡng thời gian giữa xác thực và bắt đầu chuyến đi — Open Item, xem §9).
 
 Liên quan: FR-TRIP-01 → FR-TRIP-05.
 
@@ -163,3 +192,5 @@ MVP: dữ liệu chủ yếu từ seed/mock (xem `DATA_REQUIREMENTS.md` §2.7), 
 - Cơ chế truyền JWT qua WebSocket handshake — chốt cụ thể theo thư viện Socket.io version dùng ở NestJS.
 - Có cần endpoint riêng `PATCH /api/trips/:id/vehicle` để đổi xe giữa chuyến hay không — phụ thuộc quyết định ở `EDGE_CASES.md` §2 (hiện đề xuất KHÔNG cho đổi giữa chuyến ở MVP).
 - Rate limit cụ thể (số request/giây) cho `location:update` và `/api/trips/sync` — cần số liệu benchmark trước khi chốt.
+- Ngưỡng thời gian tối đa giữa `POST /api/vehicles/:id/verify` thành công và `POST /api/trips/start` — tránh trường hợp xác thực xong rồi để rất lâu mới bắt đầu chuyến đi (có thể đã đổi người cầm lái). Đề xuất vài phút, cần chốt cụ thể ở D0.4.
+- Nhà cung cấp/SDK xác thực khuôn mặt cho `POST /api/vehicles/:id/verify` (FR-BIOMETRIC-05) — ảnh hưởng cách tích hợp (SDK client-side gửi kết quả, hay server gọi API bên thứ ba).

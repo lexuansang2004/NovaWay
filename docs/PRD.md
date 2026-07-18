@@ -64,7 +64,19 @@ Chi tiết kỹ thuật đầy đủ nằm ở `SRS.md`; đây là tóm tắt �
 6. **Cảnh báo sai lệch phương tiện (Vehicle Mismatch Detection)** — phát hiện mềm khi hành vi di chuyển không khớp loại xe đã đăng ký; chỉ nhắc nhở, không khoá tài khoản.
 7. **Cảnh báo địa hình / AR Lite** — overlay cảnh báo trực quan trên màn hình sử dụng phương tiện, có fallback khi thiết bị không đủ điều kiện (nóng, pin yếu, thiếu sáng).
 8. **Nhật ký chuyến đi (Trip Logs)** — lưu lại lịch sử chuyến đi dài hạn; dữ liệu GPS thô chỉ lưu có thời hạn.
-9. **Developer Mode / Simulator** — chế độ ẩn dành cho dev/test, không hiển thị cho người dùng thường.
+9. **Xác thực khuôn mặt gắn phương tiện (Biometric Vehicle Binding)** — trước khi bắt đầu chuyến đi, người dùng xác thực khuôn mặt để xác nhận đúng người đang được phép sử dụng phương tiện đã chọn. Đây là tính năng trọng tâm đã trình bày ở bản demo, chính thức đưa vào MVP theo quyết định ở `REVIEW_NOTES.md` §1.
+10. **Uỷ quyền phương tiện / xe mượn (Vehicle Authorization)** — chủ xe có thể cấp quyền sử dụng xe cho người khác trong một khoảng thời gian xác định; người mượn chỉ xác thực và bắt đầu chuyến đi được khi uỷ quyền còn hiệu lực.
+11. **Developer Mode / Simulator** — chế độ ẩn dành cho dev/test, không hiển thị cho người dùng thường.
+
+## 5.1. Implementation Priority (thứ tự triển khai trong MVP)
+
+MVP đưa mục 9–10 (Biometric Vehicle Binding, Vehicle Authorization) vào phạm vi chính thức, nhưng **thứ tự xây dựng ưu tiên nền tảng lõi trước**, theo đúng quyết định của người dùng ở D0.6:
+
+1. **Nền tảng trước:** Auth cơ bản, Vehicle CRUD, Trip lifecycle, Realtime location, Offline sync — đây là xương sống mọi tính năng khác đều phụ thuộc vào.
+2. **Sau đó:** Vehicle Mismatch Detection, Driver-friendly Warning UI, AR Lite — các lớp cảnh báo dựa trên dữ liệu GPS đã ổn định.
+3. **Tiếp theo:** Biometric Vehicle Binding + Vehicle Authorization — cần Auth và Vehicle Management đã vững để gắn vào đúng chỗ, không xây trước khi nền tảng chưa ổn định.
+
+Chi tiết vị trí trong micro-step plan: xem `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` các step mới `1.5`–`1.6` (chèn sau `1.4 feat/vehicle-management-api`, trước khi sang `2.1 feat/web-foundation`).
 
 ## 6. Out of Scope (MVP)
 

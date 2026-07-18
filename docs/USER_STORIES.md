@@ -21,6 +21,9 @@
 | US-D-13 | Là tài xế, tôi muốn thấy cảnh báo địa hình nguy hiểm trên bản đồ khi đang di chuyển, để chủ động tránh. | FR-AR-01 |
 | US-D-14 | Là tài xế, tôi muốn app vẫn hoạt động bình thường (không crash) ngay cả khi điện thoại nóng hoặc trời tối, để không bị gián đoạn vì lý do kỹ thuật. | FR-AR-03, FR-AR-04 |
 | US-D-15 | Là tài xế, tôi muốn kết thúc chuyến đi bất kỳ lúc nào chỉ với một thao tác, để kiểm soát hoàn toàn việc app theo dõi tôi. | FR-TRIP-04, FR-BGLOC-06 |
+| US-D-16 | Là tài xế, tôi muốn xác thực khuôn mặt nhanh trước khi lái, để hệ thống xác nhận đúng tôi được phép dùng xe này. | FR-BIOMETRIC-01 → FR-BIOMETRIC-03 |
+| US-D-17 | Là tài xế đang mượn xe, tôi muốn thấy rõ tôi đang mượn xe của ai và còn hiệu lực bao lâu, để chủ động biết khi nào cần trả xe hoặc gia hạn. | FR-AUTHZ-04 |
+| US-D-18 | Là tài xế đang mượn xe, tôi muốn được thông báo rõ nếu chủ xe thu hồi quyền sử dụng, thay vì bị chặn đột ngột không rõ lý do. | FR-AUTHZ-03 |
 
 ## 2. Vehicle Owner (Chủ phương tiện)
 
@@ -28,8 +31,9 @@
 |---|---|---|
 | US-O-01 | Là chủ xe, tôi muốn biết ai đang sử dụng xe của mình, để yên tâm khi cho mượn xe. | FR-VEHICLE-01, FR-TRIP-05 |
 | US-O-02 | Là chủ xe, tôi muốn xoá hoặc cập nhật thông tin xe khi cần, để dữ liệu luôn chính xác. | FR-VEHICLE-01 |
-
-*Ghi chú: quản lý uỷ quyền chi tiết (ai được mượn xe bao lâu) là phần mở rộng từ demo pitch, chưa có FR riêng ở MVP này — cần bổ sung ở D0.3 nếu được xác nhận là MVP core, hiện tạm xếp Post-MVP vì chưa có trong MVP Scope Draft.*
+| US-O-03 | Là chủ xe, tôi muốn cấp quyền sử dụng xe cho người khác trong một khoảng thời gian cụ thể, để kiểm soát rõ ai được mượn xe và trong bao lâu. | FR-AUTHZ-01 |
+| US-O-04 | Là chủ xe, tôi muốn thu hồi quyền sử dụng bất kỳ lúc nào, để xử lý ngay khi có tình huống bất thường. | FR-AUTHZ-03 |
+| US-O-05 | Là chủ xe, tôi muốn dùng xe của chính mình mà không cần xin quyền từ ai, để không bị làm phiền bởi chính cơ chế bảo vệ mà tôi thiết lập. | FR-AUTHZ-05 |
 
 ## 3. Dashboard User / Fleet Operator
 

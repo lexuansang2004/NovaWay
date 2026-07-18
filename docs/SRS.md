@@ -32,7 +32,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 |---|---|
 | FR-TRIP-01 | Người dùng phải cấp quyền vị trí và đồng ý (consent) chia sẻ vị trí trước khi bắt đầu chuyến đi. |
 | FR-TRIP-02 | Hệ thống không gửi/ghi nhận GPS trước khi người dùng bấm bắt đầu chuyến đi. |
-| FR-TRIP-03 | Người dùng có thể bắt đầu chuyến đi khi đã có phương tiện đang hoạt động và đã đồng ý consent. |
+| FR-TRIP-03 | Người dùng có thể bắt đầu chuyến đi khi đã có phương tiện đang hoạt động, đã đồng ý consent, **và** đã xác thực khuôn mặt thành công cho phương tiện đó (FR-BIOMETRIC-01, FR-AUTHZ-02). |
 | FR-TRIP-04 | Người dùng có thể kết thúc chuyến đi bất kỳ lúc nào; hành động này dừng toàn bộ tracking (foreground và background). |
 | FR-TRIP-05 | Mỗi chuyến đi tạo một bản ghi `trips` (vòng đời) gắn với `user_id`/`vehicle_id` ngay khi bắt đầu; khi kết thúc, hệ thống tạo thêm một bản ghi `trip_logs` (tổng hợp/summary) tương ứng — xem `DATA_REQUIREMENTS.md` §2.3–2.4 cho định nghĩa 2 entity này. |
 
@@ -119,6 +119,31 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-RETENTION-02 | Raw GPS events chỉ được lưu tối đa **30 ngày** (TTL), sau đó bị dọn dẹp tự động. |
 | FR-RETENTION-03 | Dữ liệu công khai/cộng đồng (cảnh báo địa hình) chỉ dùng dữ liệu đã giảm định danh hoặc tổng hợp (aggregate), không dùng raw GPS định danh trực tiếp người dùng. |
 
+### 1.12. Vehicle Authorization (FR-AUTHZ)
+
+> Đưa vào MVP theo quyết định D0.6 — xem `REVIEW_NOTES.md` §1. Thứ tự triển khai: sau khi Auth/Vehicle/Trip nền tảng đã ổn định (`PRD.md` §5.1).
+
+| ID | Yêu cầu |
+|---|---|
+| FR-AUTHZ-01 | Chủ xe (owner) có thể cấp quyền sử dụng một phương tiện của mình cho người dùng khác (borrower) trong một khoảng thời gian xác định (có `expires_at`). |
+| FR-AUTHZ-02 | Người mượn chỉ được chọn phương tiện đó làm "đang hoạt động" và bắt đầu chuyến đi nếu đang trong thời hạn uỷ quyền còn hiệu lực. |
+| FR-AUTHZ-03 | Chủ xe có thể thu hồi uỷ quyền bất kỳ lúc nào; sau khi thu hồi, người mượn không thể bắt đầu chuyến đi mới với xe đó. |
+| FR-AUTHZ-04 | Ứng dụng hiển thị rõ cho người mượn: đang mượn xe của ai, còn hiệu lực bao lâu (vd. "Chủ xe Trần Văn B phê duyệt, còn 24h"). |
+| FR-AUTHZ-05 | Chủ xe có toàn quyền sử dụng phương tiện của chính mình, không cần bản ghi uỷ quyền riêng. |
+| FR-AUTHZ-06 | Một phương tiện có thể có nhiều uỷ quyền với nhiều borrower khác nhau theo thời gian, nhưng tại một thời điểm chỉ một người (owner hoặc một borrower đang hiệu lực) được xác thực để lái. |
+
+### 1.13. Biometric Vehicle Binding (FR-BIOMETRIC)
+
+> Đưa vào MVP theo quyết định D0.6 — xem `REVIEW_NOTES.md` §1. Gắn trực tiếp vào luồng bắt đầu chuyến đi (FR-TRIP-03), nằm sau bước chọn phương tiện.
+
+| ID | Yêu cầu |
+|---|---|
+| FR-BIOMETRIC-01 | Trước khi bắt đầu chuyến đi, người dùng phải hoàn tất xác thực khuôn mặt gắn với phương tiện đã chọn (chủ xe hoặc borrower còn hiệu lực theo FR-AUTHZ). |
+| FR-BIOMETRIC-02 | Hệ thống kiểm tra người dùng hiện tại có quyền với phương tiện đã chọn (owner, hoặc borrower có uỷ quyền còn hiệu lực) **trước khi** tiến hành xác thực khuôn mặt — tránh chạy xác thực cho một phiên chắc chắn sẽ bị từ chối. |
+| FR-BIOMETRIC-03 | Nếu xác thực khuôn mặt thất bại, người dùng không thể bắt đầu chuyến đi; được thử lại tối đa một số lần hợp lý trước khi phải quay lại bước chọn phương tiện. |
+| FR-BIOMETRIC-04 | Hệ thống **không lưu trữ ảnh khuôn mặt thô**; chỉ lưu kết quả xác thực (thành công/thất bại, thời điểm, phương tiện liên quan). |
+| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể là Open Question, chốt ở D0.4. |
+
 ## 2. Non-Functional Requirements
 
 | ID | Yêu cầu |
@@ -127,6 +152,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | NFR-REL-02 | Backend phải chịu được việc nhiều client reconnect gần như đồng thời sau khi mất mạng diện rộng mà không sập (nhờ exponential backoff + jitter ở phía client). |
 | NFR-PRIVACY-01 | Không thu thập GPS trước khi người dùng đồng ý consent và bắt đầu chuyến đi. |
 | NFR-PRIVACY-02 | Người dùng luôn có cách dừng tracking ngay lập tức. |
+| NFR-PRIVACY-03 | Dữ liệu sinh trắc học (khuôn mặt) là dữ liệu cá nhân nhạy cảm theo Nghị định 13/2023/NĐ-CP — chỉ xử lý tạm thời để xác thực (FR-BIOMETRIC-04, không lưu ảnh thô), có consent riêng biệt với consent vị trí, và người dùng phải được thông báo rõ mục đích trước khi quét. |
 | NFR-PERF-01 | Tần suất gửi GPS event phải được giới hạn (rate limit) ở cả client và server. |
 | NFR-PERF-02 | Marker vị trí trên web dashboard cập nhật với độ trễ chấp nhận được cho realtime (mục tiêu ≤ 5 giây, xem `PRD.md` §4). |
 | NFR-BATTERY-01 | Tính năng AR/camera không được chạy liên tục không kiểm soát — phải có safeguard/fallback theo nhiệt độ và pin. |

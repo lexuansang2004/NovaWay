@@ -48,8 +48,40 @@ Vòng đời một chuyến đi (khác với `trip_logs`/summary — xem 2.4).
 | `vehicle_id` | FK → `vehicles.id` |
 | `status` | `active` / `ended` |
 | `consent_at` | thời điểm người dùng đồng ý chia sẻ vị trí cho chuyến đi này |
+| `biometric_verification_id` | FK → `biometric_verifications.id` — xác thực đã mở khoá chuyến đi này (FR-BIOMETRIC-01) |
 | `started_at` | |
 | `ended_at` | nullable cho tới khi kết thúc |
+
+### 2.3a. `vehicle_authorizations` (mới — theo quyết định D0.6, `REVIEW_NOTES.md` §1–2)
+
+Uỷ quyền sử dụng phương tiện giữa chủ xe (owner) và người mượn (borrower).
+
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID, khoá chính |
+| `vehicle_id` | FK → `vehicles.id` |
+| `owner_id` | FK → `users.id`, phải trùng `vehicles.user_id` |
+| `borrower_id` | FK → `users.id` |
+| `granted_at` | |
+| `expires_at` | thời điểm hết hiệu lực — bắt buộc, không cho phép uỷ quyền vô thời hạn ở MVP (FR-AUTHZ-01) |
+| `revoked_at` | nullable — set khi chủ xe chủ động thu hồi (FR-AUTHZ-03) |
+| `status` | `active` / `expired` / `revoked` — tính toán hoặc cache lại từ `expires_at`/`revoked_at` để query nhanh |
+
+*Ràng buộc:* không cho phép hai `vehicle_authorizations` cùng `vehicle_id` với `status = active` chồng thời gian cho hai `borrower_id` khác nhau (một xe tại một thời điểm chỉ nên có tối đa một borrower hiệu lực, theo FR-AUTHZ-06) — enforce ở tầng ứng dụng, cân nhắc constraint DB ở D0.4 nếu PostgreSQL exclusion constraint khả thi cho range thời gian.
+
+### 2.3b. `biometric_verifications` (mới — theo quyết định D0.6)
+
+Kết quả xác thực khuôn mặt — **không lưu ảnh thô** (FR-BIOMETRIC-04, NFR-PRIVACY-03).
+
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID, khoá chính |
+| `user_id` | FK → `users.id`, người thực hiện xác thực |
+| `vehicle_id` | FK → `vehicles.id`, phương tiện đang được xác thực để sử dụng |
+| `vehicle_authorization_id` | FK → `vehicle_authorizations.id`, nullable (null nếu user là chủ xe, không cần uỷ quyền — FR-AUTHZ-05) |
+| `result` | `success` / `failed` |
+| `verified_at` | |
+| `provider` | tên dịch vụ/SDK xác thực khuôn mặt dùng ở MVP — giá trị cụ thể là Open Question, chốt ở D0.4 (FR-BIOMETRIC-05) |
 
 ### 2.4. `trip_logs` (Trip Summary)
 
@@ -119,6 +151,9 @@ Cảnh báo địa hình hiển thị trên bản đồ (AR Lite/warning overlay
 
 - `users` 1—N `vehicles`
 - `users` 1—N `trips`; `vehicles` 1—N `trips`
+- `vehicles` 1—N `vehicle_authorizations`; `users` 1—N `vehicle_authorizations` (theo cả `owner_id` và `borrower_id`)
+- `users` 1—N `biometric_verifications`; `vehicles` 1—N `biometric_verifications`; `vehicle_authorizations` 1—N `biometric_verifications` (nullable)
+- `trips` 1—1 `biometric_verifications` (qua `trips.biometric_verification_id`, xác thực đã mở khoá chuyến đi)
 - `trips` 1—1 `trip_logs` (tạo khi trip kết thúc)
 - `trips` 1—N `raw_gps_events`
 - `trips` 1—N `vehicle_mismatch_warnings`
@@ -131,6 +166,8 @@ Cảnh báo địa hình hiển thị trên bản đồ (AR Lite/warning overlay
 | `users`, `vehicles` | Lưu vô thời hạn (theo vòng đời tài khoản) |
 | `trips`, `trip_logs` | Lưu dài hạn (FR-RETENTION-01) |
 | `raw_gps_events` | TTL 30 ngày, partition theo thời gian, cleanup tự động (FR-RETENTION-02) |
+| `vehicle_authorizations` | Lưu dài hạn (lịch sử uỷ quyền/thu hồi phục vụ đối chiếu khi cần) |
+| `biometric_verifications` | Lưu dài hạn **chỉ kết quả** (không ảnh thô — NFR-PRIVACY-03); nếu có yêu cầu pháp lý về xoá dữ liệu cá nhân, cần cơ chế xoá theo yêu cầu người dùng ở Post-MVP |
 | `vehicle_mismatch_warnings` | Lưu dài hạn (gắn với trip_logs, phục vụ xem lại lịch sử) |
 | `terrain_warnings` | Lưu dài hạn ở MVP (số lượng nhỏ, chủ yếu seed/mock); chính sách retention cho dữ liệu Computer Vision thật sẽ xác định lại ở Post-MVP |
 
@@ -139,3 +176,5 @@ Cảnh báo địa hình hiển thị trên bản đồ (AR Lite/warning overlay
 - Xác nhận partitioning theo tháng hay theo tuần cho `raw_gps_events` (phụ thuộc ước tính tải thật).
 - Xác nhận có cần bảng riêng cho "offline sync batch log" (audit từng lần gọi `/api/trips/sync`) hay đủ dùng `sync_channel` trên `raw_gps_events`.
 - `vehicle_mismatch_warnings.observed_behavior_summary` cần định dạng cụ thể (free text hay structured JSON) — quyết định khi thiết kế API_REQUIREMENTS chi tiết hơn ở D0.4.
+- Chọn nhà cung cấp/SDK xác thực khuôn mặt cho `biometric_verifications.provider` (FR-BIOMETRIC-05) — ảnh hưởng trực tiếp tới việc có thực sự "không lưu ảnh thô" hay chỉ là dữ liệu tạm thời trong quá trình gọi API bên thứ ba; cần xác nhận chính sách lưu trữ của nhà cung cấp trước khi chọn.
+- Cân nhắc exclusion constraint (PostgreSQL `EXCLUDE USING gist`) cho `vehicle_authorizations` để enforce "không chồng thời gian hiệu lực giữa 2 borrower" ở tầng database thay vì chỉ ở application.

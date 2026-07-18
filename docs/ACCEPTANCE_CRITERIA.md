@@ -34,7 +34,7 @@
 - Then không có GPS event nào được gửi hoặc ghi nhận
 
 **AC-TRIP-02** — Bắt đầu chuyến đi hợp lệ
-- Given người dùng đã có xe đang hoạt động và đã đồng ý consent
+- Given người dùng đã có xe đang hoạt động, đã đồng ý consent, và đã xác thực khuôn mặt thành công cho xe đó (AC-BIOMETRIC-01)
 - When họ bấm "Bắt đầu chuyến đi"
 - Then hệ thống tạo một trip mới, bắt đầu nhận GPS event gắn với `trip_id` đó
 
@@ -42,6 +42,50 @@
 - Given một chuyến đi đang active (kể cả đang tracking nền)
 - When người dùng bấm "Kết thúc chuyến đi"
 - Then foreground và background tracking đều dừng, trip được đánh dấu kết thúc và lưu log
+
+## 3.1. Vehicle Authorization (FR-AUTHZ)
+
+**AC-AUTHZ-01** — Cấp quyền có thời hạn
+- Given chủ xe muốn cho người khác mượn xe
+- When họ tạo một uỷ quyền với `expires_at` cụ thể cho một borrower
+- Then borrower đó có thể chọn xe này và xác thực trong thời hạn đã cấp, không sớm/muộn hơn
+
+**AC-AUTHZ-02** — Hết hạn uỷ quyền chặn chuyến đi mới
+- Given uỷ quyền của một borrower đã hết hạn (`expires_at` đã qua)
+- When borrower cố chọn xe đó và bắt đầu chuyến đi mới
+- Then hệ thống từ chối, thông báo rõ uỷ quyền đã hết hạn
+
+**AC-AUTHZ-03** — Thu hồi tức thời
+- Given borrower đang có uỷ quyền hiệu lực nhưng CHƯA bắt đầu chuyến đi
+- When chủ xe thu hồi uỷ quyền
+- Then borrower không thể bắt đầu chuyến đi mới với xe đó ngay sau khi thu hồi
+
+**AC-AUTHZ-04** — Chủ xe không cần uỷ quyền
+- Given người dùng là chủ sở hữu của một xe
+- When họ chọn xe đó và bắt đầu chuyến đi
+- Then hệ thống cho phép ngay, không yêu cầu bản ghi uỷ quyền
+
+## 3.2. Biometric Vehicle Binding (FR-BIOMETRIC)
+
+**AC-BIOMETRIC-01** — Xác thực thành công mở khoá bắt đầu chuyến đi
+- Given người dùng đã chọn phương tiện hợp lệ (chủ xe hoặc borrower còn hiệu lực)
+- When họ hoàn tất xác thực khuôn mặt thành công
+- Then hệ thống cho phép tiến tới bước bắt đầu chuyến đi
+
+**AC-BIOMETRIC-02** — Không xác thực cho người không có quyền
+- Given người dùng chọn một xe mà họ không phải chủ sở hữu và không có uỷ quyền hiệu lực
+- When họ cố xác thực khuôn mặt
+- Then hệ thống chặn ngay ở bước kiểm tra quyền, không tiến hành quét khuôn mặt (AC-AUTHZ-02 áp dụng trước)
+
+**AC-BIOMETRIC-03** — Thất bại không cho bắt đầu chuyến đi
+- Given xác thực khuôn mặt thất bại
+- When người dùng cố bắt đầu chuyến đi
+- Then hệ thống chặn hành động, cho phép thử lại trong giới hạn số lần cho phép
+
+**AC-BIOMETRIC-04** — Không lưu ảnh thô
+- Given một lần xác thực khuôn mặt đã hoàn tất (thành công hoặc thất bại)
+- When kiểm tra dữ liệu đã lưu trong hệ thống
+- Then chỉ có kết quả xác thực (trạng thái, thời điểm, phương tiện liên quan) được lưu — không có file ảnh khuôn mặt thô nào tồn tại sau khi xử lý xong
 
 ## 4. Realtime Location (FR-REALTIME)
 

@@ -19,6 +19,18 @@
 | Người dùng đổi phương tiện đang hoạt động giữa chuyến đi | **[OPEN]** — MVP có cho đổi xe giữa chuyến hay bắt buộc kết thúc chuyến trước? Đề xuất: không cho đổi giữa chuyến ở MVP, chỉ đổi được lúc idle |
 | Người dùng mở hai phiên (hai thiết bị) cùng một tài khoản và cùng bắt đầu chuyến đi | **[OPEN]** — cần quyết định: chặn phiên thứ hai, hay cho phép và coi là hai trip độc lập |
 
+## 2.1. Vehicle Authorization & Biometric (mới — theo quyết định D0.6)
+
+| Case | Hành vi kỳ vọng |
+|---|---|
+| Chủ xe thu hồi uỷ quyền TRONG LÚC borrower đang có chuyến đi active | **[OPEN]** — MVP có dừng chuyến đi đang chạy ngay không, hay chỉ chặn chuyến đi *tiếp theo*? Đề xuất: không ngắt chuyến đang chạy đột ngột (rủi ro an toàn khi đang lái) — chỉ chặn `POST /api/trips/start` lần sau; cần chủ xe xác nhận hiểu rõ điều này khi thu hồi |
+| Uỷ quyền hết hạn (`expires_at` đã qua) TRONG LÚC borrower đang có chuyến đi active | **[OPEN]** — tương tự trên: đề xuất không ngắt chuyến đang chạy, chỉ chặn chuyến tiếp theo |
+| Xác thực khuôn mặt thất bại nhiều lần liên tiếp | Chặn thử lại theo giới hạn (AC-BIOMETRIC-03); **[OPEN]** — số lần cụ thể và có khoá tạm thời/yêu cầu hỗ trợ sau khi vượt giới hạn hay không, cần chốt ở D0.4 |
+| Người dùng xác thực thành công nhưng trì hoãn rất lâu mới bấm "Bắt đầu chuyến đi" | Server từ chối nếu `verification_id` đã quá cũ so với ngưỡng thời gian cho phép (xem `API_REQUIREMENTS.md` §9); người dùng phải xác thực lại |
+| Chủ xe cấp uỷ quyền cho chính bản thân mình (tự uỷ quyền) | **[OPEN]** — nên chặn ở validation (không cần thiết vì FR-AUTHZ-05 đã cho chủ xe toàn quyền), tránh dữ liệu vô nghĩa trong `vehicle_authorizations` |
+| Hai uỷ quyền cùng xe, cùng khoảng thời gian, cho hai borrower khác nhau | Bị chặn ở tầng tạo uỷ quyền (AC-AUTHZ liên quan) — xem ràng buộc ở `DATA_REQUIREMENTS.md` §2.3a |
+| Dịch vụ xác thực khuôn mặt bên thứ ba bị lỗi/timeout | **[OPEN]** — cần fallback rõ ràng: chặn hoàn toàn bắt đầu chuyến đi, hay cho phép fallback thủ công (vd. xác minh qua kênh khác)? Đề xuất mặc định chặn ở MVP, không làm fallback phức tạp |
+
 ## 3. Network & Realtime
 
 | Case | Hành vi kỳ vọng |

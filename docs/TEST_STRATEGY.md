@@ -24,11 +24,29 @@
 - Integration: User B không thể sửa/xoá xe của User A (AC-VEHICLE-01).
 - Integration: không bắt đầu được trip nếu chưa có xe active (AC-VEHICLE-02).
 
+### 2.2a. Vehicle Authorization (FR-AUTHZ)
+
+- Integration: chủ xe tạo uỷ quyền → borrower thấy xe trong `GET /api/authorizations/me` trong đúng thời hạn (AC-AUTHZ-01).
+- Integration: uỷ quyền hết hạn → borrower bị chặn khi cố bắt đầu chuyến đi mới (AC-AUTHZ-02).
+- Integration: thu hồi uỷ quyền → borrower bị chặn ngay ở chuyến đi mới, nhưng chuyến đang active (nếu có) không bị ngắt đột ngột (Edge Case §2.1).
+- Integration: chủ xe dùng xe của chính mình không cần bản ghi uỷ quyền (AC-AUTHZ-04).
+- Integration: không cho tạo 2 uỷ quyền chồng thời gian cho cùng 1 xe với 2 borrower khác nhau.
+
+### 2.2b. Biometric Vehicle Binding (FR-BIOMETRIC)
+
+- Integration: user có quyền (owner/borrower hiệu lực) xác thực thành công → nhận `verification_id` hợp lệ để dùng cho `trips/start` (AC-BIOMETRIC-01).
+- Integration: user không có quyền bị chặn ở bước kiểm tra quyền, không gọi tới dịch vụ xác thực khuôn mặt (AC-BIOMETRIC-02).
+- Integration: xác thực thất bại → không thể bắt đầu chuyến đi; giới hạn số lần thử lại (AC-BIOMETRIC-03).
+- Integration/Manual: kiểm tra dữ liệu lưu trong `biometric_verifications` sau khi xác thực — xác nhận không có trường/nơi nào lưu ảnh thô (AC-BIOMETRIC-04).
+- Integration: `verification_id` quá cũ (vượt ngưỡng thời gian) bị từ chối khi gọi `trips/start`, yêu cầu xác thực lại.
+- Manual: giả lập dịch vụ xác thực bên thứ ba lỗi/timeout → xác nhận hành vi fallback (chặn rõ ràng, không crash, không treo UI).
+
 ### 2.3. Trip Lifecycle & Consent (FR-TRIP)
 
-- Integration: `start` bị từ chối nếu thiếu `consent` hoặc thiếu xe active.
+- Integration: `start` bị từ chối nếu thiếu `consent`, thiếu xe active, hoặc thiếu/không hợp lệ `verification_id`.
 - Integration: `end` dừng nhận GPS event mới cho `trip_id` đó.
-- E2E: toàn bộ luồng bắt đầu → di chuyển (mock) → kết thúc → thấy trong danh sách trip.
+- E2E: toàn bộ luồng chọn xe → xác thực khuôn mặt → bắt đầu → di chuyển (mock) → kết thúc → thấy trong danh sách trip.
+- E2E (borrower): luồng mượn xe đầy đủ — chủ xe cấp quyền → borrower đăng nhập, thấy xe được uỷ quyền, xác thực, chạy chuyến đi trong thời hạn.
 
 ### 2.4. Realtime Location (FR-REALTIME)
 
