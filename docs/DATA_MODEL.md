@@ -161,18 +161,35 @@ CREATE TABLE raw_gps_events (
   PRIMARY KEY (id, received_at)
 ) PARTITION BY RANGE (received_at);
 
--- Idempotency (NFR-SEC-03) — áp dụng bất kể qua realtime hay batch:
-CREATE UNIQUE INDEX uniq_raw_gps_user_client_event
-  ON raw_gps_events(user_id, client_event_id, received_at);
-
 CREATE INDEX idx_raw_gps_trip_id ON raw_gps_events(trip_id, received_at);
+
+-- Idempotency (NFR-SEC-03) — KHÔNG dùng unique index trực tiếp trên raw_gps_events:
+-- PostgreSQL bắt buộc partition key (received_at) phải nằm trong mọi unique index của
+-- bảng partitioned, nên "UNIQUE(user_id, client_event_id, received_at)" KHÔNG chặn được
+-- trùng lặp thật (2 lần gửi cùng client_event_id nhưng received_at khác nhau, do retry
+-- cách nhau vài giây/phút, vẫn được coi là 2 dòng khác nhau — phát hiện ở D0.5 self-review).
+--
+-- Giải pháp: bảng dedup riêng, KHÔNG partition, chỉ giữ khoá để chặn trùng:
+CREATE TABLE gps_event_dedup (
+  user_id          UUID NOT NULL,
+  client_event_id  UUID NOT NULL,
+  raw_gps_event_id BIGINT NOT NULL,
+  PRIMARY KEY (user_id, client_event_id)
+);
+
+-- Insert 1 GPS event = 2 thao tác trong cùng transaction:
+--   1. INSERT INTO gps_event_dedup (...) VALUES (...) ON CONFLICT (user_id, client_event_id) DO NOTHING;
+--   2. Nếu bước 1 thực sự insert được dòng mới (không bị conflict) -> INSERT vào raw_gps_events.
+--      Nếu bước 1 bị conflict (đã tồn tại) -> bỏ qua, tăng duplicate_count, không insert raw_gps_events.
+-- Bảng gps_event_dedup nhỏ (chỉ 2 UUID + 1 bigint/dòng), TTL cùng nhịp 30 ngày với raw_gps_events
+-- (xoá theo raw_gps_event_id khi partition tương ứng bị DROP) để không phình vô hạn.
 
 -- Ví dụ partition theo tháng (job tạo partition mới + xoá partition cũ >30 ngày chạy định kỳ):
 CREATE TABLE raw_gps_events_2026_07 PARTITION OF raw_gps_events
   FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
 ```
 
-*Lưu ý:* unique index bao gồm `received_at` vì đây là bảng partition theo range trên chính cột đó (PostgreSQL yêu cầu partition key nằm trong mọi unique constraint). Ràng buộc idempotency thực chất vẫn theo `(user_id, client_event_id)` ở tầng nghiệp vụ — cần kiểm tra kỹ ở step `1.2` xem có cần thêm cơ chế phụ (advisory lock hoặc bảng dedup nhỏ không partition) để tránh race condition ở biên hai partition.
+*Lưu ý:* `gps_event_dedup` là bảng riêng, không partition — đây là nơi enforce idempotency thật (NFR-SEC-03), không phải một index trên `raw_gps_events`. Cách này tránh được giới hạn của PostgreSQL (partition key bắt buộc có trong mọi unique index của bảng partitioned) mà không cần Redis (giữ đúng TDR-004 — không thêm hạ tầng cache ở MVP). Cần benchmark ở step `1.2` xem việc thêm 1 write phụ (`gps_event_dedup`) mỗi GPS event có ảnh hưởng throughput ở mức chấp nhận được không, đặc biệt qua đường realtime (tần suất cao hơn batch).
 
 ### 2.8. `vehicle_mismatch_warnings`
 
@@ -231,13 +248,16 @@ CREATE INDEX idx_terrain_warnings_location ON terrain_warnings USING GIST(locati
 Job "raw_gps_cleanup" (chạy daily):
   - Tạo partition tháng tiếp theo nếu chưa có.
   - DROP các partition có upper bound < now() - 30 ngày.
+  - Xoá khỏi gps_event_dedup các dòng có raw_gps_event_id thuộc partition vừa DROP
+    (batch DELETE theo id range, không phải full-table scan).
   - Log số dòng/partition đã xoá vào observability (NFR-OBS-01).
 ```
 
-Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `DATA_REQUIREMENTS.md` để tránh khoá bảng lớn.
+Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `DATA_REQUIREMENTS.md` để tránh khoá bảng lớn. `gps_event_dedup` không partition được (khoá chính là `(user_id, client_event_id)`, không phải theo thời gian), nên dọn dẹp nó là `DELETE` thường — chấp nhận được vì đã giới hạn qua `raw_gps_event_id` range, không phải toàn bảng.
 
 ## 5. Open Items for D0.7
 
 - Xác nhận extension `btree_gist` khả dụng trên môi trường hosting đã chọn (ảnh hưởng constraint ở §2.3).
 - Xác nhận chiến lược partition `raw_gps_events`: theo tháng (đề xuất ở đây) hay theo tuần nếu ước tính insert rate cao hơn dự kiến.
+- Benchmark chi phí ghi phụ vào `gps_event_dedup` cho mỗi GPS event (đặc biệt qua đường realtime tần suất cao) — nếu quá tốn, cân nhắc phương án khác ở step `1.2` (vd. batch dedup theo cửa sổ thời gian ngắn thay vì mọi write).
 - Cách xử lý race condition idempotency ở biên partition (§2.7) — cần benchmark trước khi coi là "đã giải quyết".

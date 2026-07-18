@@ -121,7 +121,7 @@ Mobile --location:update--> WebSocket Gateway (NestJS) --location:broadcast--> W
 
 - MVP: một NestJS Gateway instance, in-memory room theo `trip_id`/`vehicle_id` để broadcast đúng client đang theo dõi.
 - Scale sau (không làm ở MVP): Redis adapter cho Socket.io khi cần nhiều instance backend (NFR-SCALE-01, TDR-004).
-- Idempotency constraint (NFR-SEC-03) nằm ở tầng database (`raw_gps_events` unique index), không phải ở Gateway — Gateway chỉ validate và forward, không tự lọc trùng bằng logic riêng để tránh lệch với đường batch sync.
+- Idempotency (NFR-SEC-03) nằm ở tầng database qua bảng `gps_event_dedup` riêng (xem `DATA_MODEL.md` §2.7), không phải ở Gateway — Gateway chỉ validate và forward, không tự lọc trùng bằng logic riêng để tránh lệch với đường batch sync.
 
 ## 7. Routing & AR/Terrain (R&D tách biệt)
 
