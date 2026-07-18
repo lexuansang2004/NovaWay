@@ -34,7 +34,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-TRIP-02 | Hệ thống không gửi/ghi nhận GPS trước khi người dùng bấm bắt đầu chuyến đi. |
 | FR-TRIP-03 | Người dùng có thể bắt đầu chuyến đi khi đã có phương tiện đang hoạt động và đã đồng ý consent. |
 | FR-TRIP-04 | Người dùng có thể kết thúc chuyến đi bất kỳ lúc nào; hành động này dừng toàn bộ tracking (foreground và background). |
-| FR-TRIP-05 | Mỗi chuyến đi được lưu thành một bản ghi trip log gắn với `user_id` và `vehicle_id`. |
+| FR-TRIP-05 | Mỗi chuyến đi tạo một bản ghi `trips` (vòng đời) gắn với `user_id`/`vehicle_id` ngay khi bắt đầu; khi kết thúc, hệ thống tạo thêm một bản ghi `trip_logs` (tổng hợp/summary) tương ứng — xem `DATA_REQUIREMENTS.md` §2.3–2.4 cho định nghĩa 2 entity này. |
 
 ### 1.4. Realtime Location (FR-REALTIME)
 
@@ -135,8 +135,10 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | NFR-TEST-01 | Mỗi micro-step (theo `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`) phải có test gate riêng; các kịch bản khó tái hiện ngoài đời thật (mất mạng, thermal, low-light) bắt buộc test được qua Developer Mode/Simulator. |
 | NFR-SEC-01 | Mọi payload ghi dữ liệu (đặc biệt GPS, batch sync) phải được validate và kiểm tra quyền sở hữu (ownership) trước khi xử lý. |
 | NFR-SEC-02 | Offline sync phải có cơ chế idempotency theo `client_event_id` để chống ghi trùng khi client gửi lại. |
+| NFR-SEC-03 | Ràng buộc idempotency `(user_id, client_event_id)` phải được enforce ở tầng database (unique constraint trên `raw_gps_events`), áp dụng cho **mọi** đường ghi dữ liệu — cả GPS event gửi qua WebSocket lẫn qua REST batch sync — không chỉ ở logic riêng của endpoint `/api/trips/sync` (phát hiện ở `REVIEW_NOTES.md` §3). |
 | NFR-API-01 | `POST /api/trips/sync` phải enforce giới hạn batch tối đa 500 events/payload và trả lỗi rõ ràng nếu vượt. |
 | NFR-UX-01 | Cảnh báo hiển thị khi đang lái phải tối giản, không yêu cầu thao tác phức tạp (xem FR-WARNUI). |
+| NFR-OBS-01 | Backend phải có health check, structured logging, và metrics cơ bản (đủ để debug realtime/location issues) — tương ứng step `9.1 chore/observability-baseline` trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`. |
 
 ## 3. Constraints
 

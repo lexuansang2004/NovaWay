@@ -14,6 +14,7 @@
 | R-06 | Pin/nhiệt độ thiết bị tăng nhanh khi chạy AR/camera liên tục | Cao (nếu không giới hạn) | Trung bình | AR Lite MVP không chạy camera liên tục; có fallback theo thermal/low-light state (FR-AR-03) |
 | R-07 | Background location trên iOS bị hệ điều hành giới hạn/thu hồi quyền bất ngờ | Trung bình | Cao | Thiết kế fallback foreground-only + thông báo rõ giới hạn cho người dùng (FR-BGLOC-04) |
 | R-08 | GPS sampling rate chưa được test ảnh hưởng pin thực tế | Cao (chưa có dữ liệu) | Trung bình | Đưa vào Open Question OQ-007; cần test trước khi chốt tần suất final ở D0.3 |
+| R-16 | App bị App Store/Play Store từ chối vì xin quyền vị trí "Always/background" ngay từ đầu mà không xin "While Using" trước và giải thích rõ lý do nâng cấp | Trung bình | Cao | Thiết kế luồng xin quyền 2 bước: xin "While Using" trước, chỉ nâng cấp lên "Always" khi người dùng thực sự bắt đầu chuyến đi và cần tracking nền, kèm màn hình giải thích rõ mục đích (phát hiện ở `REVIEW_NOTES.md` §4) |
 
 ## 2. Product & Scope Risks
 

@@ -74,7 +74,7 @@ Chi tiết từng điểm GPS — **TTL 30 ngày** (FR-RETENTION-02), cần part
 | `id` | UUID hoặc BIGSERIAL |
 | `trip_id` | FK → `trips.id` |
 | `vehicle_id` | denormalized cho truy vấn nhanh |
-| `client_event_id` | **duy nhất** theo `(user_id, client_event_id)` — cơ sở cho idempotency (FR-SYNC-02, NFR-SEC-02) |
+| `client_event_id` | **duy nhất** theo `(user_id, client_event_id)` — unique constraint ở tầng database, áp dụng cho mọi đường ghi (realtime WebSocket lẫn REST batch sync), không chỉ validate ở logic ứng dụng của riêng endpoint sync (FR-SYNC-02, NFR-SEC-02, NFR-SEC-03) |
 | `location` | `GEOGRAPHY(Point, 4326)` |
 | `speed_kmh` | |
 | `accuracy_m` | |

@@ -8,6 +8,7 @@
 |---|---|
 | Người dùng từ chối quyền vị trí | Không thể bắt đầu chuyến đi; hiển thị màn hình giải thích + nút mở lại cài đặt quyền |
 | Người dùng từ chối quyền vị trí nền/always (iOS) | Vẫn cho tracking foreground; hiển thị cảnh báo rõ về giới hạn khi app xuống nền |
+| App xin quyền vị trí nền/always ngay lần đầu mở app, trước khi người dùng hiểu vì sao cần | Không làm — luồng xin quyền phải 2 bước: "While Using" trước, chỉ nâng cấp "Always" khi người dùng thực sự bắt đầu chuyến đi, kèm giải thích rõ (R-16, tránh rủi ro bị App Store/Play Store từ chối) |
 | Người dùng thu hồi quyền vị trí giữa chuyến đi | **[OPEN]** — cần chốt: dừng trip ngay hay cảnh báo trước rồi mới dừng |
 
 ## 2. Vehicle & Trip State
