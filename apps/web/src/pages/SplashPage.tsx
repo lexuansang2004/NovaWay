@@ -1,13 +1,7 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { hasAuthSession } from '@/services/authService';
+import { Navigate } from 'react-router-dom';
 
+// LoginPage tự kiểm tra session hiện có (GET /api/auth/me) và điều hướng sang
+// /dashboard nếu còn hợp lệ, nên '/' chỉ cần luôn trỏ về /login.
 export default function SplashPage() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate(hasAuthSession() ? '/dashboard' : '/login', { replace: true });
-  }, [navigate]);
-
-  return null;
+  return <Navigate to="/login" replace />;
 }

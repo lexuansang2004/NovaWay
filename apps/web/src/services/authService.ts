@@ -1,26 +1,45 @@
-// TODO(production): thay bằng gọi Auth API thật (NovaWay_COMPLETE_MICRO_STEP_PLAN.md
-// step 2.2 feat/web-auth-integration) — JWT access_token + secure storage.
-// Hiện tại chỉ mock 1 tài khoản cứng để dựng layout/routing (step 2.1).
+import { apiClient, ApiError } from '@/lib/apiClient';
 
-const SESSION_KEY = 'novaway_web_auth';
+const TOKEN_KEY = 'novaway_web_token';
 
-const MOCK_CREDENTIALS = {
-  email: 'demo@novaway.vn',
-  password: '123456',
-};
-
-export function validateCredentials(email: string, password: string): boolean {
-  return email === MOCK_CREDENTIALS.email && password === MOCK_CREDENTIALS.password;
+export interface AuthUser {
+  id: string;
+  email: string;
 }
 
-export function persistAuthSession(): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email: MOCK_CREDENTIALS.email, loggedInAt: Date.now() }));
+interface LoginResponse {
+  access_token: string;
+  user: AuthUser;
 }
 
-export function hasAuthSession(): boolean {
-  return sessionStorage.getItem(SESSION_KEY) !== null;
+export async function login(email: string, password: string): Promise<AuthUser> {
+  const { access_token, user } = await apiClient.post<LoginResponse>('/auth/login', { email, password });
+  sessionStorage.setItem(TOKEN_KEY, access_token);
+  return user;
+}
+
+// Validates the stored token against the backend (docs/API_CONTRACT.md §1
+// GET /api/auth/me) rather than just checking presence — this is what makes
+// "reload session" actually verify the session is still valid, not just cached.
+export async function fetchCurrentUser(): Promise<AuthUser | null> {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    return await apiClient.get<AuthUser>('/auth/me', token);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAuthSession();
+      return null;
+    }
+    throw error;
+  }
+}
+
+export function getToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function clearAuthSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }

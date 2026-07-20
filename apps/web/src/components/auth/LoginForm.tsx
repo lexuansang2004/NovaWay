@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { validateCredentials } from '@/services/authService';
 
 export interface LoginSubmitPayload {
   email: string;
@@ -12,26 +11,27 @@ export interface LoginSubmitPayload {
 }
 
 interface LoginFormProps {
-  onSuccess: (payload: LoginSubmitPayload) => void;
-  notice?: string | null;
+  onSubmit: (payload: LoginSubmitPayload) => Promise<void>;
 }
 
-export function LoginForm({ onSuccess, notice }: LoginFormProps) {
+export function LoginForm({ onSubmit }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!validateCredentials(email, password)) {
-      setError('Email hoặc mật khẩu không đúng.');
-      return;
-    }
-
     setError(null);
-    onSuccess({ email, password, remember });
+    setSubmitting(true);
+    try {
+      await onSubmit({ email, password, remember });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -45,12 +45,6 @@ export function LoginForm({ onSuccess, notice }: LoginFormProps) {
         <h1 className="text-xl font-semibold text-white">Đăng nhập NovaWay</h1>
         <p className="mt-1 text-sm text-cyan-100/60">Truy cập không gian điều hướng thông minh</p>
       </div>
-
-      {notice && (
-        <div className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
-          {notice}
-        </div>
-      )}
 
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-1.5">
@@ -87,7 +81,7 @@ export function LoginForm({ onSuccess, notice }: LoginFormProps) {
 
         <div className="flex items-center gap-2">
           {/* TODO(production): "remember" chưa có tác dụng — chờ chiến lược
-              refresh token/session thật ở step 2.2 trước khi wire hành vi ghi nhớ. */}
+              refresh token trước khi wire hành vi ghi nhớ đăng nhập. */}
           <Checkbox
             id="remember"
             checked={remember}
@@ -102,9 +96,10 @@ export function LoginForm({ onSuccess, notice }: LoginFormProps) {
         <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
           <Button
             type="submit"
+            disabled={submitting}
             className="mt-1 w-full border-0 bg-gradient-to-r from-cyan-400 to-emerald-400 font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] hover:from-cyan-300 hover:to-emerald-300"
           >
-            Đăng nhập
+            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </motion.div>
 
