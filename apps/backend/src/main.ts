@@ -12,6 +12,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api', { exclude: ['/', 'health'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.enableCors({ origin: configService.get<string>('WEB_ORIGIN'), credentials: true });
 
   await app.listen(configService.get<number>('PORT', 3000));
 }

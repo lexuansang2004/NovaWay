@@ -4,23 +4,28 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Navigation } from 'lucide-react';
 import { LoginForm, type LoginSubmitPayload } from '@/components/auth/LoginForm';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
-import { hasAuthSession, persistAuthSession } from '@/services/authService';
+import { fetchCurrentUser, login } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Login UI mock cho step 2.1 — xác thực khuôn mặt gắn phương tiện (FaceScanner,
-// FR-BIOMETRIC) là một luồng riêng cho việc chọn xe trước khi bắt đầu chuyến đi,
-// không phải cổng đăng nhập tài khoản; sẽ tích hợp ở đúng step làm UI chọn xe/bắt
-// đầu chuyến đi, không phải ở đây.
+// Xác thực khuôn mặt gắn phương tiện (FaceScanner, FR-BIOMETRIC) là luồng chọn
+// xe trước khi bắt đầu chuyến đi, không phải cổng đăng nhập tài khoản — sẽ tích
+// hợp ở đúng step làm UI chọn xe/bắt đầu chuyến đi, không phải ở đây.
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   useEffect(() => {
-    if (hasAuthSession()) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate]);
+    fetchCurrentUser().then((user) => {
+      if (user) {
+        setUser(user);
+        navigate('/dashboard', { replace: true });
+      }
+    });
+  }, [navigate, setUser]);
 
-  function handleSuccess(_payload: LoginSubmitPayload) {
-    persistAuthSession();
+  async function handleSubmit({ email, password }: LoginSubmitPayload) {
+    const user = await login(email, password);
+    setUser(user);
     navigate('/dashboard', { replace: true });
   }
 
@@ -58,7 +63,7 @@ export default function LoginPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
-            <LoginForm onSuccess={handleSuccess} />
+            <LoginForm onSubmit={handleSubmit} />
           </motion.div>
         </AnimatePresence>
       </div>

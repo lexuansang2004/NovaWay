@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { clearAuthSession } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const MAIN_MENU = [
@@ -36,11 +37,15 @@ const MAIN_MENU = [
 
 export function Sidebar() {
   const navigate = useNavigate();
+  const { user, setUser } = useAuth();
 
   function handleLogout() {
     clearAuthSession();
+    setUser(null);
     navigate('/login', { replace: true });
   }
+
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'NW';
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-white/5 bg-slate-950 text-slate-200">
@@ -81,14 +86,13 @@ export function Sidebar() {
               type="button"
               className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-left text-sm shadow-[0_0_18px_rgba(34,211,238,0.08)] hover:bg-white/10"
             >
-              {/* TODO(production): thay avatar/tên tĩnh bằng dữ liệu từ GET /api/auth/me (step 2.2). */}
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-emerald-400 text-xs font-semibold text-slate-950">
-                  NW
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                <span className="truncate font-medium text-white">Tài khoản</span>
+                <span className="truncate font-medium text-white">{user?.email ?? 'Tài khoản'}</span>
                 <span className="truncate text-xs text-cyan-200/50">NovaWay</span>
               </span>
               <ChevronsUpDown className="h-4 w-4 shrink-0 text-slate-500" />

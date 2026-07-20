@@ -10,4 +10,5 @@ export const envValidationSchema = Joi.object({
     .required(),
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_EXPIRES_IN: Joi.string().default('7d'),
+  WEB_ORIGIN: Joi.string().uri().default('http://localhost:5173'),
 });
