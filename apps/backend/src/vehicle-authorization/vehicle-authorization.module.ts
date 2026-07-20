@@ -11,5 +11,6 @@ import { VehicleAuthorizationService } from './vehicle-authorization.service';
   imports: [TypeOrmModule.forFeature([VehicleAuthorization]), VehiclesModule, UsersModule],
   controllers: [VehicleAuthorizationController, AuthorizationsController],
   providers: [VehicleAuthorizationService],
+  exports: [VehicleAuthorizationService],
 })
 export class VehicleAuthorizationModule {}
