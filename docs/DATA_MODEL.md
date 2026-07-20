@@ -237,14 +237,16 @@ Thứ tự phụ thuộc FK giữa các bảng (dưới đây) không migrate h�
 2. vehicles                   — step 1.2 feat/database-schema
 3. vehicle_authorizations     — step 1.5 feat/vehicle-authorization-api
 4. biometric_verifications    — step 1.6 feat/biometric-verification-api
-5. trips (FK tới biometric_verifications) — step 7.1 feat/trip-logs-api
-6. trip_logs                  — step 7.1 feat/trip-logs-api
-7. raw_gps_events (+ partition đầu tiên) — step chưa chốt, tạo ở step đầu tiên cần ghi GPS thật (ứng viên: 3.1 feat/realtime-location-gateway hoặc 4.3 feat/mobile-realtime-location)
+5. trips (FK tới biometric_verifications) — step 3.1 feat/realtime-location-gateway
+6. raw_gps_events (+ gps_event_dedup, partition đầu tiên) — step 3.1 feat/realtime-location-gateway
+7. trip_logs                  — step 7.1 feat/trip-logs-api
 8. vehicle_mismatch_warnings  — step chưa chốt, ứng viên: 6.1 feat/telematics-vehicle-mismatch
 9. terrain_warnings (+ seed data mock ban đầu) — step chưa chốt
 ```
 
-*Sửa 07/2026:* bản gốc ghi cả 9 bảng migrate ở step `1.2`, gây lỗi — `trip_logs` có FK NOT NULL tới `trips`, nhưng `trips` lại phụ thuộc `biometric_verifications` (step `1.6`), nên không thể tồn tại trước `1.2`. Đã tách theo đúng step nghiệp vụ cần bảng đó. Các dòng "step chưa chốt" (7-9) sẽ được xác nhận cụ thể khi tới gần các step tương ứng — không chặn baseline hay các step 1.x hiện tại.
+*Sửa 07/2026 (lần 1):* bản gốc ghi cả 9 bảng migrate ở step `1.2`, gây lỗi — `trip_logs` có FK NOT NULL tới `trips`, nhưng `trips` lại phụ thuộc `biometric_verifications` (step `1.6`), nên không thể tồn tại trước `1.2`. Đã tách theo đúng step nghiệp vụ cần bảng đó.
+
+*Sửa 07/2026 (lần 2):* dòng `raw_gps_events` từng để "chưa chốt, ứng viên 3.1 hoặc 4.3" — nhưng `raw_gps_events.trip_id` là `NOT NULL REFERENCES trips(id)`, và bản kế hoạch gốc đặt `trips` ở step `7.1` (sau cả `3.1`), nên nếu triển khai `raw_gps_events` ở `3.1` như dự kiến sẽ tạo FK trỏ tới bảng chưa tồn tại — cùng loại lỗi đã gặp ở lần sửa 1. Vì `trips` chỉ phụ thuộc `biometric_verifications` (đã có từ `1.6`), không phụ thuộc `trip_logs`, nên tách `trips` ra khỏi `trip_logs`: migrate `trips` ngay ở `3.1` (chỉ schema, phục vụ `raw_gps_events` — chưa có Trip API thật, vẫn tạo trip test qua SQL trực tiếp cho tới khi `7.1` xây `TripsModule`), giữ `trip_logs` ở `7.1` như cũ. Người dùng đã xác nhận hướng sửa này trước khi code step `3.1`.
 
 ## 4. TTL / Cleanup Job (liên quan step migrate `raw_gps_events` — xem §3, và `9.1`)
 
