@@ -3,6 +3,7 @@ import SplashPage from '@/pages/SplashPage';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
 import VehiclesPage from '@/pages/VehiclesPage';
+import LiveMapPage from '@/pages/LiveMapPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { AppLayout } from '@/layouts/AppLayout';
 
@@ -16,7 +17,7 @@ function App() {
       {/* Protected routes, bọc trong AppLayout (Sidebar + Main Area) */}
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/start-trip" element={<ComingSoonPage title="Bắt đầu chuyến đi" />} />
+        <Route path="/start-trip" element={<LiveMapPage />} />
         <Route path="/vehicles" element={<VehiclesPage />} />
         <Route path="/trip-history" element={<ComingSoonPage title="Lịch sử chuyến đi" />} />
         <Route path="/offline-sync" element={<ComingSoonPage title="Offline Sync" />} />
