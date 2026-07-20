@@ -16,6 +16,10 @@ export class VehiclesService {
     return this.vehiclesRepository.find({ where: { userId } });
   }
 
+  findById(id: string): Promise<Vehicle | null> {
+    return this.vehiclesRepository.findOneBy({ id });
+  }
+
   create(userId: string, dto: CreateVehicleDto): Promise<Vehicle> {
     const vehicle = this.vehiclesRepository.create({
       userId,
@@ -52,7 +56,9 @@ export class VehiclesService {
     });
   }
 
-  private async getOwnedVehicleOrThrow(id: string, userId: string): Promise<Vehicle> {
+  // Public: also reused by VehicleAuthorizationModule, which shares the same
+  // "resource exists but you don't own it" 403/404 convention on vehicle IDs.
+  async getOwnedVehicleOrThrow(id: string, userId: string): Promise<Vehicle> {
     const vehicle = await this.vehiclesRepository.findOneBy({ id });
 
     if (!vehicle) {
