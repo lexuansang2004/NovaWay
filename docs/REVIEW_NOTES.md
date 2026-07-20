@@ -101,3 +101,11 @@ Khi §12 để lại `raw_gps_events` ở trạng thái "step chưa chốt, ứn
 **Sửa:** vì `trips` chỉ phụ thuộc `biometric_verifications` (đã có từ `1.6`), không phụ thuộc `trip_logs`, nên tách `trips` ra khỏi `trip_logs` thay vì di chuyển cả cặp: migrate `trips` ngay ở step `3.1 feat/realtime-location-gateway` (chỉ tạo schema, phục vụ `raw_gps_events` — chưa có `TripsModule`/API thật, trip test cho việc verify step `3.1` sẽ tạo trực tiếp qua SQL cho tới khi `7.1` xây API); giữ `trip_logs` ở `7.1` như cũ vì không có bảng nào trước `7.1` cần nó. Đã cập nhật `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` (dòng `3.1`, `7.1`, và callout đầu file) và `DATA_MODEL.md` §3.
 
 Người dùng đã xác nhận hướng sửa này trước khi code step `3.1`.
+
+## 14. ✅ Đã sửa — Tự rà trước khi code step 5.1: routing chưa từng có contract HTTP, dù đã được nhắc tới từ D0.4
+
+`ARCHITECTURE.md` §3.2/§7 mô tả `RoutingProvider` (`getRoute(vehicleType, origin, destination)`, mock theo loại xe ở step `5.1`, thay bằng OSRM/GraphHopper thật ở `5.2`) từ D0.4, và `OQ-009` (`01_OPEN_QUESTIONS.md`) đã chốt "MVP dùng routing mock theo vehicle trước". Nhưng khác với mọi tính năng khác trong plan, routing chưa từng có: FR tương ứng trong `SRS.md`, endpoint trong `API_CONTRACT.md`, hay bất kỳ dòng nào trong `ACCEPTANCE_CRITERIA.md`/`EDGE_CASES.md`. Nếu code thẳng theo dòng plan `5.1` ("POST /routes/preview mock route motorcycle/car") mà không có contract chốt trước, request/response shape và quy ước lỗi sẽ do code tự quyết định — vi phạm nguyên tắc "docs là nguồn sự thật, code theo docs" đã áp dụng xuyên suốt dự án.
+
+**Sửa:** thêm `SRS.md` §1.14 (FR-ROUTING-01/02/03 — endpoint preview, khác nhau theo vehicle type, chỉ owner/borrower hợp lệ mới xem được) và `API_CONTRACT.md` §10 `POST /api/routes/preview` (đẩy "Open Items for D0.7" cũ từ §10 xuống §11, cập nhật 1 tham chiếu nội bộ `xem §10` → `xem §11`). Không sửa `ACCEPTANCE_CRITERIA.md`/`EDGE_CASES.md` — phạm vi tối thiểu để unblock code, các tiêu chí "vehicle_id missing/forbidden, mock route pass" đã đủ chi tiết trong chính dòng `5.1` của `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`.
+
+Người dùng đã xác nhận hướng sửa này trước khi code step `5.1`.
