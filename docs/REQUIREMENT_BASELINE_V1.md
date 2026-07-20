@@ -57,7 +57,7 @@ Các mục này là quyết định kỹ thuật cụ thể cần một technica
 | Biometric provider/SDK cụ thể | `1.6` (Biometric Verification API) | `SRS.md` FR-BIOMETRIC-05, `RISK_REGISTER.md` R-17 |
 | `verification_id` ngưỡng thời gian hợp lệ | `1.6`, `1.3`-liên-quan (Trip start) | `API_CONTRACT.md` §10 |
 | Rate limit cụ thể (GPS event, login) | `1.1`, `3.1` | `SRS.md` NFR-PERF-01, `API_REQUIREMENTS.md` §9 |
-| `403` vs `404` cho resource không sở hữu | Toàn bộ backend, chốt 1 lần dùng chung | `API_CONTRACT.md` §10 |
+| ~~`403` vs `404` cho resource không sở hữu~~ — Đã chốt: `403` + error_code cụ thể (07/2026, trước `1.4`) | — | `API_CONTRACT.md` §10 |
 | Benchmark `gps_event_dedup` (chi phí ghi phụ mỗi GPS event) | `1.2`, `3.1` | `DATA_MODEL.md` §5 |
 | Hosting/CI-CD provider | `9.2` | `ARCHITECTURE.md` §9 |
 | `packages/shared-types` workspace tooling | `0.2` | `ARCHITECTURE.md` §9 |
