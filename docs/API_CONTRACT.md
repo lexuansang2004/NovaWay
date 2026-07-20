@@ -259,8 +259,8 @@ Response `200`:
 |---|---|
 | `400` | Payload sai/thiếu field, vượt giới hạn (batch size, v.v.) |
 | `401` | Thiếu/sai token |
-| `403` | Có token hợp lệ nhưng không có quyền với resource |
-| `404` | Resource không tồn tại (hoặc không tiết lộ tồn tại nếu thuộc user khác — nhất quán theo quyết định D0.7) |
+| `403` | Có token hợp lệ, resource tồn tại nhưng không thuộc sở hữu của user (vd. `NOT_VEHICLE_OWNER`) — quy ước thống nhất toàn backend, xem §10 |
+| `404` | Resource không tồn tại thật sự (không tồn tại ID đó ở bất kỳ user nào) |
 | `409` | Xung đột trạng thái (trip đã active, uỷ quyền chồng thời gian, email đã tồn tại) |
 | `429` | Vượt rate limit (GPS event, login attempts) |
 | `500` | Lỗi hệ thống không lường trước |
@@ -273,7 +273,7 @@ Response `200`: `{ "warnings": [ { "id", "location": {"lat", "lng"}, "severity",
 
 ## 10. Open Items for D0.7
 
-- `403` vs `404` cho resource không thuộc sở hữu — cần chọn 1 chuẩn thống nhất áp dụng toàn bộ API (đang để cả 2 khả năng ở §8).
+- ~~`403` vs `404` cho resource không thuộc sở hữu~~ — **Đã chốt (07/2026, trước step `1.4`)**: dùng `403` kèm error_code cụ thể theo resource (vd. `NOT_VEHICLE_OWNER`), áp dụng cho toàn backend — khớp đúng ví dụ đã có sẵn ở §2. Lý do: vehicle ID (và các resource tương tự sau này) không phải thông tin nhạy cảm cần giấu tồn tại; 403 + error_code rõ ràng giúp FE hiển thị thông báo chính xác hơn "not found" chung chung, và tránh phải query 2 lần (exists-but-not-mine vs not-exists) ở mọi endpoint. `404` chỉ dùng khi resource thật sự không tồn tại (ID sai/đã xoá) — xem §8.
 - Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn — placeholder `provider_payload` sẽ được thay bằng schema thật.
 - Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`.
 - Rate limit cụ thể theo endpoint (số request/giây/user) — cần benchmark.
