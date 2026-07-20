@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import '../models/selectable_vehicle.dart';
 import '../session/auth_session.dart';
 import '../theme/app_theme.dart';
+import 'trip_cockpit_screen.dart';
 
-// Post-vehicle-selection placeholder for step 4.2. Biometric verify + Trip
-// Cockpit (docs/ARCHITECTURE.md §5.1: Login -> Vehicle List -> Biometric
-// Verify -> Trip Cockpit) need a real trip_id, which only exists once
-// step 7.1's Trip Logs API lands — deferred there, same reasoning as web's
-// mock GPS sender in step 3.2.
+// Biometric Verify (docs/ARCHITECTURE.md §5.1: Login -> Vehicle List ->
+// Biometric Verify -> Trip Cockpit) is deferred past this screen — it only
+// makes sense once a real POST /trips call (step 7.1) can consume its
+// verification_id. Trip Cockpit itself (step 4.3) is reachable now via a
+// manually-provisioned trip_id (ApiConfig.debugTripId), same interim
+// approach as web's mock GPS sender in step 3.2.
 class HomeScreen extends StatelessWidget {
   final SelectableVehicle vehicle;
 
@@ -78,9 +80,18 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Xác thực khuôn mặt và bắt đầu chuyến đi sẽ có ở bước triển khai tiếp theo.',
+                'Xác thực khuôn mặt sẽ có ở bước triển khai tiếp theo.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => TripCockpitScreen(vehicle: vehicle)),
+                  );
+                },
+                child: const Text('Bắt đầu chuyến đi'),
               ),
             ],
           ),
