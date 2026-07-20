@@ -13,10 +13,10 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Vehicle } from './vehicle.entity';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { toVehicleResponse } from './vehicle.response';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email: string };
@@ -62,14 +62,4 @@ export class VehiclesController {
     const vehicle = await this.vehiclesService.activate(id, req.user.id);
     return { id: vehicle.id, is_active: vehicle.isActive };
   }
-}
-
-function toVehicleResponse(vehicle: Vehicle) {
-  return {
-    id: vehicle.id,
-    type: vehicle.type,
-    license_plate: vehicle.licensePlate,
-    brand_model: vehicle.brandModel,
-    is_active: vehicle.isActive,
-  };
 }
