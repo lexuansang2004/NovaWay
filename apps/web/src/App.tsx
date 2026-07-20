@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import SplashPage from '@/pages/SplashPage';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
+import VehiclesPage from '@/pages/VehiclesPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { AppLayout } from '@/layouts/AppLayout';
 
@@ -16,7 +17,7 @@ function App() {
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/start-trip" element={<ComingSoonPage title="Bắt đầu chuyến đi" />} />
-        <Route path="/vehicles" element={<ComingSoonPage title="Quản lý phương tiện" />} />
+        <Route path="/vehicles" element={<VehiclesPage />} />
         <Route path="/trip-history" element={<ComingSoonPage title="Lịch sử chuyến đi" />} />
         <Route path="/offline-sync" element={<ComingSoonPage title="Offline Sync" />} />
         <Route path="/settings" element={<ComingSoonPage title="Cài đặt" />} />

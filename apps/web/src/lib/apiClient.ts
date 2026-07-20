@@ -52,4 +52,12 @@ export const apiClient = {
       body: body !== undefined ? JSON.stringify(body) : undefined,
       headers: authHeader(token),
     }),
+  patch: <T>(path: string, body?: unknown, token?: string) =>
+    request<T>(path, {
+      method: 'PATCH',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: authHeader(token),
+    }),
+  delete: <T>(path: string, token?: string) =>
+    request<T>(path, { method: 'DELETE', headers: authHeader(token) }),
 };
