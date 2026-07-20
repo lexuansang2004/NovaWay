@@ -93,3 +93,11 @@ Cột **Commit** của chính dòng `1.2` đã ghi sẵn `"feat: add database sc
 **Sửa:** `1.2` chỉ còn migrate `users` + `vehicles` (khớp đúng commit message có sẵn). `trips` + `trip_logs` dời sang migrate chung ở step `7.1 feat/trip-logs-api` — đúng lúc `trips` lần đầu được tạo (sau khi `vehicle_authorizations` ở `1.5` và `biometric_verifications` ở `1.6` đã tồn tại). Đã cập nhật `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` (dòng `1.2`, `7.1`, và callout đầu file) và `DATA_MODEL.md` §3 (bảng ánh xạ step cho từng bảng, thay vì gộp cả 9 bảng vào step `1.2`). Ba bảng còn lại chưa có FK bị treo (`raw_gps_events`, `vehicle_mismatch_warnings`, `terrain_warnings`) vẫn để "step chưa chốt" — sẽ xác nhận khi tới gần các step tương ứng, không chặn baseline.
 
 Người dùng đã xác nhận hướng sửa này trước khi code step `1.2`.
+
+## 13. ✅ Đã sửa — Tự rà trước khi code step 3.1: cùng loại lỗi FK sequencing, lần này giữa `raw_gps_events` và `trips`
+
+Khi §12 để lại `raw_gps_events` ở trạng thái "step chưa chốt, ứng viên: `3.1` hoặc `4.3`", chưa kiểm tra kỹ FK của chính nó. `raw_gps_events.trip_id` là `NOT NULL REFERENCES trips(id)` (`DATA_MODEL.md` §2.7), nhưng theo quyết định ở §12, `trips` chỉ được migrate ở step `7.1` — sau cả `3.1`. Nếu triển khai `raw_gps_events` ở `3.1` như dự kiến ban đầu, sẽ tạo FK trỏ tới bảng `trips` chưa tồn tại — hệt lỗi đã sửa ở §12, chỉ khác cặp bảng.
+
+**Sửa:** vì `trips` chỉ phụ thuộc `biometric_verifications` (đã có từ `1.6`), không phụ thuộc `trip_logs`, nên tách `trips` ra khỏi `trip_logs` thay vì di chuyển cả cặp: migrate `trips` ngay ở step `3.1 feat/realtime-location-gateway` (chỉ tạo schema, phục vụ `raw_gps_events` — chưa có `TripsModule`/API thật, trip test cho việc verify step `3.1` sẽ tạo trực tiếp qua SQL cho tới khi `7.1` xây API); giữ `trip_logs` ở `7.1` như cũ vì không có bảng nào trước `7.1` cần nó. Đã cập nhật `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` (dòng `3.1`, `7.1`, và callout đầu file) và `DATA_MODEL.md` §3.
+
+Người dùng đã xác nhận hướng sửa này trước khi code step `3.1`.
