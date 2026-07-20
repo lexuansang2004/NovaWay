@@ -9,11 +9,11 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { VehicleAuthorizationModule } from './vehicle-authorization/vehicle-authorization.module';
+import { BiometricModule } from './biometric/biometric.module';
 
-// Remaining domain modules (BiometricModule, TripsModule,
-// RealtimeGatewayModule, SyncModule, MismatchDetectionModule,
-// TerrainWarningsModule — see docs/ARCHITECTURE.md §3.1) are added
-// incrementally in their own micro-steps (1.6 onward), not here.
+// Remaining domain modules (TripsModule, RealtimeGatewayModule, SyncModule,
+// MismatchDetectionModule, TerrainWarningsModule — see docs/ARCHITECTURE.md
+// §3.1) are added incrementally in their own micro-steps (2.x onward), not here.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -35,6 +35,7 @@ import { VehicleAuthorizationModule } from './vehicle-authorization/vehicle-auth
     AuthModule,
     VehiclesModule,
     VehicleAuthorizationModule,
+    BiometricModule,
   ],
   controllers: [AppController],
   providers: [AppService],

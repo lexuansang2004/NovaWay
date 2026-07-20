@@ -102,6 +102,14 @@ export class VehicleAuthorizationService {
     );
   }
 
+  // Used by BiometricModule's pre-verify permission check (FR-BIOMETRIC-02).
+  // At most one authorization can be effectively active for a given
+  // (vehicleId, borrowerId) at a time — enforced by no_overlapping_active_authz.
+  async findActiveForBorrower(vehicleId: string, borrowerId: string): Promise<VehicleAuthorization | null> {
+    const candidates = await this.authorizationsRepository.find({ where: { vehicleId, borrowerId } });
+    return candidates.find((auth) => deriveEffectiveStatus(auth) === 'active') ?? null;
+  }
+
   private isExclusionViolation(error: unknown): boolean {
     return (
       typeof error === 'object' &&
