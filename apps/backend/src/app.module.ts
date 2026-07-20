@@ -7,11 +7,12 @@ import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
-// Remaining domain modules (VehiclesModule, VehicleAuthorizationModule,
-// BiometricModule, TripsModule, RealtimeGatewayModule, SyncModule,
-// MismatchDetectionModule, TerrainWarningsModule — see docs/ARCHITECTURE.md
-// §3.1) are added incrementally in their own micro-steps (1.4 onward), not here.
+// Remaining domain modules (VehicleAuthorizationModule, BiometricModule,
+// TripsModule, RealtimeGatewayModule, SyncModule, MismatchDetectionModule,
+// TerrainWarningsModule — see docs/ARCHITECTURE.md §3.1) are added
+// incrementally in their own micro-steps (1.5 onward), not here.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,6 +32,7 @@ import { AuthModule } from './auth/auth.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    VehiclesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
