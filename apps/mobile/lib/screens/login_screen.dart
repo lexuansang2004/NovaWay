@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
+import '../repositories/api_auth_repository.dart';
+import '../repositories/api_exception.dart';
+import '../repositories/api_vehicle_repository.dart';
+import '../repositories/auth_repository.dart';
+import '../repositories/vehicle_repository.dart';
+import '../session/auth_session.dart';
 import '../theme/app_theme.dart';
+import 'vehicle_list_screen.dart';
 
-// UI + client-side validation only for step 4.1 — real POST /api/auth/login
-// wiring is step 4.2 feat/mobile-auth-vehicle-selection.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final AuthRepository authRepository;
+  final VehicleRepository vehicleRepository;
+
+  const LoginScreen({
+    super.key,
+    AuthRepository? authRepository,
+    VehicleRepository? vehicleRepository,
+  })  : authRepository = authRepository ?? const ApiAuthRepository(),
+        vehicleRepository = vehicleRepository ?? const ApiVehicleRepository();
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -15,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -36,9 +51,38 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
-  void _handleSubmit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      Navigator.of(context).pushReplacementNamed('/home');
+  Future<void> _handleSubmit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await widget.authRepository.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      AuthSession.set(token: result.accessToken, userEmail: result.email);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => VehicleListScreen(vehicleRepository: widget.vehicleRepository),
+        ),
+      );
+    } on ApiException catch (e) {
+      setState(() {
+        _errorMessage = e.errorCode == 'INVALID_CREDENTIALS'
+            ? 'Email hoặc mật khẩu không đúng.'
+            : e.message;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'Không kết nối được máy chủ. Vui lòng thử lại.';
+      });
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -97,10 +141,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     validator: _validatePassword,
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _handleSubmit,
-                    child: const Text('Đăng nhập'),
+                    onPressed: _submitting ? null : _handleSubmit,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Đăng nhập'),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
