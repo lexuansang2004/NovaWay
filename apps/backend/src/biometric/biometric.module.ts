@@ -12,5 +12,6 @@ import { MockBiometricProvider } from './providers/mock-biometric.provider';
   imports: [TypeOrmModule.forFeature([BiometricVerification]), VehiclesModule, VehicleAuthorizationModule],
   controllers: [BiometricController],
   providers: [BiometricService, { provide: BIOMETRIC_PROVIDER, useClass: MockBiometricProvider }],
+  exports: [BiometricService],
 })
 export class BiometricModule {}
