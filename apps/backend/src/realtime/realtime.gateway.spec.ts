@@ -2,14 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { RealtimeGateway } from './realtime.gateway';
 import { TripsService } from '../trips/trips.service';
+import { VehiclesService } from '../vehicles/vehicles.service';
+import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
 import { GpsEventsService } from './gps-events.service';
 import { Trip } from '../trips/trip.entity';
+import { Vehicle } from '../vehicles/vehicle.entity';
 
 describe('RealtimeGateway', () => {
   let gateway: RealtimeGateway;
   let jwtService: jest.Mocked<JwtService>;
   let tripsService: jest.Mocked<TripsService>;
+  let vehiclesService: jest.Mocked<VehiclesService>;
   let gpsEventsService: jest.Mocked<GpsEventsService>;
+  let mismatchDetectionService: jest.Mocked<MismatchDetectionService>;
 
   const TRIP_ID = '11111111-1111-4111-8111-111111111111';
   const CLIENT_EVENT_ID = '22222222-2222-4222-8222-222222222222';
@@ -23,6 +28,17 @@ describe('RealtimeGateway', () => {
     consentAt: new Date(),
     startedAt: new Date(),
     endedAt: null,
+    ...overrides,
+  });
+
+  const buildVehicle = (overrides: Partial<Vehicle> = {}): Vehicle => ({
+    id: 'vehicle-id',
+    userId: 'user-id',
+    type: 'motorbike',
+    licensePlate: '59A-11111',
+    brandModel: null,
+    isActive: false,
+    createdAt: new Date(),
     ...overrides,
   });
 
@@ -52,14 +68,20 @@ describe('RealtimeGateway', () => {
         RealtimeGateway,
         { provide: JwtService, useValue: { verify: jest.fn() } },
         { provide: TripsService, useValue: { findById: jest.fn() } },
+        { provide: VehiclesService, useValue: { findById: jest.fn() } },
         { provide: GpsEventsService, useValue: { recordEvent: jest.fn() } },
+        { provide: MismatchDetectionService, useValue: { evaluate: jest.fn() } },
       ],
     }).compile();
 
     gateway = module.get(RealtimeGateway);
     jwtService = module.get(JwtService);
     tripsService = module.get(TripsService);
+    vehiclesService = module.get(VehiclesService);
     gpsEventsService = module.get(GpsEventsService);
+    mismatchDetectionService = module.get(MismatchDetectionService);
+    vehiclesService.findById.mockResolvedValue(buildVehicle());
+    mismatchDetectionService.evaluate.mockResolvedValue(null);
     gateway.server = { to: jest.fn().mockReturnValue({ emit: jest.fn() }) } as never;
   });
 
@@ -157,6 +179,39 @@ describe('RealtimeGateway', () => {
         'location:broadcast',
         expect.objectContaining({ trip_id: TRIP_ID, vehicle_id: 'vehicle-id' }),
       );
+    });
+
+    it('broadcasts mismatch:warning when the detection service returns one', async () => {
+      const client = buildSocket();
+      client.data = { userId: 'user-id' };
+      tripsService.findById.mockResolvedValue(buildTrip());
+      gpsEventsService.recordEvent.mockResolvedValue({ persisted: true });
+      mismatchDetectionService.evaluate.mockResolvedValue({
+        id: 'warning-id',
+        tripId: TRIP_ID,
+        detectedAt: new Date(),
+        declaredVehicleType: 'motorbike',
+        observedBehaviorSummary: 'Tốc độ trung bình 85 km/h trong 3 phút',
+        userResponse: 'no_response',
+        resolvedAt: null,
+      });
+      const roomEmit = jest.fn();
+      (gateway.server.to as jest.Mock).mockReturnValue({ emit: roomEmit });
+
+      await gateway.handleLocationUpdate(client as never, validPayload);
+
+      expect(mismatchDetectionService.evaluate).toHaveBeenCalledWith(
+        TRIP_ID,
+        'motorbike',
+        validPayload.speed_kmh,
+        validPayload.timestamp,
+      );
+      expect(roomEmit).toHaveBeenCalledWith('mismatch:warning', {
+        trip_id: TRIP_ID,
+        warning_id: 'warning-id',
+        declared_vehicle_type: 'motorbike',
+        observed_behavior_summary: 'Tốc độ trung bình 85 km/h trong 3 phút',
+      });
     });
 
     it('does not broadcast a duplicate client_event_id', async () => {
