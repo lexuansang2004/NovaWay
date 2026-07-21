@@ -40,11 +40,17 @@ jobs:
       - name: Lint
         run: pnpm -r --if-present lint
 
-      - name: Test
-        run: pnpm -r --if-present test
-
+      # Build before test — apps/backend/apps/web import @novaway/shared-types,
+      # which is only resolvable once its own `tsc` build has produced
+      # dist/index.d.ts. `pnpm -r` builds in dependency (topological) order,
+      # so this one invocation builds shared-types before backend/web need
+      # it. Running test first (as this workflow originally did) failed with
+      # "Cannot find module '@novaway/shared-types'" — found by this CI run.
       - name: Build
         run: pnpm -r --if-present build
+
+      - name: Test
+        run: pnpm -r --if-present test
 
   mobile:
     name: Mobile (analyze, test)
