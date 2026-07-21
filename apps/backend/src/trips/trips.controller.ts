@@ -31,7 +31,11 @@ export class TripsController {
   @Get()
   async list(@Req() req: AuthenticatedRequest, @Query('vehicle_id') vehicleId?: string) {
     const entries = await this.tripsService.list(req.user.id, vehicleId);
-    return { trips: entries.map((e) => toTripListItemResponse(e.trip, e.distanceKm)) };
+    return {
+      trips: entries.map((e) =>
+        toTripListItemResponse(e.trip, e.distanceKm, e.durationMinutes, e.mismatchWarningCount),
+      ),
+    };
   }
 
   @Get(':id')

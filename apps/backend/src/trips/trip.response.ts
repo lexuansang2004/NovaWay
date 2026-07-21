@@ -3,7 +3,12 @@ import { TripLog } from './trip-log.entity';
 import { VehicleMismatchWarning } from '../mismatch-detection/vehicle-mismatch-warning.entity';
 
 // docs/API_CONTRACT.md §5 GET /trips.
-export function toTripListItemResponse(trip: Trip, distanceKm: number) {
+export function toTripListItemResponse(
+  trip: Trip,
+  distanceKm: number,
+  durationMinutes: number,
+  mismatchWarningCount: number,
+) {
   return {
     id: trip.id,
     vehicle_id: trip.vehicleId,
@@ -11,6 +16,8 @@ export function toTripListItemResponse(trip: Trip, distanceKm: number) {
     started_at: trip.startedAt,
     ended_at: trip.endedAt,
     distance_km: distanceKm,
+    duration_minutes: durationMinutes,
+    mismatch_warning_count: mismatchWarningCount,
   };
 }
 

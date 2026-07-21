@@ -269,7 +269,14 @@ describe('TripsService', () => {
 
       const result = await service.list(USER_ID);
 
-      expect(result).toEqual([{ trip: expect.objectContaining({ id: TRIP_ID }), distanceKm: 0 }]);
+      expect(result).toEqual([
+        {
+          trip: expect.objectContaining({ id: TRIP_ID }),
+          distanceKm: 0,
+          durationMinutes: 0,
+          mismatchWarningCount: 0,
+        },
+      ]);
     });
 
     it('filters by vehicle_id when provided', async () => {

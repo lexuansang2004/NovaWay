@@ -20,6 +20,8 @@ const POSTGRES_UNIQUE_VIOLATION = '23505';
 export interface TripListEntry {
   trip: Trip;
   distanceKm: number;
+  durationMinutes: number;
+  mismatchWarningCount: number;
 }
 
 export interface TripDetail {
@@ -121,9 +123,17 @@ export class TripsService {
     const logs = await this.tripLogsRepository.find({
       where: { tripId: In(trips.map((t) => t.id)) },
     });
-    const distanceByTripId = new Map(logs.map((l) => [l.tripId, l.distanceKm]));
+    const logByTripId = new Map(logs.map((l) => [l.tripId, l]));
 
-    return trips.map((trip) => ({ trip, distanceKm: distanceByTripId.get(trip.id) ?? 0 }));
+    return trips.map((trip) => {
+      const log = logByTripId.get(trip.id);
+      return {
+        trip,
+        distanceKm: log?.distanceKm ?? 0,
+        durationMinutes: log?.durationMinutes ?? 0,
+        mismatchWarningCount: log?.mismatchWarningCount ?? 0,
+      };
+    });
   }
 
   // docs/API_CONTRACT.md §5 GET /trips/:id.
