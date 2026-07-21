@@ -167,7 +167,9 @@ Response `200`: object trip với `status: "ended"`, `ended_at` set, kèm `trip_
 
 Query param tuỳ chọn: `?vehicle_id=uuid`.
 
-Response `200`: `{ "trips": [ { "id", "vehicle_id", "status", "started_at", "ended_at", "distance_km" }, ... ] }`.
+Response `200`: `{ "trips": [ { "id", "vehicle_id", "status", "started_at", "ended_at", "distance_km", "duration_minutes", "mismatch_warning_count" }, ... ] }`.
+
+`duration_minutes`/`mismatch_warning_count` bổ sung 07/2026 (trước step `7.2`) — cần cho biểu đồ analytics của web dashboard, lấy thẳng từ `trip_logs` giống `distance_km` (đều `0` cho trip đang active, chưa có `trip_log`). Không phải thay đổi breaking — chỉ thêm field vào response đã có.
 
 ### `GET /api/trips/:id`
 
