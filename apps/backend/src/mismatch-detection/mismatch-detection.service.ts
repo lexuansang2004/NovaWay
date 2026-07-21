@@ -84,4 +84,9 @@ export class MismatchDetectionService {
     });
     return this.warningsRepository.save(warning);
   }
+
+  // Used by TripsService (step 7.1) for GET /trips/:id's warning list.
+  findByTripId(tripId: string): Promise<VehicleMismatchWarning[]> {
+    return this.warningsRepository.find({ where: { tripId }, order: { detectedAt: 'ASC' } });
+  }
 }

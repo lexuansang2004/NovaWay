@@ -17,4 +17,9 @@ export const envValidationSchema = Joi.object({
   ROUTING_PROVIDER: Joi.string().valid('mock', 'osrm').default('mock'),
   ROUTING_ENGINE_BASE_URL: Joi.string().uri().default('https://router.project-osrm.org'),
   ROUTING_ENGINE_TIMEOUT_MS: Joi.number().positive().default(3000),
+  // docs/API_CONTRACT.md §5 POST /trips/start — closes the "Open Item"
+  // left in API_REQUIREMENTS.md §9 ("đề xuất vài phút, cần chốt cụ thể").
+  // 5 minutes: long enough to walk from face-scan to bike, short enough
+  // that a handoff to a different driver after verifying can't reuse it.
+  VERIFICATION_VALIDITY_MINUTES: Joi.number().positive().default(5),
 });

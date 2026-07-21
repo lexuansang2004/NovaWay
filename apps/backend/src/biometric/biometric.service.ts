@@ -65,4 +65,10 @@ export class BiometricService {
       errorCode: providerResult.errorCode,
     };
   }
+
+  // Used by TripsService (step 7.1) to validate a `verification_id` at
+  // POST /trips/start — TripsModule doesn't own this table.
+  findById(id: string): Promise<BiometricVerification | null> {
+    return this.verificationsRepository.findOneBy({ id });
+  }
 }
