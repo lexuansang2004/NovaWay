@@ -240,7 +240,7 @@ Thứ tự phụ thuộc FK giữa các bảng (dưới đây) không migrate h�
 5. trips (FK tới biometric_verifications) — step 3.1 feat/realtime-location-gateway
 6. raw_gps_events (+ gps_event_dedup, partition đầu tiên) — step 3.1 feat/realtime-location-gateway
 7. trip_logs                  — step 7.1 feat/trip-logs-api
-8. vehicle_mismatch_warnings  — step chưa chốt, ứng viên: 6.1 feat/telematics-vehicle-mismatch
+8. vehicle_mismatch_warnings  — step 6.1 feat/telematics-vehicle-mismatch (đã chốt 07/2026 — bảng này không có ứng viên nào khác trong plan, và FK `trip_id` tới `trips` đã thoả từ step 3.1)
 9. terrain_warnings (+ seed data mock ban đầu) — step chưa chốt
 ```
 

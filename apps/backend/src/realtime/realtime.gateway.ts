@@ -11,8 +11,10 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import type { LocationBroadcastPayload } from '@novaway/shared-types';
+import type { LocationBroadcastPayload, MismatchWarningPayload } from '@novaway/shared-types';
 import { TripsService } from '../trips/trips.service';
+import { VehiclesService } from '../vehicles/vehicles.service';
+import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
 import { GpsEventsService } from './gps-events.service';
 import { LocationUpdateDto } from './dto/location-update.dto';
 
@@ -33,7 +35,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   constructor(
     private readonly jwtService: JwtService,
     private readonly tripsService: TripsService,
+    private readonly vehiclesService: VehiclesService,
     private readonly gpsEventsService: GpsEventsService,
+    private readonly mismatchDetectionService: MismatchDetectionService,
   ) {}
 
   handleConnection(client: Socket): void {
@@ -139,6 +143,27 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       timestamp: dto.timestamp,
     };
     this.server.to(tripRoom(trip.id)).emit('location:broadcast', broadcastPayload);
+
+    // docs/ARCHITECTURE.md §6 — MismatchDetectionModule evaluates inline,
+    // alongside the broadcast, not blocking or gating it either way.
+    const vehicle = await this.vehiclesService.findById(trip.vehicleId);
+    if (vehicle) {
+      const warning = await this.mismatchDetectionService.evaluate(
+        trip.id,
+        vehicle.type,
+        dto.speed_kmh,
+        dto.timestamp,
+      );
+      if (warning) {
+        const warningPayload: MismatchWarningPayload = {
+          trip_id: trip.id,
+          warning_id: warning.id,
+          declared_vehicle_type: warning.declaredVehicleType,
+          observed_behavior_summary: warning.observedBehaviorSummary,
+        };
+        this.server.to(tripRoom(trip.id)).emit('mismatch:warning', warningPayload);
+      }
+    }
   }
 
   private reject(client: Socket, clientEventId: string | undefined, errorCode: string): void {
