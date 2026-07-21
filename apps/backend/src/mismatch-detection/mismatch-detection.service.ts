@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VehicleType } from '../vehicles/vehicle.entity';
+import { MetricsService } from '../observability/metrics.service';
 import { VehicleMismatchWarning } from './vehicle-mismatch-warning.entity';
 
 // docs/API_CONTRACT.md §6 mismatch:warning example ("85 km/h trong 3 phút")
@@ -29,10 +30,12 @@ export class MismatchDetectionService {
   // trip-end hook exists yet to clear entries either; Trip API is step
   // 7.1). Keyed by trip_id, one entry per trip currently being tracked.
   private readonly episodes = new Map<string, Episode>();
+  private readonly logger = new Logger(MismatchDetectionService.name);
 
   constructor(
     @InjectRepository(VehicleMismatchWarning)
     private readonly warningsRepository: Repository<VehicleMismatchWarning>,
+    private readonly metricsService: MetricsService,
   ) {}
 
   // Called inline for every accepted GPS event (docs/ARCHITECTURE.md §6:
@@ -82,7 +85,10 @@ export class MismatchDetectionService {
       // API_CONTRACT.md §6.
       observedBehaviorSummary: `Tốc độ trung bình ${avgSpeed.toFixed(0)} km/h trong ${minutes} phút`,
     });
-    return this.warningsRepository.save(warning);
+    const saved = await this.warningsRepository.save(warning);
+    this.metricsService.increment('mismatch_warnings_total', { vehicle_type: vehicleType });
+    this.logger.warn(`Mismatch warning created trip=${tripId} vehicle_type=${vehicleType}`);
+    return saved;
   }
 
   // Used by TripsService (step 7.1) for GET /trips/:id's warning list.

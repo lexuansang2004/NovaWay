@@ -9,8 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  // docs/API_CONTRACT.md §0 — Base URL /api, except GET / and GET /health.
-  app.setGlobalPrefix('api', { exclude: ['/', 'health'] });
+  // docs/API_CONTRACT.md §0 — Base URL /api, except GET /, GET /health, and
+  // GET /metrics (ops endpoints, not part of the client-facing API surface).
+  app.setGlobalPrefix('api', { exclude: ['/', 'health', 'metrics'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.enableCors({ origin: configService.get<string>('WEB_ORIGIN'), credentials: true });
