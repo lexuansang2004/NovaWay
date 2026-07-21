@@ -140,8 +140,8 @@ Mobile --location:update--> WebSocket Gateway (NestJS) --location:broadcast--> W
 
 ## 9. Open Items for D0.7 (cần chốt trước Requirement Baseline v1.0)
 
-- **Mobile stack (OQ-001):** xác nhận Flutter chính thức — chưa có lý do kỹ thuật mới để đổi hướng, đề xuất chốt "có".
-- **Tile provider (OQ-005):** Protomaps vs Mapbox Free Tier — cần technical spike (kiểm tra quota/pricing hiện hành) trước khi `apps/web` phụ thuộc vào một trong hai.
-- **Biometric provider (FR-BIOMETRIC-05, R-17):** chưa chọn SDK/dịch vụ cụ thể — ảnh hưởng trực tiếp `BiometricModule` và việc "không lưu ảnh thô" có thực sự đúng theo chính sách nhà cung cấp hay không.
+- ~~**Mobile stack (OQ-001)**~~ — **Đã chốt**: Flutter, dùng xuyên suốt `apps/mobile` từ step `0.2` đến `4.3`.
+- **Tile provider (OQ-005):** Protomaps vs Mapbox Free Tier — cần technical spike (kiểm tra quota/pricing hiện hành) trước khi `apps/web` phụ thuộc vào một trong hai. **Vẫn mở** sau MVP — xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`.
+- **Biometric provider (FR-BIOMETRIC-05, R-17):** chưa chọn SDK/dịch vụ cụ thể — ảnh hưởng trực tiếp `BiometricModule` và việc "không lưu ảnh thô" có thực sự đúng theo chính sách nhà cung cấp hay không. **Vẫn mở** sau MVP — `MockBiometricProvider` vẫn là adapter đang dùng.
 - **Hosting/CI-CD provider:** phần CI (lint/test/build gate cho PR) đã chốt và triển khai ở step `9.2` — GitHub Actions (`.github/workflows/ci.yml`), khớp tên nhà cung cấp đã ghi sẵn trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `9.2`. Phần **hosting/CD** (nơi deploy staging/production) vẫn **chưa chốt** — cần trước khi có thể triển khai E2E-on-staging gate của `TEST_STRATEGY.md` §3.
-- **`packages/shared-types` build tooling:** dùng workspace nào (npm/pnpm/yarn workspaces, hay Nx/Turborepo) — ảnh hưởng step `0.2`, nên chốt ngay trước khi khởi tạo monorepo.
+- ~~**`packages/shared-types` build tooling`**~~ — **Đã chốt**: pnpm workspaces (`pnpm-workspace.yaml`), dùng từ step `0.2`.
