@@ -109,3 +109,11 @@ Người dùng đã xác nhận hướng sửa này trước khi code step `3.1`
 **Sửa:** thêm `SRS.md` §1.14 (FR-ROUTING-01/02/03 — endpoint preview, khác nhau theo vehicle type, chỉ owner/borrower hợp lệ mới xem được) và `API_CONTRACT.md` §10 `POST /api/routes/preview` (đẩy "Open Items for D0.7" cũ từ §10 xuống §11, cập nhật 1 tham chiếu nội bộ `xem §10` → `xem §11`). Không sửa `ACCEPTANCE_CRITERIA.md`/`EDGE_CASES.md` — phạm vi tối thiểu để unblock code, các tiêu chí "vehicle_id missing/forbidden, mock route pass" đã đủ chi tiết trong chính dòng `5.1` của `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`.
 
 Người dùng đã xác nhận hướng sửa này trước khi code step `5.1`.
+
+## 15. ⏸️ Hoãn step 8.1 (`feat/ar-terrain-prototype`) — thiếu Unity + thiết bị AR thật
+
+Step `8.1` yêu cầu dựng Unity AR Foundation prototype với test gate bắt buộc đo FPS, nhiệt độ, pin, và điều kiện ánh sáng yếu (`03_REQUIREMENT_DELTA_V0_2.md` §5.1, `04_TECH_DECISION_RECORD.md` TDR-003). Môi trường dev hiện tại không cài Unity/Unity Hub, và bản chất test gate này đòi hỏi đo trên thiết bị AR thật — không thể giả lập hay verify bằng CLI/browser automation như mọi step khác trong plan đã làm được.
+
+**Quyết định:** hoãn step `8.1` cho tới khi có Unity + thiết bị AR thật để triển khai và verify đúng test gate; không scaffold code Unity chưa từng biên dịch/kiểm chứng để tránh nợ kỹ thuật giả. Đúng tinh thần tài liệu đã ghi: đây là nhánh R&D tách biệt hoàn toàn khỏi `apps/mobile`, không chặn phần còn lại của MVP. Tiếp tục với step `9.1` (Observability baseline).
+
+Người dùng đã xác nhận hướng hoãn này.
