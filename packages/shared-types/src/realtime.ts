@@ -1,5 +1,8 @@
 // Mirrors API_CONTRACT.md §6 (WebSocket namespace `/realtime`).
-// TODO: keep in sync by hand until the gateway (step 3.1) is implemented.
+// Hand-maintained by design — this package has no schema-to-types codegen
+// (mobile isn't TypeScript, so API_CONTRACT.md stays the cross-platform
+// contract; this package is just a backend<->web convenience). Update
+// alongside apps/backend/src/realtime/realtime.gateway.ts.
 
 export interface LocationUpdatePayload {
   trip_id: string;

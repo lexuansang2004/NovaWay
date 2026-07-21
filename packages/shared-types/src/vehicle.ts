@@ -1,5 +1,6 @@
 // Mirrors DATA_MODEL.md §2.2 `vehicles.type` and §2.3 `vehicle_authorizations`.
-// TODO: keep in sync by hand until step 1.2/1.4 generate this from the real schema.
+// Hand-maintained by design — see realtime.ts for why. Update alongside
+// apps/backend/src/vehicles/vehicle.entity.ts.
 
 export type VehicleType = 'motorbike' | 'car';
 

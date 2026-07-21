@@ -1,5 +1,6 @@
 // Mirrors DATA_MODEL.md §2.5-2.6 and API_CONTRACT.md §5.
-// TODO: keep in sync by hand until step 1.2/1.4 generate this from the real schema.
+// Hand-maintained by design — see realtime.ts for why. Update alongside
+// apps/backend/src/trips/trip.entity.ts and trip.response.ts.
 
 export type TripStatus = 'active' | 'ended';
 
