@@ -9,7 +9,7 @@
     "build": "pnpm -r --if-present build"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "packageManager": "pnpm@11.14.0"
 }
