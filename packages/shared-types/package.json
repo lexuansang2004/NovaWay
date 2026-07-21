@@ -1,0 +1,18 @@
+{
+  "name": "@novaway/shared-types",
+  "version": "0.0.1",
+  "private": true,
+  "description": "TypeScript types shared between apps/backend and apps/web (DTOs, enums, realtime event payloads). Not used by apps/mobile (Dart) — mobile follows docs/API_CONTRACT.md instead.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.2"
+  }
+}

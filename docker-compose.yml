@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: novaway-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: novaway
+      POSTGRES_PASSWORD: novaway
+      POSTGRES_DB: novaway
+    ports:
+      - "5433:5432"
+    volumes:
+      - novaway-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  novaway-postgres-data:
