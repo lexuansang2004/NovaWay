@@ -1,17 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { VehicleType } from '../../vehicles/vehicle.entity';
 import { LatLng, RouteResult, RoutingProvider } from '../routing-provider.interface';
+import { durationMinFromDistance } from '../vehicle-speed';
 
 // docs/DATA_MODEL.md doesn't govern this (no persistence) — mock only,
 // swapped for OSRM/GraphHopper at step 5.2 behind the same interface.
-const AVG_SPEED_KMH_BY_VEHICLE_TYPE: Record<VehicleType, number> = {
-  // Motorbikes lane-split through urban traffic in Vietnam; cars don't —
-  // gives FR-ROUTING-02's "differs by vehicle type" an observable effect
-  // even though both follow the same mock path.
-  motorbike: 35,
-  car: 28,
-};
-
 const EARTH_RADIUS_KM = 6371;
 
 function toRad(deg: number): number {
@@ -32,8 +25,7 @@ function haversineKm(a: LatLng, b: LatLng): number {
 export class MockRoutingProvider implements RoutingProvider {
   async getRoute(vehicleType: VehicleType, origin: LatLng, destination: LatLng): Promise<RouteResult> {
     const distanceKm = haversineKm(origin, destination);
-    const speedKmh = AVG_SPEED_KMH_BY_VEHICLE_TYPE[vehicleType];
-    const durationMin = Math.max(1, Math.round((distanceKm / speedKmh) * 60));
+    const durationMin = durationMinFromDistance(distanceKm, vehicleType);
 
     const midpoint: LatLng = {
       lat: (origin.lat + destination.lat) / 2,
