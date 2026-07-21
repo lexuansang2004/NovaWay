@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MismatchDetectionService } from './mismatch-detection.service';
 import { VehicleMismatchWarning } from './vehicle-mismatch-warning.entity';
+import { MetricsService } from '../observability/metrics.service';
 
 describe('MismatchDetectionService', () => {
   let service: MismatchDetectionService;
@@ -18,8 +19,9 @@ describe('MismatchDetectionService', () => {
         MismatchDetectionService,
         {
           provide: getRepositoryToken(VehicleMismatchWarning),
-          useValue: { create: jest.fn((d) => d), save: jest.fn() },
+          useValue: { create: jest.fn((d) => d), save: jest.fn(), find: jest.fn() },
         },
+        { provide: MetricsService, useValue: { increment: jest.fn() } },
       ],
     }).compile();
 

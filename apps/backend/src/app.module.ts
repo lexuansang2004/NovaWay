@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -13,6 +14,8 @@ import { BiometricModule } from './biometric/biometric.module';
 import { TripsModule } from './trips/trips.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RoutingModule } from './routing/routing.module';
+import { ObservabilityModule } from './observability/metrics.module';
+import { LoggingInterceptor } from './observability/logging.interceptor';
 
 // Remaining domain modules (SyncModule, MismatchDetectionModule,
 // TerrainWarningsModule — see docs/ARCHITECTURE.md §3.1) are added
@@ -33,6 +36,7 @@ import { RoutingModule } from './routing/routing.module';
         synchronize: false,
       }),
     }),
+    ObservabilityModule,
     HealthModule,
     UsersModule,
     AuthModule,
@@ -44,6 +48,6 @@ import { RoutingModule } from './routing/routing.module';
     RoutingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor }],
 })
 export class AppModule {}

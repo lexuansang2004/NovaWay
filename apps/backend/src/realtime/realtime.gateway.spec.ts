@@ -4,6 +4,7 @@ import { RealtimeGateway } from './realtime.gateway';
 import { TripsService } from '../trips/trips.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
+import { MetricsService } from '../observability/metrics.service';
 import { GpsEventsService } from './gps-events.service';
 import { Trip } from '../trips/trip.entity';
 import { Vehicle } from '../vehicles/vehicle.entity';
@@ -71,6 +72,7 @@ describe('RealtimeGateway', () => {
         { provide: VehiclesService, useValue: { findById: jest.fn() } },
         { provide: GpsEventsService, useValue: { recordEvent: jest.fn() } },
         { provide: MismatchDetectionService, useValue: { evaluate: jest.fn() } },
+        { provide: MetricsService, useValue: { increment: jest.fn(), gaugeIncrement: jest.fn(), gaugeSet: jest.fn() } },
       ],
     }).compile();
 

@@ -7,6 +7,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
@@ -15,6 +16,7 @@ import type { LocationBroadcastPayload, MismatchWarningPayload } from '@novaway/
 import { TripsService } from '../trips/trips.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
+import { MetricsService } from '../observability/metrics.service';
 import { GpsEventsService } from './gps-events.service';
 import { LocationUpdateDto } from './dto/location-update.dto';
 
@@ -32,12 +34,15 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   @WebSocketServer()
   server!: Server;
 
+  private readonly logger = new Logger(RealtimeGateway.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly tripsService: TripsService,
     private readonly vehiclesService: VehiclesService,
     private readonly gpsEventsService: GpsEventsService,
     private readonly mismatchDetectionService: MismatchDetectionService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   handleConnection(client: Socket): void {
@@ -50,14 +55,20 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     try {
       const payload = this.jwtService.verify<{ sub: string }>(token);
       (client.data as AuthenticatedSocketData).userId = payload.sub;
+      this.metricsService.gaugeIncrement('ws_connections_current', {}, 1);
+      this.logger.log(`Connected: user=${payload.sub} socket=${client.id}`);
     } catch {
       this.rejectConnection(client);
     }
   }
 
-  handleDisconnect(): void {
+  handleDisconnect(client: Socket): void {
     // Socket.io removes the socket from all rooms automatically on
     // disconnect — no extra cleanup needed at MVP in-memory-room scale.
+    if ((client.data as AuthenticatedSocketData).userId) {
+      this.metricsService.gaugeIncrement('ws_connections_current', {}, -1);
+      this.logger.log(`Disconnected: socket=${client.id}`);
+    }
   }
 
   // Lets a viewer (e.g. web dashboard, step 3.2) join a trip's broadcast
@@ -132,6 +143,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       return;
     }
 
+    this.metricsService.increment('gps_events_processed_total');
+    this.logger.debug(`location:update accepted trip=${trip.id} speed=${dto.speed_kmh}km/h`);
+
     await client.join(tripRoom(trip.id));
 
     const broadcastPayload: LocationBroadcastPayload = {
@@ -167,6 +181,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   private reject(client: Socket, clientEventId: string | undefined, errorCode: string): void {
+    this.metricsService.increment('gps_events_rejected_total', { reason: errorCode });
+    this.logger.warn(`location:update rejected error_code=${errorCode} client_event_id=${clientEventId}`);
     client.emit('location:rejected', { client_event_id: clientEventId, error_code: errorCode });
   }
 
