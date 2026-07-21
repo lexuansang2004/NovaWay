@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import { VehicleType } from '../../vehicles/vehicle.entity';
 import { LatLng, RouteResult, RoutingProvider } from '../routing-provider.interface';
 import { durationMinFromDistance } from '../vehicle-speed';
