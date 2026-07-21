@@ -99,6 +99,8 @@
 - Merge vào `main` yêu cầu thêm: E2E suite pass trên môi trường staging.
 - PR không được merge nếu bất kỳ test gate nào của micro-step liên quan chưa pass (theo cột "Test gate" trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`).
 
+**Đã triển khai ở step `9.2` (07/2026):** `.github/workflows/ci.yml` — GitHub Actions chạy trên mọi PR vào `develop` và `main`, gồm lint + unit test + build cho backend/web/shared-types (pnpm workspace) và `flutter analyze`/`flutter test` cho mobile. **Chưa triển khai:** yêu cầu "E2E suite pass trên môi trường staging" cho merge vào `main` — chưa có E2E suite nào trong repo (Playwright/Cypress/Flutter integration test đều chưa viết), và môi trường staging chưa chốt (`ARCHITECTURE.md` §9). Sẽ bổ sung khi cả hai điều kiện đó sẵn sàng.
+
 ## 4. Out of Scope for MVP Testing
 
 - Load test quy mô lớn (nghìn client đồng thời) — chỉ test số lượng nhỏ đủ để xác nhận cơ chế backoff/jitter hoạt động đúng logic, không phải benchmark hiệu năng thật.

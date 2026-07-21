@@ -167,7 +167,9 @@ Response `200`: object trip với `status: "ended"`, `ended_at` set, kèm `trip_
 
 Query param tuỳ chọn: `?vehicle_id=uuid`.
 
-Response `200`: `{ "trips": [ { "id", "vehicle_id", "status", "started_at", "ended_at", "distance_km" }, ... ] }`.
+Response `200`: `{ "trips": [ { "id", "vehicle_id", "status", "started_at", "ended_at", "distance_km", "duration_minutes", "mismatch_warning_count" }, ... ] }`.
+
+`duration_minutes`/`mismatch_warning_count` bổ sung 07/2026 (trước step `7.2`) — cần cho biểu đồ analytics của web dashboard, lấy thẳng từ `trip_logs` giống `distance_km` (đều `0` cho trip đang active, chưa có `trip_log`). Không phải thay đổi breaking — chỉ thêm field vào response đã có.
 
 ### `GET /api/trips/:id`
 
@@ -259,8 +261,8 @@ Response `200`:
 |---|---|
 | `400` | Payload sai/thiếu field, vượt giới hạn (batch size, v.v.) |
 | `401` | Thiếu/sai token |
-| `403` | Có token hợp lệ nhưng không có quyền với resource |
-| `404` | Resource không tồn tại (hoặc không tiết lộ tồn tại nếu thuộc user khác — nhất quán theo quyết định D0.7) |
+| `403` | Có token hợp lệ, resource tồn tại nhưng không thuộc sở hữu của user (vd. `NOT_VEHICLE_OWNER`) — quy ước thống nhất toàn backend, xem §11 |
+| `404` | Resource không tồn tại thật sự (không tồn tại ID đó ở bất kỳ user nào) |
 | `409` | Xung đột trạng thái (trip đã active, uỷ quyền chồng thời gian, email đã tồn tại) |
 | `429` | Vượt rate limit (GPS event, login attempts) |
 | `500` | Lỗi hệ thống không lường trước |
@@ -271,9 +273,31 @@ Response `200`:
 
 Response `200`: `{ "warnings": [ { "id", "location": {"lat", "lng"}, "severity", "description" }, ... ] }`.
 
-## 10. Open Items for D0.7
+## 10. Routing (mock, step `5.1`)
 
-- `403` vs `404` cho resource không thuộc sở hữu — cần chọn 1 chuẩn thống nhất áp dụng toàn bộ API (đang để cả 2 khả năng ở §8).
+> Bổ sung 07/2026 — tự rà trước khi code step `5.1`: `ARCHITECTURE.md` §3.2/§7 mô tả `RoutingProvider` từ D0.4 nhưng chưa từng có contract HTTP tương ứng ở đây. Xem `SRS.md` §1.14 (FR-ROUTING), `REVIEW_NOTES.md` §14.
+
+### `POST /api/routes/preview`
+
+Request:
+```json
+{ "vehicle_id": "uuid", "origin": { "lat": 10.762622, "lng": 106.660172 }, "destination": { "lat": 10.780000, "lng": 106.700000 } }
+```
+
+Response `200`:
+```json
+{ "vehicle_type": "motorbike", "distance_km": 5.2, "duration_min": 9, "polyline": [ [10.762622, 106.660172], [10.771311, 106.680086], [10.780000, 106.700000] ] }
+```
+
+Lỗi:
+- `400 VALIDATION_ERROR` — thiếu/sai `vehicle_id`, `origin`, hoặc `destination`
+- `403 NOT_AUTHORIZED_FOR_VEHICLE` — không phải owner, không có `vehicle_authorizations` active cho `vehicle_id` (cùng quy ước §4)
+
+Ghi chú: MVP sinh route mock bằng nội suy tuyến tính giữa `origin`/`destination` kèm vài điểm trung gian; `duration_min` tính theo tốc độ trung bình giả lập khác nhau theo `vehicle_type` (`motorbike` nhanh hơn `car` trong đô thị) để lộ trình quan sát được là khác nhau theo loại xe (FR-ROUTING-02). Thay bằng OSRM/GraphHopper thật ở step `5.2`, giữ nguyên contract này.
+
+## 11. Open Items for D0.7
+
+- ~~`403` vs `404` cho resource không thuộc sở hữu~~ — **Đã chốt (07/2026, trước step `1.4`)**: dùng `403` kèm error_code cụ thể theo resource (vd. `NOT_VEHICLE_OWNER`), áp dụng cho toàn backend — khớp đúng ví dụ đã có sẵn ở §2. Lý do: vehicle ID (và các resource tương tự sau này) không phải thông tin nhạy cảm cần giấu tồn tại; 403 + error_code rõ ràng giúp FE hiển thị thông báo chính xác hơn "not found" chung chung, và tránh phải query 2 lần (exists-but-not-mine vs not-exists) ở mọi endpoint. `404` chỉ dùng khi resource thật sự không tồn tại (ID sai/đã xoá) — xem §8.
 - Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn — placeholder `provider_payload` sẽ được thay bằng schema thật.
 - Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`.
 - Rate limit cụ thể theo endpoint (số request/giây/user) — cần benchmark.

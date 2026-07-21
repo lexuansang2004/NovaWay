@@ -1,0 +1,75 @@
+name: CI
+
+# docs/TEST_STRATEGY.md §3 — "Mọi PR vào develop phải pass: lint, unit
+# test, integration test." The "E2E suite pass trên môi trường staging"
+# requirement for merges into main is NOT implemented here: no E2E suite
+# exists anywhere in the repo yet, and no staging environment has been
+# chosen (docs/ARCHITECTURE.md §9 "Hosting/CI-CD provider" — still open).
+# This workflow covers the part that's actually achievable today: lint +
+# unit test + build, gating PRs into both develop and main.
+on:
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Backend + Web + shared-types (lint, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # pnpm@11 requires Node >= 22.13 (found by this CI run itself —
+          # node-version: 20 failed with ERR_UNKNOWN_BUILTIN_MODULE).
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # apps/backend jest specs use mocked repositories (no live Postgres
+      # needed, see docs/OBSERVABILITY.md / no *.e2e-spec.ts in the repo),
+      # so no database service container is required for this job.
+      - name: Lint
+        run: pnpm -r --if-present lint
+
+      # Build before test — apps/backend/apps/web import @novaway/shared-types,
+      # which is only resolvable once its own `tsc` build has produced
+      # dist/index.d.ts. `pnpm -r` builds in dependency (topological) order,
+      # so this one invocation builds shared-types before backend/web need
+      # it. Running test first (as this workflow originally did) failed with
+      # "Cannot find module '@novaway/shared-types'" — found by this CI run.
+      - name: Build
+        run: pnpm -r --if-present build
+
+      - name: Test
+        run: pnpm -r --if-present test
+
+  mobile:
+    name: Mobile (analyze, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: flutter test
+        run: flutter test

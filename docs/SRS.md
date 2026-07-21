@@ -144,6 +144,16 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-BIOMETRIC-04 | Hệ thống **không lưu trữ ảnh khuôn mặt thô**; chỉ lưu kết quả xác thực (thành công/thất bại, thời điểm, phương tiện liên quan). |
 | FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể là Open Question, chốt ở D0.4. |
 
+### 1.14. Routing (FR-ROUTING)
+
+> Bổ sung 07/2026 — tự rà trước khi code step `5.1`: `ARCHITECTURE.md` §3.2/§7 đã mô tả `RoutingProvider` (mock theo `vehicleType`, step `5.1`) từ D0.4, nhưng chưa từng có FR tương ứng ở đây, và `API_CONTRACT.md` chưa có endpoint nào cho routing. Xem `REVIEW_NOTES.md` §14.
+
+| ID | Yêu cầu |
+|---|---|
+| FR-ROUTING-01 | Hệ thống cung cấp endpoint xem trước lộ trình (route preview) giữa điểm đi và điểm đến, gắn với một phương tiện cụ thể của người dùng. |
+| FR-ROUTING-02 | Lộ trình trả về phải khác nhau theo loại phương tiện (`motorbike` so với `car`) — MVP dùng dữ liệu mock (`RoutingProvider`), thay bằng routing engine thật (OSRM/GraphHopper) ở step `5.2` mà không đổi contract gọi từ web/mobile. |
+| FR-ROUTING-03 | Chỉ chủ xe hoặc borrower đang có uỷ quyền hiệu lực (FR-AUTHZ-02) cho phương tiện mới xem được route preview của phương tiện đó. |
+
 ## 2. Non-Functional Requirements
 
 | ID | Yêu cầu |

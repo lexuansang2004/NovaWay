@@ -1,10 +1,10 @@
 # NovaWay — Data Model v0.1
 
-> Step D0.4. Cụ thể hoá `DATA_REQUIREMENTS.md` (D0.2) thành schema gần với DDL thật — kiểu dữ liệu, khoá, index, ràng buộc. Vẫn là **thiết kế**, không phải migration thật (migration thuộc step `1.2 feat/database-schema`). PostgreSQL + PostGIS (TDR-001).
+> Step D0.4. Cụ thể hoá `DATA_REQUIREMENTS.md` (D0.2) thành schema gần với DDL thật — kiểu dữ liệu, khoá, index, ràng buộc. Vẫn là **thiết kế**, không phải migration thật (migration thật trải qua nhiều step, bắt đầu từ `1.2 feat/database-schema` — xem §3 Migration Order). PostgreSQL + PostGIS (TDR-001).
 
 ## 1. Quy ước chung
 
-- Khoá chính: `UUID DEFAULT gen_random_uuid()` cho hầu hết bảng (dùng extension `pgcrypto` hoặc `uuid-ossp`), trừ `raw_gps_events` có thể cân nhắc `BIGSERIAL` nếu insert rate cao (quyết định ở step `1.2`).
+- Khoá chính: `UUID DEFAULT gen_random_uuid()` cho hầu hết bảng (dùng extension `pgcrypto` hoặc `uuid-ossp`), trừ `raw_gps_events` có thể cân nhắc `BIGSERIAL` nếu insert rate cao (quyết định ở step migrate bảng này — xem §3).
 - Toạ độ: `GEOGRAPHY(Point, 4326)` cho điểm đơn (tính khoảng cách chính xác trên mặt cầu); `GEOMETRY(LineString, 4326)` cho `route_geometry` (hiển thị, không cần tính khoảng cách chính xác cao).
 - Mọi bảng có `created_at TIMESTAMPTZ DEFAULT now()`. Bảng có vòng đời thay đổi trạng thái có thêm `updated_at`.
 - Dùng `TIMESTAMPTZ`, không dùng `TIMESTAMP` trần, để tránh nhầm timezone.
@@ -75,7 +75,7 @@ ALTER TABLE vehicle_authorizations ADD CONSTRAINT no_overlapping_active_authz
   ) WHERE (status = 'active');
 ```
 
-*(Xác nhận tính khả thi/hiệu năng constraint này ở step `1.2` — nếu phức tạp, fallback: enforce ở application layer trong `VehicleAuthorizationModule`.)*
+*(Xác nhận tính khả thi/hiệu năng constraint này ở step `1.5` — nếu phức tạp, fallback: enforce ở application layer trong `VehicleAuthorizationModule`.)*
 
 ### 2.4. `biometric_verifications`
 
@@ -189,7 +189,7 @@ CREATE TABLE raw_gps_events_2026_07 PARTITION OF raw_gps_events
   FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
 ```
 
-*Lưu ý:* `gps_event_dedup` là bảng riêng, không partition — đây là nơi enforce idempotency thật (NFR-SEC-03), không phải một index trên `raw_gps_events`. Cách này tránh được giới hạn của PostgreSQL (partition key bắt buộc có trong mọi unique index của bảng partitioned) mà không cần Redis (giữ đúng TDR-004 — không thêm hạ tầng cache ở MVP). Cần benchmark ở step `1.2` xem việc thêm 1 write phụ (`gps_event_dedup`) mỗi GPS event có ảnh hưởng throughput ở mức chấp nhận được không, đặc biệt qua đường realtime (tần suất cao hơn batch).
+*Lưu ý:* `gps_event_dedup` là bảng riêng, không partition — đây là nơi enforce idempotency thật (NFR-SEC-03), không phải một index trên `raw_gps_events`. Cách này tránh được giới hạn của PostgreSQL (partition key bắt buộc có trong mọi unique index của bảng partitioned) mà không cần Redis (giữ đúng TDR-004 — không thêm hạ tầng cache ở MVP). Cần benchmark ở step migrate bảng này (xem §3 — chưa chốt) xem việc thêm 1 write phụ (`gps_event_dedup`) mỗi GPS event có ảnh hưởng throughput ở mức chấp nhận được không, đặc biệt qua đường realtime (tần suất cao hơn batch).
 
 ### 2.8. `vehicle_mismatch_warnings`
 
@@ -228,21 +228,27 @@ CREATE TABLE terrain_warnings (
 CREATE INDEX idx_terrain_warnings_location ON terrain_warnings USING GIST(location);
 ```
 
-## 3. Migration Order (step `1.2`)
+## 3. Migration Order
+
+Thứ tự phụ thuộc FK giữa các bảng (dưới đây) không migrate hết trong 1 step — mỗi step trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` chỉ migrate bảng nó thực sự cần, đúng nguyên tắc "một branch = một nghiệp vụ nhỏ" (`AGENTS.md`). Ánh xạ đã chốt:
 
 ```text
-1. users
-2. vehicles
-3. vehicle_authorizations
-4. biometric_verifications
-5. trips (FK tới biometric_verifications)
-6. trip_logs
-7. raw_gps_events (+ partition đầu tiên)
-8. vehicle_mismatch_warnings
-9. terrain_warnings (+ seed data mock ban đầu)
+1. users                      — step 1.2 feat/database-schema
+2. vehicles                   — step 1.2 feat/database-schema
+3. vehicle_authorizations     — step 1.5 feat/vehicle-authorization-api
+4. biometric_verifications    — step 1.6 feat/biometric-verification-api
+5. trips (FK tới biometric_verifications) — step 3.1 feat/realtime-location-gateway
+6. raw_gps_events (+ gps_event_dedup, partition đầu tiên) — step 3.1 feat/realtime-location-gateway
+7. trip_logs                  — step 7.1 feat/trip-logs-api
+8. vehicle_mismatch_warnings  — step 6.1 feat/telematics-vehicle-mismatch (đã chốt 07/2026 — bảng này không có ứng viên nào khác trong plan, và FK `trip_id` tới `trips` đã thoả từ step 3.1)
+9. terrain_warnings (+ seed data mock ban đầu) — step chưa chốt
 ```
 
-## 4. TTL / Cleanup Job (liên quan step `1.2`, `9.1`)
+*Sửa 07/2026 (lần 1):* bản gốc ghi cả 9 bảng migrate ở step `1.2`, gây lỗi — `trip_logs` có FK NOT NULL tới `trips`, nhưng `trips` lại phụ thuộc `biometric_verifications` (step `1.6`), nên không thể tồn tại trước `1.2`. Đã tách theo đúng step nghiệp vụ cần bảng đó.
+
+*Sửa 07/2026 (lần 2):* dòng `raw_gps_events` từng để "chưa chốt, ứng viên 3.1 hoặc 4.3" — nhưng `raw_gps_events.trip_id` là `NOT NULL REFERENCES trips(id)`, và bản kế hoạch gốc đặt `trips` ở step `7.1` (sau cả `3.1`), nên nếu triển khai `raw_gps_events` ở `3.1` như dự kiến sẽ tạo FK trỏ tới bảng chưa tồn tại — cùng loại lỗi đã gặp ở lần sửa 1. Vì `trips` chỉ phụ thuộc `biometric_verifications` (đã có từ `1.6`), không phụ thuộc `trip_logs`, nên tách `trips` ra khỏi `trip_logs`: migrate `trips` ngay ở `3.1` (chỉ schema, phục vụ `raw_gps_events` — chưa có Trip API thật, vẫn tạo trip test qua SQL trực tiếp cho tới khi `7.1` xây `TripsModule`), giữ `trip_logs` ở `7.1` như cũ. Người dùng đã xác nhận hướng sửa này trước khi code step `3.1`.
+
+## 4. TTL / Cleanup Job (liên quan step migrate `raw_gps_events` — xem §3, và `9.1`)
 
 ```text
 Job "raw_gps_cleanup" (chạy daily):
@@ -259,5 +265,5 @@ Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `
 
 - Xác nhận extension `btree_gist` khả dụng trên môi trường hosting đã chọn (ảnh hưởng constraint ở §2.3).
 - Xác nhận chiến lược partition `raw_gps_events`: theo tháng (đề xuất ở đây) hay theo tuần nếu ước tính insert rate cao hơn dự kiến.
-- Benchmark chi phí ghi phụ vào `gps_event_dedup` cho mỗi GPS event (đặc biệt qua đường realtime tần suất cao) — nếu quá tốn, cân nhắc phương án khác ở step `1.2` (vd. batch dedup theo cửa sổ thời gian ngắn thay vì mọi write).
+- Benchmark chi phí ghi phụ vào `gps_event_dedup` cho mỗi GPS event (đặc biệt qua đường realtime tần suất cao) — nếu quá tốn, cân nhắc phương án khác ở step migrate `raw_gps_events` (vd. batch dedup theo cửa sổ thời gian ngắn thay vì mọi write).
 - Cách xử lý race condition idempotency ở biên partition (§2.7) — cần benchmark trước khi coi là "đã giải quyết".
