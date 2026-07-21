@@ -12,6 +12,7 @@ import { VehicleAuthorizationModule } from './vehicle-authorization/vehicle-auth
 import { BiometricModule } from './biometric/biometric.module';
 import { TripsModule } from './trips/trips.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RoutingModule } from './routing/routing.module';
 
 // Remaining domain modules (SyncModule, MismatchDetectionModule,
 // TerrainWarningsModule — see docs/ARCHITECTURE.md §3.1) are added
@@ -40,6 +41,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     BiometricModule,
     TripsModule,
     RealtimeModule,
+    RoutingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
