@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { envValidationSchema } from './config/env.validation';
@@ -36,6 +37,11 @@ import { LoggingInterceptor } from './observability/logging.interceptor';
         synchronize: false,
       }),
     }),
+    // NFR-API-01 / OPEN_ITEMS_AFTER_MVP.md §5 — initial conservative limit
+    // (5 attempts/min), pending a real load benchmark. Only applied where
+    // @UseGuards(ThrottlerGuard) is used explicitly (AuthController.login) —
+    // registering the module does not throttle every route globally.
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 5 }]),
     ObservabilityModule,
     HealthModule,
     UsersModule,

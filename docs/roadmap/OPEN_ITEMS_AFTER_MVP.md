@@ -35,11 +35,14 @@
 - **Payload `provider_payload`:** hiện là chuỗi mờ (opaque string), sẽ đổi schema thật theo SDK đã chọn — không đổi contract `POST /api/vehicles/:id/verify` ở tầng response.
 - Xem: `docs/API_CONTRACT.md` §4/§11, `docs/ARCHITECTURE.md` §9.
 
-## 5. Rate limiting — chưa triển khai
+## 5. Rate limiting — ✅ login + GPS event xong (R1-4, 07/2026); batch sync N/A
 
-- **Trạng thái:** Không có middleware rate-limit nào trong `apps/backend` (đã kiểm tra: không có `ThrottlerModule`/tương đương). FR-REALTIME-04 ("GPS event có rate limit để tránh spam/quá tải server") và NFR liên quan **chưa được hiện thực hoá**.
-- **Cần:** benchmark số request/giây/user hợp lý trước khi chốt giới hạn cụ thể (đăng nhập, GPS event, batch sync).
-- Xem: `docs/API_CONTRACT.md` §11, `docs/SRS.md` NFR-API-01.
+- **Trạng thái:** Đã triển khai cho 2/3 phần trong phạm vi gốc.
+  - **Login** (`POST /api/auth/login`): `@nestjs/throttler`, `ThrottlerGuard` áp riêng cho route này (không global) — 5 lần/60 giây/IP. Verify thật: 5 lần đầu trả `401` (sai mật khẩu), lần thứ 6 trả `429 {error_code: "RATE_LIMITED"}`.
+  - **GPS event** (`location:update`, WebSocket): `GpsRateLimiterService` (in-memory fixed-window counter, cùng phong cách `MismatchDetectionService`) — 10 event/giây/user. Verify thật qua `socket.io-client`: gửi dồn 15 event, 10 event đầu được chấp nhận, 5 event sau bị `location:rejected` với `error_code: "RATE_LIMITED"`.
+  - Cả 2 giới hạn trên là **giá trị ban đầu thận trọng, chưa qua benchmark tải thật** — đúng như cảnh báo gốc ở mục này trước khi sửa, cần tinh chỉnh khi có traffic thật.
+  - **Batch sync** (`POST /api/trips/sync`): **không áp dụng được** — endpoint này chỉ mới có hợp đồng tài liệu (`docs/API_CONTRACT.md` §7: request/response shape, giới hạn 500 events/payload đã đặc tả sẵn) nhưng **chưa từng được implement** trong `apps/backend` (không có route, không có `SyncModule` dù `app.module.ts` có để sẵn comment placeholder). Không thể rate-limit một endpoint không tồn tại — cần xây endpoint trước (việc riêng, ngoài phạm vi R1-4).
+- Xem: `docs/API_CONTRACT.md` §7, §11, `docs/SRS.md` NFR-API-01, FR-REALTIME-04, NFR-PERF-01. Code: `apps/backend/src/realtime/gps-rate-limiter.service.ts`, `apps/backend/src/auth/auth.controller.ts`.
 
 ## 6. Hosting / CD cho staging & production ✅ STAGING XONG (production vẫn mở)
 
