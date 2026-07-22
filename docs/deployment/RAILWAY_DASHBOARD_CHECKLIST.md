@@ -55,7 +55,7 @@ Chỉ nhập trực tiếp trên Dashboard, không gửi giá trị thật vào 
 - [x] `PORT` — không set tay, Railway tự inject.
 - [x] `JWT_SECRET` — random string ≥16 ký tự.
 - [x] `JWT_EXPIRES_IN=7d`
-- [ ] `WEB_ORIGIN` — **chưa điền** (đã xoá biến này khỏi Variables để Joi dùng default `http://localhost:5173` tạm thời — xem `env.validation.ts`). Điền lại sau khi có domain web staging thật (§7).
+- [x] `WEB_ORIGIN=https://nova-way-web.vercel.app` — đã điền sau khi web deploy xong (§7), CORS xác nhận hoạt động qua trình duyệt thật.
 - [x] `ROUTING_PROVIDER=mock`
 - [ ] `ROUTING_ENGINE_BASE_URL`, `ROUTING_ENGINE_TIMEOUT_MS` — không cần, `ROUTING_PROVIDER=mock`.
 - [x] `VERIFICATION_VALIDITY_MINUTES=5`
@@ -71,11 +71,12 @@ Chỉ nhập trực tiếp trên Dashboard, không gửi giá trị thật vào 
 
 Theo quyết định đã chốt: **không** deploy `apps/web` trên Railway — host trên Vercel/Netlify/Cloudflare Pages, tách riêng khỏi backend.
 
-- [ ] Chọn provider tĩnh (Vercel/Netlify/Cloudflare Pages) — **NEED_USER_DECISION**, chưa chọn cụ thể provider nào ở bước này.
-- [ ] Set biến `VITE_API_BASE_URL=https://novawaybackend-production.up.railway.app/api` trên provider đó.
-- [ ] Sau khi có domain web thật, quay lại điền `WEB_ORIGIN` trên backend (§5) cho đúng CORS.
+- [x] Chọn provider tĩnh — đã chọn **Vercel**. Chi tiết: `docs/deployment/VERCEL_WEB_CHECKLIST.md`.
+- [x] Set biến `VITE_API_BASE_URL=https://novawaybackend-production.up.railway.app/api` trên Vercel.
+- [x] Sau khi có domain web thật, quay lại điền `WEB_ORIGIN` trên backend (§5) cho đúng CORS.
 - [x] **Dọn dẹp:** service `@novaway/web` từng bị tạo nhầm trên Railway lúc đầu (leftover, cấu hình `Builder: DOCKERFILE` dù không có Dockerfile, `Start Command` dùng `dev` — sai hoàn toàn cho production) — đã bị loại khỏi lô deploy đầu tiên bằng "Discard", và đã **xoá hẳn** khỏi project `patient-stillness`.
-- [x] **Lưu ý:** repo hiện **không có** biến `VITE_WS_URL` hay bất kỳ kết nối `socket.io-client` nào trong `apps/web` — dashboard web (`LiveMapPage`) hiện dùng mock GPS sender phía client (`useMockGpsSender.ts`), chưa thật sự kết nối tới `/realtime` gateway của backend. Đây là gap đã ghi ở `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. Không thêm biến `VITE_WS_URL` vì code chưa đọc biến đó.
+- [x] **Lưu ý:** repo hiện **không có** biến `VITE_WS_URL` hay bất kỳ kết nối `socket.io-client` nào trong `apps/web` — dashboard web (`LiveMapPage`) hiện dùng mock GPS sender phía client (`useMockGpsSender.ts`), chưa thật sự kết nối tới `/realtime` gateway của backend. Đây là gap đã ghi ở `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §9. Không thêm biến `VITE_WS_URL` vì code chưa đọc biến đó.
+- [x] **Domain web thật:** `https://nova-way-web.vercel.app` — deploy xong, verify CORS + SPA routing + E2E suite pass thật. Chi tiết: `docs/deployment/VERCEL_WEB_CHECKLIST.md`.
 
 ## 8. Verify sau khi deploy — ĐÃ THỰC HIỆN (trên URL thật)
 
@@ -86,7 +87,7 @@ Theo quyết định đã chốt: **không** deploy `apps/web` trên Railway —
 - [x] WebSocket `wss://novawaybackend-production.up.railway.app/realtime` — connect thành công bằng `socket.io-client` thật với JWT thật từ login.
 - [x] `GET /metrics` → `200`, đúng format Prometheus.
 - [x] Logs không crash-loop sau khi sửa xong các lỗi (xem §10), không thấy secret plaintext trong log (Railway tự redact).
-- [ ] CORS từ domain web staging thật — **chưa test**, chờ có domain web (§7).
+- [x] CORS từ domain web staging thật (`nova-way-web.vercel.app`) — đã test qua trình duyệt thật (login), thành công. E2E suite cũng đã chạy pass nhắm thẳng vào domain này.
 - [ ] PostGIS ở mức "1 trip có GPS thật" (route_geometry qua `ST_MakeLine`) — mới verify extension active, chưa tạo trip thật qua API để test geometry function cụ thể. Nên làm khi bắt đầu R1-3 (E2E suite).
 
 ## 9. Risk & Rollback (tham chiếu nhanh)

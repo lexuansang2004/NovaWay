@@ -1,6 +1,8 @@
 # NovaWay — Vercel Web Dashboard Checklist (R1-2/R1-3 follow-up)
 
 > Thao tác thủ công trên Vercel Dashboard — không dùng Vercel CLI. Host `apps/web` (staging) tách khỏi Railway (chỉ dùng cho backend + PostgreSQL/PostGIS), theo đúng quyết định đã chốt ở [`RAILWAY_STAGING_PLAN.md`](./RAILWAY_STAGING_PLAN.md) §3.
+>
+> **Trạng thái:** Đã deploy thành công và verify đầy đủ. Domain thật: `https://nova-way-web.vercel.app`.
 
 ## 0. Điều kiện tiên quyết
 
@@ -9,63 +11,62 @@
 
 ## 1. Tạo project trên Vercel
 
-1. Vercel Dashboard → **Add New → Project**.
-2. Import repo `lexuansang2004/NovaWay` (kết nối GitHub nếu chưa).
-3. **Root Directory:** bấm **Edit** → chọn `apps/web` — bắt buộc, vì đây là monorepo.
-4. Bấm **"Include source files outside of the Root Directory in the Build Step"** (checkbox này nằm ngay dưới Root Directory) → **BẬT**. **Bắt buộc**, thiếu bước này build sẽ fail vì không thấy được `packages/shared-types` hay `pnpm-workspace.yaml`/`pnpm-lock.yaml` ở repo root.
+- [x] Import repo `lexuansang2004/NovaWay` từ GitHub.
+- [x] **Root Directory:** chọn `apps/web` — qua UI chọn file-tree (bấm **Edit** cạnh Root Directory → duyệt `apps → web` → **Continue**). Vercel phiên bản hiện tại **không có** checkbox "Include source files outside Root Directory" riêng như bản cũ hơn — việc thấy được `packages/shared-types`/`pnpm-workspace.yaml` được xử lý tự động khi chọn Root Directory qua file-tree picker này (đã verify: build thành công, resolve đúng `@novaway/shared-types`).
+- [x] **Branch:** `develop` (mặc định ban đầu hiện `main` — đã đổi lại đúng `develop` trước khi Deploy, xác nhận qua dòng "Importing from GitHub... develop").
+- [x] Project Name: `nova-way-web`.
+- [x] Application Preset: `Vite` (tự nhận diện).
 
 ## 2. Build & Output Settings
 
-- [ ] **Framework Preset:** chọn `Vite` (Vercel thường tự nhận diện qua `apps/web/package.json`).
-- [ ] **Build Command:** bật override, nhập:
+- [x] **Build Command:** bật override, đã nhập:
   ```
   pnpm --filter @novaway/shared-types build && pnpm --filter @novaway/web build
   ```
-  (Build tường minh 2 bước, đúng thứ tự — `@novaway/web` import `@novaway/shared-types`, cần build trước. Không dùng `pnpm build` mặc định của Vite framework preset vì nó không biết build package phụ thuộc trước.)
-- [ ] **Output Directory:** `dist` (tương đối theo Root Directory `apps/web` — khớp `vite build` mặc định).
-- [ ] **Install Command:** để mặc định (Vercel tự nhận `packageManager: pnpm@11.14.0` trong `package.json` root và chạy `pnpm install`).
+- [x] **Output Directory:** bật override, `dist`.
+- [x] **Install Command:** để mặc định (tắt override) — Vercel tự nhận `packageManager: pnpm@11.14.0`.
 
 ## 3. Environment Variables
 
-Chỉ 1 biến cần thiết cho `apps/web` (xem `apps/web/.env.example`):
-
-- [ ] `VITE_API_BASE_URL` = `https://novawaybackend-production.up.railway.app/api`
-
-Set ở **Project Settings → Environment Variables**, áp dụng cho môi trường **Production** (và **Preview** nếu muốn preview deploy cũng gọi được backend thật).
+- [x] `VITE_API_BASE_URL` = `https://novawaybackend-production.up.railway.app/api` — set cho **Production and Preview**.
 
 ## 4. Deploy
 
-1. Bấm **Deploy**.
-2. Theo dõi **Build Logs** — nếu fail ngay ở bước cài đặt/`pnpm-workspace.yaml not found`, kiểm tra lại bước 1.4 (Include source files outside Root Directory) đã bật chưa.
-3. Sau khi deploy xong, Vercel cấp domain dạng `*.vercel.app` — ghi lại domain thật.
+- [x] Deploy lần đầu **thành công** — build pass, trang login render đúng nội dung thật ngay trong preview thumbnail của Vercel.
+- [x] **Lưu ý đã gặp:** trang "Congratulations" sau deploy có gợi ý "Deploy another project — `/apps/backend` — Nest.JS project" (Vercel tự phát hiện thêm 1 app deploy được trong repo) — **đã bỏ qua**, không bấm Deploy ở đó vì backend đã chạy trên Railway, không cần bản backend thứ 2 trên Vercel.
+- [x] Domain thật: **`https://nova-way-web.vercel.app`**, deploy từ commit `bb2f868` (PR #12) trên `develop`, status Ready.
 
-## 5. Verify sau khi deploy (URL thật)
+## 5. Verify sau khi deploy (URL thật) — ĐÃ THỰC HIỆN
 
-Gửi domain web thật cho tôi (Claude), tôi sẽ verify:
+- [x] Trang `/login` load được, không lỗi console.
+- [x] Đăng nhập thật (tài khoản test tạo lúc verify Railway) → vào được `/dashboard`, hiển thị đúng email user.
+- [x] Điều hướng trực tiếp vào `/trip-history` (qua trình duyệt thật, không phải chỉ curl status) → không bị 404, session giữ nguyên — xác nhận `vercel.json` rewrite hoạt động đúng.
+- [x] Gọi API thật tới backend Railway — **lần đầu bị lỗi `Failed to fetch`** (CORS, vì `WEB_ORIGIN` trên backend chưa cập nhật) → sau khi làm bước 6, verify lại thành công.
 
-- [ ] Trang `/login` load được, không lỗi console.
-- [ ] Đăng nhập thật (tài khoản test) → vào được `/dashboard`.
-- [ ] Refresh trực tiếp vào 1 route con (vd. `/vehicles`) → không bị 404 (xác nhận `vercel.json` rewrite hoạt động).
-- [ ] Gọi API thật tới backend Railway thành công (không lỗi CORS) — **cần bước 6 dưới đây trước**.
+## 6. Cập nhật CORS trên backend (Railway) — ĐÃ XONG
 
-## 6. Cập nhật CORS trên backend (Railway)
-
-Sau khi có domain web thật, quay lại Railway → `@novaway/backend` → Variables → điền:
+Đã điền trên Railway → `@novaway/backend` → Variables:
 
 ```
-WEB_ORIGIN = https://<domain-web-thật>.vercel.app
+WEB_ORIGIN = https://nova-way-web.vercel.app
 ```
 
-(Không để dấu `/` cuối, đúng scheme `https://`.) Trigger redeploy backend để áp dụng. Đây là bước còn thiếu duy nhất từ `RAILWAY_DASHBOARD_CHECKLIST.md` §5 (`WEB_ORIGIN` trước đó đã xoá để dùng default `http://localhost:5173` tạm thời).
+Service tự redeploy, verify lại đăng nhập qua trình duyệt thật → thành công, hết lỗi CORS.
 
-## 7. Chạy E2E nhắm vào staging thật (sau khi bước 6 xong)
+## 7. Chạy E2E nhắm vào staging thật — ĐÃ CHẠY PASS
 
-`apps/web/e2e/golden-path.spec.ts` đã hỗ trợ sẵn 3 biến môi trường để trỏ vào staging thay vì local:
+Đã chạy thật với:
 
 ```
-E2E_WEB_BASE_URL=https://<domain-web-thật>.vercel.app
+E2E_WEB_BASE_URL=https://nova-way-web.vercel.app
 E2E_API_BASE_URL=https://novawaybackend-production.up.railway.app/api
 E2E_WS_BASE_URL=https://novawaybackend-production.up.railway.app
 ```
 
-Chạy: `E2E_WEB_BASE_URL=... E2E_API_BASE_URL=... E2E_WS_BASE_URL=... pnpm --filter @novaway/web test:e2e`. Việc này chưa wire vào CI (CI hiện chạy E2E nhắm Postgres/backend dựng ngay trong runner, không phải staging thật) — chạy thủ công trước, wire vào CI là việc riêng sau nếu cần.
+```
+E2E_WEB_BASE_URL=... E2E_API_BASE_URL=... E2E_WS_BASE_URL=... npx playwright test --project=chromium
+```
+
+**Kết quả: pass (13.4s)** — đúng luồng vàng đầy đủ (đăng nhập → chọn/kích hoạt xe → start trip → gửi GPS qua WebSocket thật → end trip → thấy trên Analytics), tất cả nhắm vào staging thật (Vercel + Railway), không phải local. Đây chính là yêu cầu gốc "E2E suite pass trên môi trường staging" của `docs/TEST_STRATEGY.md` §3.
+
+**Chưa làm:** tự động hoá bước này trong CI (job `e2e` hiện tại chỉ chạy nhắm Postgres/backend dựng trong runner, không nhắm staging) — xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §2.
