@@ -99,7 +99,11 @@
 - Merge vào `main` yêu cầu thêm: E2E suite pass trên môi trường staging.
 - PR không được merge nếu bất kỳ test gate nào của micro-step liên quan chưa pass (theo cột "Test gate" trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`).
 
-**Đã triển khai ở step `9.2` (07/2026):** `.github/workflows/ci.yml` — GitHub Actions chạy trên mọi PR vào `develop` và `main`, gồm lint + unit test + build cho backend/web/shared-types (pnpm workspace) và `flutter analyze`/`flutter test` cho mobile. **Chưa triển khai:** yêu cầu "E2E suite pass trên môi trường staging" cho merge vào `main` — chưa có E2E suite nào trong repo (Playwright/Cypress/Flutter integration test đều chưa viết), và môi trường staging chưa chốt (`ARCHITECTURE.md` §9). Sẽ bổ sung khi cả hai điều kiện đó sẵn sàng.
+**Đã triển khai ở step `9.2` (07/2026):** `.github/workflows/ci.yml` — GitHub Actions chạy trên mọi PR vào `develop` và `main`, gồm lint + unit test + build cho backend/web/shared-types (pnpm workspace) và `flutter analyze`/`flutter test` cho mobile.
+
+**Đã triển khai ở R1-3 (07/2026):** `apps/web/e2e/golden-path.spec.ts` (Playwright) — E2E suite thật cho luồng vàng đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí → kết thúc chuyến đi, chạy được thật (`pnpm --filter @novaway/web test:e2e`) đối với backend + Postgres/PostGIS local. Vì `LiveMapPage` (`/start-trip`) hiện chỉ có mock GPS animation phía client (chưa gọi API thật — xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §9), suite này lái đăng nhập + chọn/kích hoạt xe qua UI thật, còn bắt đầu/gửi GPS/kết thúc chuyến đi gọi thẳng REST + WebSocket thật (cùng pipeline mobile dùng), rồi verify kết quả hiện đúng trên Analytics (`/trip-history`, UI thật).
+
+**Chưa triển khai:** (1) wire suite này vào CI (`.github/workflows/ci.yml` chưa chạy E2E — cần Postgres service container + backend/web boot trong CI, việc riêng ngoài phạm vi R1-3); (2) chạy suite nhắm vào domain staging thật (`E2E_API_BASE_URL`/`E2E_WEB_BASE_URL`/`E2E_WS_BASE_URL` đã hỗ trợ qua env var, nhưng chưa từng chạy thật với staging — cần web đã deploy, xem `docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md` §7); do đó yêu cầu "E2E suite pass trên môi trường staging" cho merge vào `main` **vẫn chưa** là gate thật, chỉ mới có suite chạy được local.
 
 ## 4. Out of Scope for MVP Testing
 
