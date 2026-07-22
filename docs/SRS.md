@@ -201,6 +201,6 @@ Mỗi `FR-*`/`NFR-*` ở đây tương ứng với ít nhất một mục trong 
 ## 6. Open Items for D0.3
 
 - OQ-001: Flutter cho mobile — đề xuất chốt "có" trừ khi có lý do kỹ thuật mới xuất hiện.
-- OQ-006: Plugin bản đồ cho Flutter — cần chọn sau khi OQ-001 chốt và kiểm tra tương thích MapLibre/OSM.
+- ~~OQ-006: Plugin bản đồ cho Flutter~~ — **Đã chốt (R1-5, 07/2026):** `flutter_map` + OSM public tile, xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7.
 - OQ-007: Tần suất lấy mẫu GPS (đề xuất 1–5 giây/event khi chuyến đi active) — cần test ảnh hưởng pin trước khi chốt.
 - OQ-005: Tile provider final (Protomaps vs Mapbox Free Tier) — cần technical spike trước khi code map.
