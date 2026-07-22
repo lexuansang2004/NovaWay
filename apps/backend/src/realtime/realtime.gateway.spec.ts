@@ -6,6 +6,7 @@ import { VehiclesService } from '../vehicles/vehicles.service';
 import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
 import { MetricsService } from '../observability/metrics.service';
 import { GpsEventsService } from './gps-events.service';
+import { GpsRateLimiterService } from './gps-rate-limiter.service';
 import { Trip } from '../trips/trip.entity';
 import { Vehicle } from '../vehicles/vehicle.entity';
 
@@ -15,6 +16,7 @@ describe('RealtimeGateway', () => {
   let tripsService: jest.Mocked<TripsService>;
   let vehiclesService: jest.Mocked<VehiclesService>;
   let gpsEventsService: jest.Mocked<GpsEventsService>;
+  let gpsRateLimiterService: jest.Mocked<GpsRateLimiterService>;
   let mismatchDetectionService: jest.Mocked<MismatchDetectionService>;
 
   const TRIP_ID = '11111111-1111-4111-8111-111111111111';
@@ -71,6 +73,7 @@ describe('RealtimeGateway', () => {
         { provide: TripsService, useValue: { findById: jest.fn() } },
         { provide: VehiclesService, useValue: { findById: jest.fn() } },
         { provide: GpsEventsService, useValue: { recordEvent: jest.fn() } },
+        { provide: GpsRateLimiterService, useValue: { isAllowed: jest.fn() } },
         { provide: MismatchDetectionService, useValue: { evaluate: jest.fn() } },
         { provide: MetricsService, useValue: { increment: jest.fn(), gaugeIncrement: jest.fn(), gaugeSet: jest.fn() } },
       ],
@@ -81,9 +84,11 @@ describe('RealtimeGateway', () => {
     tripsService = module.get(TripsService);
     vehiclesService = module.get(VehiclesService);
     gpsEventsService = module.get(GpsEventsService);
+    gpsRateLimiterService = module.get(GpsRateLimiterService);
     mismatchDetectionService = module.get(MismatchDetectionService);
     vehiclesService.findById.mockResolvedValue(buildVehicle());
     mismatchDetectionService.evaluate.mockResolvedValue(null);
+    gpsRateLimiterService.isAllowed.mockReturnValue(true);
     gateway.server = { to: jest.fn().mockReturnValue({ emit: jest.fn() }) } as never;
   });
 
@@ -121,6 +126,21 @@ describe('RealtimeGateway', () => {
   });
 
   describe('handleLocationUpdate', () => {
+    it('rejects with RATE_LIMITED and skips validation/DB when over the limit', async () => {
+      const client = buildSocket();
+      client.data = { userId: 'user-id' };
+      gpsRateLimiterService.isAllowed.mockReturnValue(false);
+
+      await gateway.handleLocationUpdate(client as never, validPayload);
+
+      expect(client.emit).toHaveBeenCalledWith('location:rejected', {
+        client_event_id: CLIENT_EVENT_ID,
+        error_code: 'RATE_LIMITED',
+      });
+      expect(tripsService.findById).not.toHaveBeenCalled();
+      expect(gpsEventsService.recordEvent).not.toHaveBeenCalled();
+    });
+
     it('rejects with VALIDATION_ERROR for an out-of-range coordinate, without touching the DB', async () => {
       const client = buildSocket();
       client.data = { userId: 'user-id' };

@@ -18,6 +18,7 @@ import { VehiclesService } from '../vehicles/vehicles.service';
 import { MismatchDetectionService } from '../mismatch-detection/mismatch-detection.service';
 import { MetricsService } from '../observability/metrics.service';
 import { GpsEventsService } from './gps-events.service';
+import { GpsRateLimiterService } from './gps-rate-limiter.service';
 import { LocationUpdateDto } from './dto/location-update.dto';
 
 interface AuthenticatedSocketData {
@@ -41,6 +42,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly tripsService: TripsService,
     private readonly vehiclesService: VehiclesService,
     private readonly gpsEventsService: GpsEventsService,
+    private readonly gpsRateLimiterService: GpsRateLimiterService,
     private readonly mismatchDetectionService: MismatchDetectionService,
     private readonly metricsService: MetricsService,
   ) {}
@@ -107,6 +109,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
 
     const clientEventId = this.extractClientEventId(body);
+
+    if (!this.gpsRateLimiterService.isAllowed(userId)) {
+      this.reject(client, clientEventId, 'RATE_LIMITED');
+      return;
+    }
 
     const dto = plainToInstance(LocationUpdateDto, body);
     const errors = await validate(dto);
