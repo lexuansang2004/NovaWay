@@ -58,10 +58,11 @@
 - **Đã build:** marker vị trí hiện tại (di chuyển theo GPS fix thật), trail (polyline lịch sử vị trí, giới hạn 500 điểm gần nhất tránh phình bộ nhớ chuyến dài), map luôn hiển thị (kể cả trước khi bắt đầu chuyến, center mặc định TP.HCM).
 - **Verify đã chạy:** `flutter analyze` sạch, `flutter test` 17/17 pass (thêm test mới xác nhận marker xuất hiện đúng sau GPS fix, dùng `FakeTileProvider` — trả ảnh trong suốt 1x1 đồng bộ thay vì gọi mạng thật trong test, tránh test chậm/flaky). `flutter build windows --debug` build thành công, chạy thử `.exe` thật — process sống, Dart VM service khởi động, không crash. **Chưa chụp được ảnh màn hình thật của map hiển thị** (không có công cụ điều khiển/chụp cửa sổ desktop native trong môi trường này) — verify dừng ở mức build/test/boot thật, không phải xác nhận trực quan.
 
-## 8. Benchmark hiệu năng `gps_event_dedup` — chưa thực hiện
+## 8. ✅ Benchmark hiệu năng `gps_event_dedup` — đã xong (R1-6, 07/2026)
 
-- **Trạng thái:** `docs/REQUIREMENT_BASELINE_V1.md` §4 liệt kê "Benchmark `gps_event_dedup` (chi phí ghi phụ mỗi GPS event)" là implementation-time item cần giải quyết ở step `1.2`/`3.1`. Chưa từng benchmark thật — logic idempotency (`apps/backend/src/realtime/gps-events.service.ts`) đã đúng và có unit test, nhưng chi phí throughput của việc ghi thêm 1 bảng phụ mỗi GPS event (đặc biệt qua đường realtime, tần suất cao) chưa được đo bằng số liệu thật.
-- **Cần:** load test nhỏ (không phải benchmark quy mô lớn, xem `docs/TEST_STRATEGY.md` §4 "Out of Scope") để xác nhận mức chấp nhận được trước khi có tải sản xuất thật.
+- **Trạng thái cũ:** `docs/REQUIREMENT_BASELINE_V1.md` §4 liệt kê "Benchmark `gps_event_dedup` (chi phí ghi phụ mỗi GPS event)" là implementation-time item cần giải quyết ở step `1.2`/`3.1`. Logic idempotency (`apps/backend/src/realtime/gps-events.service.ts`) đã đúng và có unit test, nhưng chưa từng đo throughput/latency thật của việc ghi thêm bảng phụ mỗi GPS event.
+- **Đã làm:** viết `apps/backend/scripts/benchmark-gps-dedup.js` — load test nhỏ (không phải benchmark quy mô lớn, đúng phạm vi `docs/TEST_STRATEGY.md` §4 "Out of Scope"), đo latency tuần tự (n=500) và throughput đồng thời (4 kết nối × 200 events) trên schema local giống staging. Chi tiết phương pháp + số liệu thật: `docs/performance/GPS_EVENT_DEDUP_BENCHMARK.md`.
+- **Kết quả:** chi phí biên của bước dedup ~1.4 ms avg / ~1.7 ms p95 (nhỏ so với ~5 ms avg tổng); throughput đo được ~813 events/sec với 4 kết nối song song, không có dấu hiệu nghẽn ở tải này. Thiết kế idempotency hiện tại chấp nhận được cho quy mô staging nội bộ.
 
 ## 9. Web `LiveMapPage` (`/start-trip`) chưa nối API thật — phát hiện khi viết E2E suite (R1-3)
 
