@@ -1,81 +1,91 @@
 # NovaWay — Railway Dashboard Checklist (R1-2)
 
 > Thao tác thủ công trên Railway Dashboard — không dùng Railway CLI. Đi kèm [`RAILWAY_STAGING_PLAN.md`](./RAILWAY_STAGING_PLAN.md) (quyết định + kiến trúc tổng thể). Tài liệu này là checklist thao tác cụ thể, cập nhật theo cấu hình thật đã thấy trên Dashboard khi thực hiện R1-2.
+>
+> **Trạng thái:** Backend đã deploy thành công lên staging và verify đầy đủ (xem §8). Domain thật: `https://novawaybackend-production.up.railway.app`.
 
 ## 0. Điều kiện tiên quyết
 
 - [x] `apps/backend/Dockerfile` tồn tại, đã verify build + boot local bằng `docker build`/`docker run` thật (xem log verify trong PR `chore/railway-dockerfile`).
 - [x] `.dockerignore` loại trừ `node_modules`, `**/dist`, `**/*.tsbuildinfo`, `apps/mobile/build`, `demo-app`, `.git`, secrets.
-- [ ] Project Railway đã tạo, service `@novaway/backend` đã kết nối tới repo `lexuansang2004/NovaWay`.
+- [x] Project Railway đã tạo, service `@novaway/backend` đã kết nối tới repo `lexuansang2004/NovaWay`.
 
 ## 1. Service backend — Source
 
-- [ ] **Root Directory:** để **trống** (không set) — bắt buộc, vì Dockerfile cần build context là repo root để thấy `packages/shared-types`.
-- [ ] **Branch connected to production:** `develop`.
-- [ ] **Wait for CI:** **BẬT** — chỉ deploy sau khi GitHub Actions (`.github/workflows/ci.yml`) pass, tránh staging chạy code chưa qua CI.
+- [x] **Root Directory:** để **trống** (không set) — bắt buộc, vì Dockerfile cần build context là repo root để thấy `packages/shared-types`.
+- [x] **Branch connected to production:** `develop`.
+- [x] **Wait for CI:** **BẬT** — chỉ deploy sau khi GitHub Actions (`.github/workflows/ci.yml`) pass, tránh staging chạy code chưa qua CI.
 
 ## 2. Service backend — Build
 
-- [ ] **Builder:** `Dockerfile`.
-- [ ] **Dockerfile Path:** `apps/backend/Dockerfile` (relative to repo root, vì Root Directory để trống).
-- [ ] **Custom Build Command:** để **trống** — build đã nằm trong chính Dockerfile (`RUN pnpm --filter @novaway/shared-types build` rồi `RUN pnpm --filter @novaway/backend build`); điền command ở đây có thể xung đột hoặc bị bỏ qua tuỳ builder, không cần thiết.
-- [ ] **Custom Start Command:** để **trống** — Dockerfile đã có `CMD ["node", "dist/main.js"]`.
-- [ ] **Watch Paths:** thêm CẢ HAI pattern:
+- [x] **Builder:** `Dockerfile`.
+- [x] **Dockerfile Path:** `apps/backend/Dockerfile` (relative to repo root, vì Root Directory để trống).
+- [x] **Custom Build Command:** để **trống** — build đã nằm trong chính Dockerfile (`RUN pnpm --filter @novaway/shared-types build` rồi `RUN pnpm --filter @novaway/backend build`).
+- [x] **Custom Start Command:** để **trống** — Dockerfile đã có `CMD ["node", "dist/main.js"]`. **Quan trọng:** runtime stage của Dockerfile không cài `pnpm` (chỉ build stage có `corepack enable`) — nếu điền command dùng `pnpm` ở đây, container sẽ crash `pnpm: not found`.
+- [x] **Watch Paths:** cả 2 pattern đã thêm:
   - `/apps/backend/**`
-  - `/packages/shared-types/**` — **bắt buộc**, backend import trực tiếp package này; thiếu pattern này thì sửa `shared-types` mà không đụng `apps/backend` sẽ không trigger redeploy dù code đã đổi thật.
+  - `/packages/shared-types/**`
 
 ## 3. Service backend — Deploy
 
-- [ ] **Healthcheck Path:** `/health` (không có prefix `/api` — xem `apps/backend/src/main.ts` loại trừ `health` khỏi global prefix).
-- [ ] **Restart Policy:** giữ mặc định `On Failure`, số lần retry mặc định là đủ cho staging.
-- [ ] **Serverless:** để tắt — realtime WebSocket cần service chạy liên tục, không phù hợp scale-to-zero.
-- [ ] **Teardown:** để tắt (mặc định) trừ khi có lý do cụ thể.
+- [x] **Healthcheck Path:** `/health` (không có prefix `/api`).
+- [x] **Pre-deploy Command:** `node ./node_modules/typeorm/cli-ts-node-commonjs.js -d src/database/data-source.ts migration:run` — chạy trực tiếp qua `node`, **không dùng `pnpm`** (cùng lý do runtime không có pnpm). Đã verify chạy thành công (migration pass trước khi app start).
+- [x] **Restart Policy:** giữ mặc định `On Failure`, 10 retries.
+- [x] **Serverless:** tắt.
+- [x] **Teardown:** tắt (mặc định).
 
 ## 4. PostgreSQL/PostGIS service
 
-- [ ] Thử tạo **Database → PostgreSQL** trước.
-- [ ] Verify PostGIS: chạy `SELECT * FROM pg_extension WHERE extname = 'postgis';` qua query console của Railway. Nếu rỗng → template không có PostGIS.
-- [ ] Nếu không có PostGIS: xoá service đó, tạo **Empty Service → Docker Image** với image `postgis/postgis:16-3.4-alpine` (đúng image dùng ở `docker-compose.yml` local), gắn volume để giữ data.
-- [ ] Gắn `DATABASE_URL` cho backend bằng **variable reference** tới service Postgres (không gõ tay connection string).
+- [x] Thử tạo **Database → PostgreSQL** (template mặc định) trước — **kết quả: KHÔNG có PostGIS** (`CREATE EXTENSION postgis` báo lỗi `extension "postgis" is not available`). Đã xoá service này.
+- [x] Tạo lại bằng **Empty Service → Docker Image** với image `postgis/postgis:16-3.4-alpine` — verify PostGIS thành công (`extversion: 3.4.3`).
+- [x] Gắn Volume, mount path `/var/lib/postgresql/data`.
+- [x] Set biến `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — **bắt buộc điền tay**, service Docker Image tự do (không phải plugin Postgres chính thức của Railway) **không tự có** các biến này, khác với template mặc định.
+- [x] Gắn `DATABASE_URL` cho backend bằng **variable reference**, dạng: `postgres://${{<service>.POSTGRES_USER}}:${{<service>.POSTGRES_PASSWORD}}@${{<service>.RAILWAY_PRIVATE_DOMAIN}}:5432/${{<service>.POSTGRES_DB}}`.
+
+**Lưu ý tên service thật:** Railway tự đặt tên ngẫu nhiên cho Empty Service (không dùng tên image) — trong lần triển khai này service PostGIS thật sự tên là **`pretty-insight`** (không phải `postgis`). Luôn dùng đúng tên hiển thị trên tab của service đó khi viết reference `${{ServiceName.VAR}}`, không giả định theo tên image.
 
 ## 5. Environment Variables — Backend service
 
 Chỉ nhập trực tiếp trên Dashboard, không gửi giá trị thật vào chat/commit vào repo:
 
-- [ ] `DATABASE_URL` — variable reference tới service Postgres/PostGIS
-- [ ] `NODE_ENV=production`
-- [ ] `PORT` — **không cần set tay**, Railway tự inject, `main.ts` đã đọc qua `configService.get<number>('PORT', 3000)`
-- [ ] `JWT_SECRET` — random string ≥16 ký tự
-- [ ] `JWT_EXPIRES_IN` — vd. `7d`
-- [ ] `WEB_ORIGIN` — điền sau khi có domain web staging thật (bước 7)
-- [ ] `ROUTING_PROVIDER` — khuyến nghị giữ `mock` cho staging
-- [ ] `ROUTING_ENGINE_BASE_URL`, `ROUTING_ENGINE_TIMEOUT_MS` — chỉ cần nếu `ROUTING_PROVIDER=osrm`
-- [ ] `VERIFICATION_VALIDITY_MINUTES`
+- [x] `DATABASE_URL` — variable reference tới service PostGIS (xem §4).
+- [x] `NODE_ENV=production`
+- [x] `PORT` — không set tay, Railway tự inject.
+- [x] `JWT_SECRET` — random string ≥16 ký tự.
+- [x] `JWT_EXPIRES_IN=7d`
+- [ ] `WEB_ORIGIN` — **chưa điền** (đã xoá biến này khỏi Variables để Joi dùng default `http://localhost:5173` tạm thời — xem `env.validation.ts`). Điền lại sau khi có domain web staging thật (§7).
+- [x] `ROUTING_PROVIDER=mock`
+- [ ] `ROUTING_ENGINE_BASE_URL`, `ROUTING_ENGINE_TIMEOUT_MS` — không cần, `ROUTING_PROVIDER=mock`.
+- [x] `VERIFICATION_VALIDITY_MINUTES=5`
+
+**Cảnh báo quan trọng:** nếu 1 biến bắt buộc theo `.uri()` (như `WEB_ORIGIN`) **tồn tại nhưng để giá trị rỗng** (`""`), Joi validate sẽ **fail** vì `default(...)` chỉ áp dụng khi biến hoàn toàn không tồn tại, không áp dụng khi biến có mặt nhưng rỗng. Muốn dùng default, phải **xoá hẳn** biến đó, không để rỗng.
 
 ## 6. Generate domain
 
-- [ ] Service backend → Settings → Networking → **Generate Domain**.
-- [ ] Ghi lại domain (`*.up.railway.app`) — dùng để verify ở mục 8 và set biến frontend.
+- [x] Service backend → Settings → Networking → **Generate Domain**.
+- [x] Domain thật: **`https://novawaybackend-production.up.railway.app`** (domain chỉ thật sự active sau lần deploy thành công đầu tiên — trước đó chỉ hiện placeholder "Public domain will be generated").
 
 ## 7. Web staging (ngoài Railway)
 
-Theo quyết định đã chốt: **không** tạo/deploy service `@novaway/web` trên Railway — web host trên Vercel/Netlify/Cloudflare Pages, tách riêng khỏi backend.
+Theo quyết định đã chốt: **không** deploy `apps/web` trên Railway — host trên Vercel/Netlify/Cloudflare Pages, tách riêng khỏi backend.
 
 - [ ] Chọn provider tĩnh (Vercel/Netlify/Cloudflare Pages) — **NEED_USER_DECISION**, chưa chọn cụ thể provider nào ở bước này.
-- [ ] Set biến `VITE_API_BASE_URL=https://<backend-domain>/api` trên provider đó.
-- [ ] **Lưu ý:** repo hiện **không có** biến `VITE_WS_URL` hay bất kỳ kết nối `socket.io-client` nào trong `apps/web` — dashboard web (`LiveMapPage`) hiện dùng mock GPS sender phía client (`useMockGpsSender.ts`), chưa thật sự kết nối tới `/realtime` gateway của backend. Đây là gap đã ghi ở `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7 (mobile cockpit thiếu map — tương tự, web dashboard cũng chưa nối WebSocket thật). Không thêm biến `VITE_WS_URL` vào lúc này vì code chưa đọc biến đó — thêm sẽ là biến chết.
+- [ ] Set biến `VITE_API_BASE_URL=https://novawaybackend-production.up.railway.app/api` trên provider đó.
+- [ ] Sau khi có domain web thật, quay lại điền `WEB_ORIGIN` trên backend (§5) cho đúng CORS.
+- [ ] **Dọn dẹp:** có 1 service `@novaway/web` từng bị tạo nhầm trên Railway lúc đầu (leftover, cấu hình `Builder: DOCKERFILE` dù không có Dockerfile, `Start Command` dùng `dev` — sai hoàn toàn cho production) — đã bị loại khỏi lô deploy đầu tiên bằng "Discard", cần **xoá hẳn** service này để tránh nhầm lẫn về sau.
+- [x] **Lưu ý:** repo hiện **không có** biến `VITE_WS_URL` hay bất kỳ kết nối `socket.io-client` nào trong `apps/web` — dashboard web (`LiveMapPage`) hiện dùng mock GPS sender phía client (`useMockGpsSender.ts`), chưa thật sự kết nối tới `/realtime` gateway của backend. Đây là gap đã ghi ở `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. Không thêm biến `VITE_WS_URL` vì code chưa đọc biến đó.
 
-## 8. Verify sau khi deploy (URL thật)
+## 8. Verify sau khi deploy — ĐÃ THỰC HIỆN (trên URL thật)
 
-Gửi domain backend thật cho tôi (Claude), tôi sẽ verify:
-
-- [ ] `GET https://<backend-domain>/health` → `200`, `{"status":"ok","database":{"status":"ok"}}`.
-- [ ] Migration đã chạy đủ 9 migration (`apps/backend/src/database/migrations/`).
-- [ ] PostGIS thật hoạt động (test qua 1 trip có GPS thật, không chỉ `SELECT 1`).
-- [ ] WebSocket `wss://<backend-domain>/realtime` — connect bằng `socket.io-client` với JWT thật từ `POST /api/auth/login`, gửi `location:update`, xác nhận broadcast.
-- [ ] CORS đúng khi gọi từ domain web staging thật.
-- [ ] `GET /metrics` trả đúng Prometheus format.
-- [ ] Logs không crash-loop, không lộ secret plaintext.
+- [x] `GET https://novawaybackend-production.up.railway.app/health` → `200`, `{"status":"ok","database":{"status":"ok"}}`.
+- [x] Migration đã chạy đủ (Pre-deploy Command pass, không lỗi).
+- [x] PostGIS extension active trên DB thật (`extversion: 3.4.3`, verify qua `pg_extension`).
+- [x] Auth thật: `POST /api/auth/register` → `201`, `POST /api/auth/login` → JWT thật, đều chạy qua Postgres thật.
+- [x] WebSocket `wss://novawaybackend-production.up.railway.app/realtime` — connect thành công bằng `socket.io-client` thật với JWT thật từ login.
+- [x] `GET /metrics` → `200`, đúng format Prometheus.
+- [x] Logs không crash-loop sau khi sửa xong các lỗi (xem §10), không thấy secret plaintext trong log (Railway tự redact).
+- [ ] CORS từ domain web staging thật — **chưa test**, chờ có domain web (§7).
+- [ ] PostGIS ở mức "1 trip có GPS thật" (route_geometry qua `ST_MakeLine`) — mới verify extension active, chưa tạo trip thật qua API để test geometry function cụ thể. Nên làm khi bắt đầu R1-3 (E2E suite).
 
 ## 9. Risk & Rollback (tham chiếu nhanh)
 
@@ -84,5 +94,15 @@ Chi tiết đầy đủ ở `RAILWAY_STAGING_PLAN.md` §"Risk & Rollback". Tóm 
 - Deploy fail → Railway giữ deployment trước, dùng nút Rollback trong tab Deployments.
 - Migration fail → kiểm tra bảng `migrations` trong Postgres, sửa nguyên nhân, chạy lại — không tự `synchronize`.
 - WebSocket fail → kiểm tra `wss://` (không phải `ws://`), kiểm tra Railway không cắt idle connection sớm hơn dự kiến.
-- CORS fail → `WEB_ORIGIN` phải khớp chính xác domain web (kể cả scheme, không dấu `/` cuối).
-- Healthcheck fail → kiểm tra `DATABASE_URL` reference đúng service Postgres, network cùng project thông nhau.
+- CORS fail → `WEB_ORIGIN` phải khớp chính xác domain web (kể cả scheme, không dấu `/` cuối, không để rỗng — xem cảnh báo ở §5).
+- Healthcheck fail → kiểm tra `DATABASE_URL` reference đúng service Postgres, đúng project (xem §10).
+
+## 10. Sự cố thực tế đã gặp trong lần triển khai đầu — rút kinh nghiệm
+
+Ghi lại để không lặp lại khi tạo staging mới hoặc mở rộng sang môi trường khác:
+
+1. **Volume mount root gây lỗi `initdb`:** gắn Volume thẳng vào `/var/lib/postgresql/data` khiến Postgres thấy thư mục `lost+found` do cơ chế mount tạo sẵn, từ chối init (`directory exists but is not empty`). **Fix:** thêm biến `PGDATA=/var/lib/postgresql/data/pgdata` (thư mục con bên trong volume), giữ nguyên mount path.
+2. **Reference variable khác PROJECT resolve ra rỗng, không báo lỗi rõ:** `${{ServiceName.VAR}}` chỉ hoạt động giữa các service **cùng một Railway project**. Nếu backend và Postgres nằm ở 2 project khác nhau, Railway âm thầm trả về chuỗi rỗng cho mỗi reference (không throw lỗi lúc nhập), khiến `DATABASE_URL` cuối cùng chỉ còn khung rỗng (`postgres://:@:5432/`) — lỗi xuất hiện muộn, dạng `Invalid URL` hoặc Joi `must be a valid uri`, dễ nhầm là lỗi cú pháp/ký tự đặc biệt trong password. **Cách chẩn đoán nhanh:** in `DATABASE_URL.length` + kiểm tra còn chứa `${{` hay không qua 1 lệnh Node an toàn (không lộ secret) trước khi đoán các nguyên nhân khác. **Fix:** đảm bảo mọi service cần tham chiếu lẫn nhau nằm chung 1 project.
+3. **Empty Service (Docker Image tự do) không tự có biến như plugin chính thức:** service Postgres tạo qua "Empty Service → Docker Image" **không tự sinh** `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`/`DATABASE_URL` như plugin Postgres chính thức của Railway — phải tự set tay, và nếu để trống (không xoá hẳn, chỉ để rỗng) sẽ gây lỗi khó hiểu tương tự mục 2.
+4. **Biến bắt buộc để giá trị rỗng thay vì xoá hẳn:** `WEB_ORIGIN` (có `.default()` trong Joi schema) từng để `<empty string>` thay vì xoá — Joi validate giá trị hiện có (rỗng) thay vì áp dụng default, gây crash bootstrap ngay lập tức. Bài học: muốn dùng giá trị default của app, phải xoá hẳn biến, không để rỗng.
+5. **`Custom Build/Start Command` xung đột với Dockerfile builder:** để sẵn `pnpm --filter ... build`/`pnpm --filter ... dev` trong 2 field này (leftover từ lúc mới tạo service) trong khi Builder đã chọn Dockerfile — runtime stage của Dockerfile không có `pnpm`, nên nếu field Start Command ghi đè `CMD` gốc sẽ crash `pnpm: not found`. Bài học: khi dùng Dockerfile builder, để trống cả 2 field này, để Dockerfile tự quyết định build/start.
