@@ -10,16 +10,17 @@
 - **Điều kiện để tiếp tục:** có máy cài Unity Hub + Unity Editor (LTS phù hợp với AR Foundation), và ít nhất một thiết bị Android/iOS hỗ trợ ARCore/ARKit để đo thật.
 - Chi tiết: `docs/REVIEW_NOTES.md` §15, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `8.1`.
 
-## 2. E2E-on-staging test gate ⏸️ PENDING (một phần đã xong)
+## 2. E2E-on-staging test gate ✅ ĐÃ CHẠY PASS THẬT (chưa tự động hoá)
 
-- **Trạng thái:** E2E suite đã viết và chạy pass thật (local) — R1-3 (07/2026). Gate "trên môi trường staging" cho merge vào `main` vẫn **chưa** hoạt động.
+- **Trạng thái:** Đã chạy `apps/web/e2e/golden-path.spec.ts` pass thật nhắm vào staging thật (Vercel + Railway) — R1-2/R1-3 follow-up (07/2026). Yêu cầu gốc của `docs/TEST_STRATEGY.md` §3 ("E2E suite pass trên môi trường staging") **đã đạt được**, nhưng bằng thao tác thủ công, chưa tự động hoá trong CI.
 - **Yêu cầu gốc:** `docs/TEST_STRATEGY.md` §3 — "Merge vào `main` yêu cầu thêm: E2E suite pass trên môi trường staging."
-- **Đã xong:** `apps/web/e2e/golden-path.spec.ts` (Playwright) — luồng đăng nhập → chọn/kích hoạt xe (UI thật) → bắt đầu/gửi GPS/kết thúc chuyến đi (REST + WebSocket thật) → verify trên Analytics (UI thật). Chạy pass thật với backend + Postgres/PostGIS local (`pnpm --filter @novaway/web test:e2e`). Chi tiết + lý do thiết kế (gap `LiveMapPage` mock) ở `docs/TEST_STRATEGY.md` §3.
-- **Còn thiếu:**
-  1. **Wire vào CI** — `.github/workflows/ci.yml` chưa chạy E2E job nào; cần Postgres service container + boot backend/web trong CI trước.
-  2. **Chạy trên staging thật** — suite đã hỗ trợ trỏ tới URL khác qua `E2E_API_BASE_URL`/`E2E_WEB_BASE_URL`/`E2E_WS_BASE_URL`, nhưng chưa từng chạy thật nhắm vào staging vì `apps/web` chưa được deploy (backend đã deploy — `docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md`).
-- **Hiện tại:** CI (`.github/workflows/ci.yml`) chỉ gate lint + unit test + build trên PR — đủ cho `develop`, chưa đủ cho gate "an toàn để lên `main`" như tài liệu gốc mô tả. `v0.1.0` được merge vào `main` dựa trên unit test + verify thủ công từng bước (curl/socket/browser automation) trong lúc phát triển, **không** dựa trên E2E-on-staging.
-- **Điều kiện để tiếp tục:** deploy `apps/web` lên staging (§7 dưới), rồi wire E2E vào CI nhắm vào URL staging thật.
+- **Đã xong:**
+  1. Viết suite (`apps/web/e2e/golden-path.spec.ts`) — luồng đăng nhập → chọn/kích hoạt xe (UI thật) → bắt đầu/gửi GPS/kết thúc chuyến đi (REST + WebSocket thật) → verify trên Analytics (UI thật). Chi tiết + lý do thiết kế (gap `LiveMapPage` mock) ở `docs/TEST_STRATEGY.md` §3.
+  2. Wire vào CI (`e2e` job, `.github/workflows/ci.yml`) — chạy nhắm Postgres/PostGIS dựng ngay trong runner (không phải staging thật).
+  3. Deploy `apps/web` lên Vercel (`docs/deployment/VERCEL_WEB_CHECKLIST.md`), cập nhật `WEB_ORIGIN` trên backend Railway — CORS xác nhận hoạt động qua trình duyệt thật.
+  4. Chạy suite thủ công với `E2E_WEB_BASE_URL`/`E2E_API_BASE_URL`/`E2E_WS_BASE_URL` trỏ vào domain Vercel + Railway thật — **pass**.
+- **Còn thiếu:** tự động hoá bước 4 — job `e2e` trong CI hiện chỉ chạy nhắm Postgres/backend dựng trong runner (mục đích: gate nhanh cho mọi PR, không phụ thuộc staging đang online), chưa có job/schedule nào tự chạy lại suite nhắm vào staging thật sau mỗi lần deploy. Có thể để thủ công (chạy tay khi cần xác nhận staging) hoặc thêm job CI riêng — chưa quyết định, không khẩn cấp vì gate chính (PR → `develop`/`main`) đã có `e2e` job tự động.
+- **Hiện tại:** `v0.1.0` được merge vào `main` trước khi có gate này — dựa trên unit test + verify thủ công từng bước lúc đó, không hồi tố. Gate này áp dụng cho các lần merge `main` tiếp theo.
 
 ## 3. Tile provider cho web dashboard (OQ-005) — vẫn mở
 
@@ -40,10 +41,11 @@
 - **Cần:** benchmark số request/giây/user hợp lý trước khi chốt giới hạn cụ thể (đăng nhập, GPS event, batch sync).
 - Xem: `docs/API_CONTRACT.md` §11, `docs/SRS.md` NFR-API-01.
 
-## 6. Hosting / CD cho staging & production — vẫn mở
+## 6. Hosting / CD cho staging & production ✅ STAGING XONG (production vẫn mở)
 
-- **Trạng thái:** Chưa chốt nhà cung cấp. Phần **CI** (lint/test/build gate cho PR) đã xong ở step `9.2` (GitHub Actions) — đây là phần riêng, **CD** (deploy) là phần còn thiếu.
-- **Chặn:** mục 2 (E2E-on-staging gate) không thể triển khai cho tới khi có nơi deploy staging.
+- **Trạng thái:** Staging đã chốt và deploy thật — R1-1/R1-2 (07/2026). Backend: Railway (`docs/deployment/RAILWAY_STAGING_PLAN.md`, `RAILWAY_DASHBOARD_CHECKLIST.md`) — `https://novawaybackend-production.up.railway.app`. Web: Vercel (`docs/deployment/VERCEL_WEB_CHECKLIST.md`) — `https://nova-way-web.vercel.app`. Postgres/PostGIS: Railway Docker Image service (`pretty-insight`).
+- **CD:** deploy hiện là **thủ công** (bấm Deploy trên Dashboard mỗi provider, hoặc Railway tự redeploy khi có push lên `develop` do "Wait for CI" + GitHub trigger đã bật — xem `RAILWAY_DASHBOARD_CHECKLIST.md` §1). Chưa có pipeline CD tự động đầy đủ (vd. auto-deploy Vercel khi merge, rồi tự chạy lại E2E nhắm staging).
+- **Còn mở:** production hosting (khác staging) — chưa chốt, chưa cần tới trong sprint này. Fly.io được ghi nhận là ứng viên đánh giá lại qua TDR riêng khi cần scale (`RAILWAY_STAGING_PLAN.md` §7).
 - Xem: `docs/ARCHITECTURE.md` §8 (Deployment Topology), §9.
 
 ## 7. Mobile Trip Cockpit chưa có Map view (OQ-006) — phát hiện khi soát lại cho tài liệu này

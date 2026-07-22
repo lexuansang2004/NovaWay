@@ -61,7 +61,9 @@ Nguồn: `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`. Không mục nào ở đây đ�
 
 ## 6. Definition of Done cho Sprint R1
 
-- [ ] R1-1, R1-2, R1-3 hoàn tất — có staging thật + ít nhất 1 luồng E2E chạy pass trên đó.
-- [ ] `docs/TEST_STRATEGY.md` §3 được cập nhật để phản ánh đúng trạng thái mới (không còn ghi "chưa triển khai" cho phần đã xong).
-- [ ] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` được cập nhật — mục nào xong thì đánh dấu, không xoá lịch sử.
-- [ ] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 3.
+- [x] R1-1, R1-2, R1-3 hoàn tất — có staging thật (Railway backend + Vercel web) + luồng E2E vàng chạy pass thật trên đó (07/2026).
+- [x] `docs/TEST_STRATEGY.md` §3 được cập nhật để phản ánh đúng trạng thái mới (không còn ghi "chưa triển khai" cho phần đã xong).
+- [x] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` được cập nhật — mục nào xong thì đánh dấu, không xoá lịch sử.
+- [x] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 3.
+
+**Ghi chú:** R1-4 tới R1-8 (P1/P2) vẫn còn mở, chưa bắt đầu — xem mục 3.
