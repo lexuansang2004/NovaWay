@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Navigation, Route, Car, CloudUpload, TriangleAlert } from 'lucide-react';
+import { MapPin, Route, Car, CloudUpload, TriangleAlert } from 'lucide-react';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Hero: Bắt đầu chuyến đi */}
+        {/* Hero: Vị trí trực tiếp */}
         <motion.div
           className="relative overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-900/50 p-6 backdrop-blur-xl"
           initial={{ opacity: 0, y: 14 }}
@@ -48,7 +48,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
           <div className="relative z-10 max-w-md">
-            <h2 className="text-xl font-semibold text-white">Bắt đầu chuyến đi</h2>
+            <h2 className="text-xl font-semibold text-white">Vị trí trực tiếp</h2>
             <p className="mt-2 text-sm text-cyan-100/60">
               Theo dõi hành trình, phương tiện và cảnh báo an toàn theo thời gian thực.
             </p>
@@ -56,7 +56,7 @@ export default function DashboardPage() {
               onClick={() => navigate('/start-trip')}
               className="mt-5 border-0 bg-gradient-to-r from-cyan-400 to-emerald-400 font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] hover:from-cyan-300 hover:to-emerald-300"
             >
-              <Navigation className="h-4 w-4" /> Bắt đầu chuyến đi
+              <MapPin className="h-4 w-4" /> Xem vị trí trực tiếp
             </Button>
           </div>
 

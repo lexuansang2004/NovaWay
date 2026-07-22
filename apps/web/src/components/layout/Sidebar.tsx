@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Navigation,
+  MapPin,
   Car,
   History,
   CloudUpload,
@@ -28,7 +29,7 @@ import { cn } from '@/lib/utils';
 
 const MAIN_MENU = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { to: '/start-trip', label: 'Bắt đầu chuyến đi', Icon: Navigation },
+  { to: '/start-trip', label: 'Vị trí trực tiếp', Icon: MapPin },
   { to: '/vehicles', label: 'Quản lý phương tiện', Icon: Car },
   { to: '/trip-history', label: 'Lịch sử chuyến đi', Icon: History },
   { to: '/offline-sync', label: 'Offline Sync', Icon: CloudUpload },
