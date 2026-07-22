@@ -37,3 +37,9 @@ apps/mobile/**/ios/Flutter/ephemeral/
 
 # Coverage
 coverage/
+
+# Playwright (apps/web)
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/playwright/.cache/

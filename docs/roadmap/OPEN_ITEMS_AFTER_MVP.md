@@ -10,15 +10,16 @@
 - **Điều kiện để tiếp tục:** có máy cài Unity Hub + Unity Editor (LTS phù hợp với AR Foundation), và ít nhất một thiết bị Android/iOS hỗ trợ ARCore/ARKit để đo thật.
 - Chi tiết: `docs/REVIEW_NOTES.md` §15, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `8.1`.
 
-## 2. E2E-on-staging test gate ⏸️ PENDING
+## 2. E2E-on-staging test gate ⏸️ PENDING (một phần đã xong)
 
-- **Trạng thái:** Chưa triển khai.
+- **Trạng thái:** E2E suite đã viết và chạy pass thật (local) — R1-3 (07/2026). Gate "trên môi trường staging" cho merge vào `main` vẫn **chưa** hoạt động.
 - **Yêu cầu gốc:** `docs/TEST_STRATEGY.md` §3 — "Merge vào `main` yêu cầu thêm: E2E suite pass trên môi trường staging."
-- **Còn thiếu 2 điều kiện:**
-  1. **E2E suite** — chưa có Playwright/Cypress (web) hay Flutter integration test (mobile) nào trong repo. `docs/TEST_STRATEGY.md` §1 đã đề xuất công cụ nhưng chưa viết test case nào.
-  2. **Môi trường staging** — chưa chốt nhà cung cấp hosting/CD (`docs/ARCHITECTURE.md` §9 "Hosting/CI-CD provider" — phần CI/PR-gate đã xong ở `9.2`, nhưng phần deploy staging/production vẫn mở).
+- **Đã xong:** `apps/web/e2e/golden-path.spec.ts` (Playwright) — luồng đăng nhập → chọn/kích hoạt xe (UI thật) → bắt đầu/gửi GPS/kết thúc chuyến đi (REST + WebSocket thật) → verify trên Analytics (UI thật). Chạy pass thật với backend + Postgres/PostGIS local (`pnpm --filter @novaway/web test:e2e`). Chi tiết + lý do thiết kế (gap `LiveMapPage` mock) ở `docs/TEST_STRATEGY.md` §3.
+- **Còn thiếu:**
+  1. **Wire vào CI** — `.github/workflows/ci.yml` chưa chạy E2E job nào; cần Postgres service container + boot backend/web trong CI trước.
+  2. **Chạy trên staging thật** — suite đã hỗ trợ trỏ tới URL khác qua `E2E_API_BASE_URL`/`E2E_WEB_BASE_URL`/`E2E_WS_BASE_URL`, nhưng chưa từng chạy thật nhắm vào staging vì `apps/web` chưa được deploy (backend đã deploy — `docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md`).
 - **Hiện tại:** CI (`.github/workflows/ci.yml`) chỉ gate lint + unit test + build trên PR — đủ cho `develop`, chưa đủ cho gate "an toàn để lên `main`" như tài liệu gốc mô tả. `v0.1.0` được merge vào `main` dựa trên unit test + verify thủ công từng bước (curl/socket/browser automation) trong lúc phát triển, **không** dựa trên E2E-on-staging.
-- **Điều kiện để tiếp tục:** chốt nhà cung cấp hosting trước, sau đó viết E2E suite tối thiểu cho luồng "đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí trên dashboard → kết thúc chuyến đi" (đã liệt kê ở `docs/TEST_STRATEGY.md` §1).
+- **Điều kiện để tiếp tục:** deploy `apps/web` lên staging (§7 dưới), rồi wire E2E vào CI nhắm vào URL staging thật.
 
 ## 3. Tile provider cho web dashboard (OQ-005) — vẫn mở
 
@@ -56,7 +57,14 @@
 - **Trạng thái:** `docs/REQUIREMENT_BASELINE_V1.md` §4 liệt kê "Benchmark `gps_event_dedup` (chi phí ghi phụ mỗi GPS event)" là implementation-time item cần giải quyết ở step `1.2`/`3.1`. Chưa từng benchmark thật — logic idempotency (`apps/backend/src/realtime/gps-events.service.ts`) đã đúng và có unit test, nhưng chi phí throughput của việc ghi thêm 1 bảng phụ mỗi GPS event (đặc biệt qua đường realtime, tần suất cao) chưa được đo bằng số liệu thật.
 - **Cần:** load test nhỏ (không phải benchmark quy mô lớn, xem `docs/TEST_STRATEGY.md` §4 "Out of Scope") để xác nhận mức chấp nhận được trước khi có tải sản xuất thật.
 
-## 9. Các Open Item nhỏ khác còn treo trong docs gốc
+## 9. Web `LiveMapPage` (`/start-trip`) chưa nối API thật — phát hiện khi viết E2E suite (R1-3)
+
+- **Trạng thái:** `apps/web/src/pages/LiveMapPage.tsx` chỉ chạy `useMockGpsSender` — mô phỏng vị trí phía client theo `MOCK_ROUTE` cố định. Không gọi `POST /api/trips/start`, không kết nối `/realtime` WebSocket thật, không gọi `POST /api/trips/:id/end`. Nút bấm ghi rõ "Bắt đầu chuyến đi (mock)".
+- **Vì sao chưa phát hiện sớm hơn:** step `3.2` (`feat/web-live-map`) khi viết ban đầu chỉ yêu cầu "marker di chuyển realtime (mock GPS sender phía client)" — đúng như plan gốc mô tả, không phải lỗi implementation, chỉ là plan gốc chưa yêu cầu nối API thật ở bước đó và chưa có bước nào sau đó quay lại nối.
+- **Ảnh hưởng:** luồng vàng "đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí trên dashboard → kết thúc chuyến đi" (`docs/TEST_STRATEGY.md` §3, `docs/roadmap/SPRINT_R1_STABILIZATION.md` R1-3) không thể test 100% qua UI thật — E2E suite (`apps/web/e2e/golden-path.spec.ts`) phải gọi thẳng REST + WebSocket thật cho phần bắt đầu/kết thúc chuyến đi, chỉ dùng UI thật cho đăng nhập + chọn xe + xem kết quả.
+- **Cần:** nối `LiveMapPage` vào `POST /api/trips/start`, `/realtime` WebSocket thật (gửi vị trí GPS trình duyệt thật hoặc mô phỏng qua API thay vì hoàn toàn client-side), và `POST /api/trips/:id/end` — việc riêng, ngoài phạm vi R1-3 (chỉ viết E2E suite).
+
+## 10. Các Open Item nhỏ khác còn treo trong docs gốc
 
 - `OQ-005` (tile provider) và biometric provider — đã liệt kê ở mục 3/4, không lặp lại.
 - Exclusion constraint `btree_gist` (dùng ở `vehicle_authorizations`, step `1.5`) mới xác nhận hoạt động trên Postgres local — chưa xác nhận khả dụng trên hosting production cuối cùng (phụ thuộc mục 6, hosting provider chưa chốt).
