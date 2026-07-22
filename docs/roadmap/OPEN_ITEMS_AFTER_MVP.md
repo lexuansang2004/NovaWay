@@ -51,11 +51,12 @@
 - **Còn mở:** production hosting (khác staging) — chưa chốt, chưa cần tới trong sprint này. Fly.io được ghi nhận là ứng viên đánh giá lại qua TDR riêng khi cần scale (`RAILWAY_STAGING_PLAN.md` §7).
 - Xem: `docs/ARCHITECTURE.md` §8 (Deployment Topology), §9.
 
-## 7. Mobile Trip Cockpit chưa có Map view (OQ-006) — phát hiện khi soát lại cho tài liệu này
+## 7. ✅ Mobile Trip Cockpit Map view (OQ-006) — đã xong (R1-5, 07/2026)
 
-- **Trạng thái:** `docs/ARCHITECTURE.md` §5.1 mô tả màn hình chính mobile là "Trip Cockpit (Map + AR Lite)", nhưng step `4.3` (`feat/mobile-realtime-location`) chỉ build UI text (tốc độ, trạng thái kết nối) — **không có map view nào** trong `apps/mobile` (đã kiểm tra `pubspec.yaml`: không có package map nào — `flutter_map`, `google_maps_flutter`, v.v.).
-- **OQ-006** ("Mobile map plugin chọn gì?") chưa từng được chốt lại sau D0.2 — không nằm trong 13 hạng mục bắt buộc đã đóng ở `docs/REQUIREMENT_BASELINE_V1.md` §3, và không có step riêng nào trong plan yêu cầu xây map cho mobile.
-- **Cần:** chốt package map cho Flutter (tương thích OSM/MapLibre theo `docs/ARCHITECTURE.md` §5.1), rồi thêm map view thật vào Trip Cockpit — hiện đang là scope gap giữa thiết kế và implementation, không phải bug.
+- **Trạng thái:** Đã thêm map thật vào `TripCockpitScreen` — `flutter_map` + OSM public tile (`tile.openstreetmap.org`), khớp đúng trạng thái hiện tại của web (Leaflet + OSM public tile, `docs/ARCHITECTURE.md` §5.1) thay vì hướng MapLibre GL JS tương lai (TDR-002), để tránh phụ thuộc OQ-005 (tile provider) vẫn đang mở.
+- **OQ-006 đã chốt** (`docs/01_OPEN_QUESTIONS.md`): `flutter_map` (MIT, không cần API key). Sẽ đổi sang `maplibre_gl` song song với web khi OQ-005 chốt và web thật sự chuyển MapLibre.
+- **Đã build:** marker vị trí hiện tại (di chuyển theo GPS fix thật), trail (polyline lịch sử vị trí, giới hạn 500 điểm gần nhất tránh phình bộ nhớ chuyến dài), map luôn hiển thị (kể cả trước khi bắt đầu chuyến, center mặc định TP.HCM).
+- **Verify đã chạy:** `flutter analyze` sạch, `flutter test` 17/17 pass (thêm test mới xác nhận marker xuất hiện đúng sau GPS fix, dùng `FakeTileProvider` — trả ảnh trong suốt 1x1 đồng bộ thay vì gọi mạng thật trong test, tránh test chậm/flaky). `flutter build windows --debug` build thành công, chạy thử `.exe` thật — process sống, Dart VM service khởi động, không crash. **Chưa chụp được ảnh màn hình thật của map hiển thị** (không có công cụ điều khiển/chụp cửa sổ desktop native trong môi trường này) — verify dừng ở mức build/test/boot thật, không phải xác nhận trực quan.
 
 ## 8. Benchmark hiệu năng `gps_event_dedup` — chưa thực hiện
 

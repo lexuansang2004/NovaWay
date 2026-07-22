@@ -67,7 +67,10 @@ test('golden path: login → select vehicle → start trip → see location → 
     await page.getByRole('button', { name: 'Thêm phương tiện' }).click();
     await page.getByLabel('Biển số').fill(licensePlate);
     await page.getByRole('button', { name: 'Lưu' }).click();
-    await expect(page.getByText(licensePlate)).toBeVisible();
+    // exact: true -- avoid Playwright's default case-insensitive substring
+    // match colliding with the sidebar's logged-in user email, which also
+    // embeds a Date.now()-based timestamp and can share the same digits.
+    await expect(page.getByText(licensePlate, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Đặt đang dùng' }).click();
     await expect(page.getByText('Đang hoạt động')).toBeVisible();
   });

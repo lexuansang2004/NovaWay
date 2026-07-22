@@ -141,7 +141,7 @@ Tài liệu này ghi lại các câu hỏi còn cần chốt trước khi chuy�
 | OQ-003 | Admin role có cần trong MVP không? | Trung bình | Chưa cần full admin; có thể chuẩn bị role field |
 | OQ-004 | Offline queue lưu GPS hay cả obstacle event? | Cao | MVP lưu GPS/trip event trước; obstacle event sau hoặc chỉ warning mock |
 | OQ-005 | Tile provider MVP chọn Protomaps hay Mapbox Free Tier? | Cao | D0.2 ghi cả 2 candidate; D0.3 kiểm quota/cost và chọn final |
-| OQ-006 | Mobile map plugin chọn gì? | Cao | Cần chốt sau khi chọn Flutter + tile strategy |
+| OQ-006 | ~~Mobile map plugin chọn gì?~~ | Cao | **Đã chốt (R1-5, 07/2026):** `flutter_map` + OSM public tile — khớp trạng thái hiện tại của web (Leaflet + OSM), tránh phụ thuộc OQ-005 vẫn mở. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. |
 | OQ-007 | GPS sampling frequency là bao nhiêu? | Cao | Đề xuất 1-5 giây/event khi active trip; cần test pin |
 | OQ-008 | Dữ liệu public warning cần ẩn danh mức nào? | Cao | Chỉ lưu aggregate/crowdsourced event cho bản đồ chung |
 | OQ-009 | Routing MVP dùng mock hay engine thật? | Cao | MVP dùng routing mock theo vehicle trước |

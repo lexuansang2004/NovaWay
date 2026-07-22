@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/models/selectable_vehicle.dart';
@@ -8,6 +9,7 @@ import 'package:mobile/session/auth_session.dart';
 
 import 'fakes/fake_location_source.dart';
 import 'fakes/fake_realtime_client.dart';
+import 'fakes/fake_tile_provider.dart';
 
 const _testVehicle = SelectableVehicle(
   id: 'a1111111-1111-4111-8111-111111111111',
@@ -37,6 +39,7 @@ void main() {
           tripId: _testTripId,
           locationSource: FakeLocationSource(permissionResult: LocationPermissionResult.denied),
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -57,6 +60,7 @@ void main() {
           tripId: _testTripId,
           locationSource: FakeLocationSource(permissionResult: LocationPermissionResult.serviceDisabled),
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -77,6 +81,7 @@ void main() {
           tripId: '',
           locationSource: FakeLocationSource(),
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -98,6 +103,7 @@ void main() {
           tripId: _testTripId,
           locationSource: location,
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -127,6 +133,7 @@ void main() {
           tripId: _testTripId,
           locationSource: location,
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -153,6 +160,7 @@ void main() {
           tripId: _testTripId,
           locationSource: location,
           realtimeClient: client,
+          tileProvider: FakeTileProvider(),
         ),
       ),
     );
@@ -166,5 +174,34 @@ void main() {
 
     expect(find.text('Mất kết nối tới máy chủ.'), findsOneWidget);
     expect(find.text('Bắt đầu'), findsOneWidget);
+  });
+
+  testWidgets('shows the map with a position marker once tracking starts (R1-5)',
+      (WidgetTester tester) async {
+    final client = FakeRealtimeClient();
+    final location = FakeLocationSource();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TripCockpitScreen(
+          vehicle: _testVehicle,
+          tripId: _testTripId,
+          locationSource: location,
+          realtimeClient: client,
+          tileProvider: FakeTileProvider(),
+        ),
+      ),
+    );
+
+    // Map is present even before tracking starts (default center).
+    expect(find.byType(FlutterMap), findsOneWidget);
+    expect(find.byKey(const Key('trip-position-marker')), findsNothing);
+
+    await tester.tap(find.text('Bắt đầu'));
+    await tester.pumpAndSettle();
+
+    location.emit(const LocationFix(latitude: 10.8, longitude: 106.7, speedKmh: 30, accuracyM: 5));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('trip-position-marker')), findsOneWidget);
   });
 }

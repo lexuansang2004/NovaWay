@@ -22,7 +22,7 @@ Nguồn: `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`. Không mục nào ở đây đ�
 | R1-2 | Deploy `develop` lên staging (thủ công hoặc CD tối thiểu) | P0 | Cần môi trường thật để chạy E2E | E2E-on-staging gate |
 | R1-3 | Viết E2E suite tối thiểu cho 1 luồng vàng: đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí trên dashboard → kết thúc chuyến đi (web, Playwright) | P0 | Đây là gate còn thiếu duy nhất giữa CI hiện tại và yêu cầu gốc của `TEST_STRATEGY.md` §3 | Merge-to-main gate đầy đủ |
 | R1-4 | ✅ Rate limiting cho login + GPS event (batch sync N/A — endpoint chưa tồn tại, xem `OPEN_ITEMS_AFTER_MVP.md` §5) | P1 | FR-REALTIME-04/NFR-API-01 chưa hiện thực hoá, rủi ro abuse trước khi có traffic thật | — |
-| R1-5 | Mobile Trip Cockpit: thêm map view thật (chốt OQ-006) | P1 | Gap giữa `docs/ARCHITECTURE.md` §5.1 và implementation thật — cockpit hiện chỉ có text | — |
+| R1-5 | ✅ Mobile Trip Cockpit: thêm map view thật (chốt OQ-006) | P1 | Gap giữa `docs/ARCHITECTURE.md` §5.1 và implementation thật — cockpit hiện chỉ có text | — |
 | R1-6 | Benchmark chi phí `gps_event_dedup` | P2 | Xác nhận idempotency design chịu được tải trước khi có traffic thật | — |
 | R1-7 | Technical spike tile provider (OQ-005: Protomaps vs Mapbox) | P2 | Cần trước khi đổi Leaflet → MapLibre GL JS (TDR-002) | R1-5 nên làm sau khi có kết quả spike này nếu muốn đổi map stack luôn thể |
 | R1-8 | Đánh giá biometric provider thật (FR-BIOMETRIC-05) | P2 | Không khẩn cấp cho staging nội bộ — mock vẫn dùng được | — |
