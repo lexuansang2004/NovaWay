@@ -177,6 +177,14 @@ Response `200`: chi tiết trip + `trip_log` (nếu đã kết thúc) + danh sá
 
 ## 6. Realtime (WebSocket, namespace `/realtime`)
 
+### Client → Server: `join:trip`
+
+```json
+{ "trip_id": "uuid" }
+```
+
+Cho một client (vd. web dashboard, R2-1 07/2026) tham gia phòng broadcast của một trip để nhận `location:broadcast`/`mismatch:warning` của trip đó, mà không tự gửi `location:update`. Server kiểm tra `trip_id` thuộc user đã auth qua handshake — nếu không, request bị bỏ qua lặng lẽ (không có ack lỗi). Người gửi `location:update` cũng tự động join phòng này (không cần gọi `join:trip` riêng).
+
 ### Client → Server: `location:update`
 
 ```json

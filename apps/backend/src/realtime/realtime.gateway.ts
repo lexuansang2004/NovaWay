@@ -73,12 +73,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
-  // Lets a viewer (e.g. web dashboard, step 3.2) join a trip's broadcast
-  // room. Not itself part of docs/API_CONTRACT.md §6 (which only specifies
-  // location:update / location:broadcast / mismatch:warning /
-  // location:rejected) — this fills the undocumented gap of "how does a
-  // client start watching a trip", scoped to the trip's own owner only,
-  // matching FR-REALTIME-03. Subject to refinement at step 3.2.
+  // Lets a viewer (web dashboard's LiveMapPage, R2-1 07/2026 — apps/web/src/
+  // services/useLiveTrip.ts) join a trip's broadcast room without itself
+  // sending location:update. Documented at docs/API_CONTRACT.md §6, scoped
+  // to the trip's own owner only, matching FR-REALTIME-03.
   @SubscribeMessage('join:trip')
   async handleJoinTrip(
     @ConnectedSocket() client: Socket,

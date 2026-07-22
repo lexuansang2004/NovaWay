@@ -5,14 +5,16 @@ import { io } from 'socket.io-client';
 // docs/roadmap/SPRINT_R1_STABILIZATION.md R1-3 — minimal E2E for the golden
 // flow: đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí → kết thúc.
 //
-// LiveMapPage (/start-trip) only drives a client-side mock GPS animation —
-// it never calls the real trip/WebSocket APIs (see docs/roadmap/
-// OPEN_ITEMS_AFTER_MVP.md §9). So "start trip" / "see location" / "end trip"
-// are exercised here through the real REST + WebSocket APIs directly
-// (the same ones apps/mobile's Trip Cockpit uses), while login and vehicle
-// selection go through the real web UI. This keeps the test meaningful
-// (it hits the real backend pipeline) without adding new product features
-// to LiveMapPage, which is out of scope for R1-3.
+// "Start trip" / "see location" / "end trip" are exercised here through the
+// real REST + WebSocket APIs directly (the same ones apps/mobile's Trip
+// Cockpit uses), while login and vehicle selection go through the real web
+// UI. This is not a LiveMapPage limitation — starting/ending a trip requires
+// biometric vehicle binding (FR-BIOMETRIC-01), which is a mobile-only flow
+// (no webcam-based verify UI on web, by design — see docs/roadmap/
+// SPRINT_R2_PRODUCT_COMPLETION.md R2-1 / docs/roadmap/OPEN_ITEMS_AFTER_MVP.md
+// §9). LiveMapPage (/start-trip, R2-1, 07/2026) only *watches* whichever
+// trip is currently active for the user via the real `/realtime` WebSocket
+// (apps/web/src/services/useLiveTrip.ts) — it has no start/stop control.
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:3000/api';
 const WS_BASE_URL = process.env.E2E_WS_BASE_URL ?? 'http://localhost:3000';
