@@ -15,7 +15,7 @@
 | R-07 | Background location trên iOS bị hệ điều hành giới hạn/thu hồi quyền bất ngờ | Trung bình | Cao | Thiết kế fallback foreground-only + thông báo rõ giới hạn cho người dùng (FR-BGLOC-04) |
 | R-08 | GPS sampling rate chưa được test ảnh hưởng pin thực tế | Cao (chưa có dữ liệu) | Trung bình | Đưa vào Open Question OQ-007; cần test trước khi chốt tần suất final ở D0.3 |
 | R-16 | App bị App Store/Play Store từ chối vì xin quyền vị trí "Always/background" ngay từ đầu mà không xin "While Using" trước và giải thích rõ lý do nâng cấp | Trung bình | Cao | Thiết kế luồng xin quyền 2 bước: xin "While Using" trước, chỉ nâng cấp lên "Always" khi người dùng thực sự bắt đầu chuyến đi và cần tracking nền, kèm màn hình giải thích rõ mục đích (phát hiện ở `REVIEW_NOTES.md` §4) |
-| R-17 | Phụ thuộc dịch vụ/SDK xác thực khuôn mặt bên thứ ba chưa được chọn — rủi ro về chi phí, độ chính xác, uptime khi tích hợp thật | Trung bình | Cao | Chọn nhà cung cấp là Open Item bắt buộc chốt ở D0.4 trước khi implement (FR-BIOMETRIC-05); thiết kế API nội bộ (`POST /api/vehicles/:id/verify`) độc lập với provider cụ thể để dễ đổi sau |
+| R-17 | Phụ thuộc dịch vụ/SDK xác thực khuôn mặt bên thứ ba — rủi ro về chi phí, độ chính xác, uptime khi tích hợp thật | Trung bình | Cao | **Đã đánh giá (R1-8, 07/2026):** chốt AWS Rekognition Face Liveness làm primary candidate (xem `docs/architecture/TDR-biometric-provider-spike.md`); cần xác nhận ToS/DPA đã tắt lưu video trước khi implement thật. Thiết kế API nội bộ (`POST /api/vehicles/:id/verify`) độc lập với provider cụ thể để dễ đổi sau |
 
 ## 2. Product & Scope Risks
 

@@ -142,7 +142,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-BIOMETRIC-02 | Hệ thống kiểm tra người dùng hiện tại có quyền với phương tiện đã chọn (owner, hoặc borrower có uỷ quyền còn hiệu lực) **trước khi** tiến hành xác thực khuôn mặt — tránh chạy xác thực cho một phiên chắc chắn sẽ bị từ chối. |
 | FR-BIOMETRIC-03 | Nếu xác thực khuôn mặt thất bại, người dùng không thể bắt đầu chuyến đi; được thử lại tối đa một số lần hợp lý trước khi phải quay lại bước chọn phương tiện. |
 | FR-BIOMETRIC-04 | Hệ thống **không lưu trữ ảnh khuôn mặt thô**; chỉ lưu kết quả xác thực (thành công/thất bại, thời điểm, phương tiện liên quan). |
-| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể là Open Question, chốt ở D0.4. |
+| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể **đã đánh giá (R1-8, 07/2026): AWS Rekognition Face Liveness** làm primary candidate, xem `docs/architecture/TDR-biometric-provider-spike.md` — chưa implement, MVP vẫn dùng `MockBiometricProvider`. |
 
 ### 1.14. Routing (FR-ROUTING)
 

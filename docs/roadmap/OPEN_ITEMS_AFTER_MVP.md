@@ -29,12 +29,14 @@
 - **Còn lại:** migrate `apps/web`'s `TripMap.tsx` từ Leaflet sang MapLibre GL JS + wire Protomaps thật — cố ý **chưa làm trong R1-7** (phạm vi R1-7 chỉ là spike/quyết định, không phải code migration; migrate là thay đổi UI thật cần verify trực quan riêng). `apps/mobile`'s `flutter_map` (OQ-006) nên đổi theo song song khi web migrate, để tránh 2 tile source khác nhau.
 - Xem: `docs/ARCHITECTURE.md` §9, `docs/04_TECH_DECISION_RECORD.md` TDR-002, `docs/architecture/TDR-tile-provider-spike.md`.
 
-## 4. Biometric provider thật (FR-BIOMETRIC-05, R-17) — vẫn mở
+## 4. ✅ Biometric provider thật (FR-BIOMETRIC-05, R-17) — đánh giá xong (R1-8, 07/2026), chưa implement
 
-- **Trạng thái:** MVP dùng `MockBiometricProvider` (adapter pattern, `apps/backend/src/biometric/`). Chưa chọn SDK/dịch vụ xác thực khuôn mặt thật.
-- **Cần chốt trước khi thay:** nhà cung cấp cụ thể + xác nhận chính sách của họ thật sự đáp ứng "không lưu ảnh thô" (constraint cứng của dự án, không chỉ quy ước code).
-- **Payload `provider_payload`:** hiện là chuỗi mờ (opaque string), sẽ đổi schema thật theo SDK đã chọn — không đổi contract `POST /api/vehicles/:id/verify` ở tầng response.
-- Xem: `docs/API_CONTRACT.md` §4/§11, `docs/ARCHITECTURE.md` §9.
+- **Trạng thái cũ:** MVP dùng `MockBiometricProvider` (adapter pattern, `apps/backend/src/biometric/`). Chưa chọn SDK/dịch vụ xác thực khuôn mặt thật.
+- **Đã làm:** technical spike so sánh AWS Rekognition Face Liveness, Azure Face API, FPT.AI eKYC, Regula Face SDK/FaceTec (07/2026) — chốt **AWS Rekognition Face Liveness** làm primary candidate, FPT.AI làm fallback nếu cần data residency nghiêm ngặt hơn. Chi tiết: `docs/architecture/TDR-biometric-provider-spike.md`.
+- **Điều kiện bắt buộc trước khi implement thật (chưa làm):** xác nhận qua ToS/DPA của AWS đã tắt (opt-out) việc lưu selfie video để "cải thiện dịch vụ" — mặc định của AWS có lưu, phải tắt thủ công để đáp ứng ràng buộc "không lưu ảnh thô" (constraint cứng của dự án, không chỉ quy ước code) và Nghị định 13/2023/NĐ-CP.
+- **Payload `provider_payload`:** hiện là chuỗi mờ (opaque string), sẽ đổi schema thật theo session flow của AWS Rekognition Face Liveness khi implement — không đổi contract `POST /api/vehicles/:id/verify` ở tầng response.
+- **Còn lại:** implement `AwsRekognitionBiometricProvider` thật — việc riêng, chưa lên lịch (P2, không khẩn cấp cho staging nội bộ vì mock vẫn dùng được).
+- Xem: `docs/API_CONTRACT.md` §4/§11, `docs/ARCHITECTURE.md` §9, `docs/architecture/TDR-biometric-provider-spike.md`.
 
 ## 5. Rate limiting — ✅ login + GPS event xong (R1-4, 07/2026); batch sync N/A
 

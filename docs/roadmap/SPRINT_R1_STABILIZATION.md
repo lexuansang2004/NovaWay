@@ -25,7 +25,7 @@ Nguồn: `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`. Không mục nào ở đây đ�
 | R1-5 | ✅ Mobile Trip Cockpit: thêm map view thật (chốt OQ-006) | P1 | Gap giữa `docs/ARCHITECTURE.md` §5.1 và implementation thật — cockpit hiện chỉ có text | — |
 | R1-6 | ✅ Benchmark chi phí `gps_event_dedup` (xem `docs/performance/GPS_EVENT_DEDUP_BENCHMARK.md`) | P2 | Xác nhận idempotency design chịu được tải trước khi có traffic thật | — |
 | R1-7 | ✅ Technical spike tile provider (OQ-005: Protomaps vs Mapbox) — chốt Protomaps, xem `docs/architecture/TDR-tile-provider-spike.md` | P2 | Cần trước khi đổi Leaflet → MapLibre GL JS (TDR-002) | Migrate Leaflet → MapLibre GL JS cố ý chưa làm — việc riêng ngoài phạm vi spike |
-| R1-8 | Đánh giá biometric provider thật (FR-BIOMETRIC-05) | P2 | Không khẩn cấp cho staging nội bộ — mock vẫn dùng được | — |
+| R1-8 | ✅ Đánh giá biometric provider thật (FR-BIOMETRIC-05) — chốt AWS Rekognition Face Liveness làm primary, xem `docs/architecture/TDR-biometric-provider-spike.md` | P2 | Không khẩn cấp cho staging nội bộ — mock vẫn dùng được | Implement provider thật cố ý chưa làm — việc riêng ngoài phạm vi đánh giá |
 
 **Đề xuất thứ tự làm:** R1-1 → R1-2 → R1-3 trước (đây là nhóm P0, mở khoá E2E-on-staging gate thật sự); R1-4/R1-5 làm song song nếu có nhân lực; R1-6/7/8 để cuối sprint hoặc sang R2 nếu hết thời gian.
 
@@ -66,4 +66,4 @@ Nguồn: `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`. Không mục nào ở đây đ�
 - [x] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` được cập nhật — mục nào xong thì đánh dấu, không xoá lịch sử.
 - [x] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 3.
 
-**Ghi chú:** R1-8 (P2) vẫn còn mở, chưa bắt đầu — xem mục 3.
+**Ghi chú:** Toàn bộ backlog R1-1 tới R1-8 đã hoàn tất (07/2026) — xem mục 3. R1-6/R1-7/R1-8 (P2) khép lại ở mức benchmark/spike/đánh giá đúng phạm vi ban đầu; các việc triển khai code phát sinh (migrate Leaflet→MapLibre, implement AWS Rekognition provider thật) cố ý để lại cho PR/sprint riêng.
