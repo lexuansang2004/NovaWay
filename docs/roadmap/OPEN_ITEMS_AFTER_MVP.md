@@ -22,11 +22,12 @@
 - **Còn thiếu:** tự động hoá bước 4 — job `e2e` trong CI hiện chỉ chạy nhắm Postgres/backend dựng trong runner (mục đích: gate nhanh cho mọi PR, không phụ thuộc staging đang online), chưa có job/schedule nào tự chạy lại suite nhắm vào staging thật sau mỗi lần deploy. Có thể để thủ công (chạy tay khi cần xác nhận staging) hoặc thêm job CI riêng — chưa quyết định, không khẩn cấp vì gate chính (PR → `develop`/`main`) đã có `e2e` job tự động.
 - **Hiện tại:** `v0.1.0` được merge vào `main` trước khi có gate này — dựa trên unit test + verify thủ công từng bước lúc đó, không hồi tố. Gate này áp dụng cho các lần merge `main` tiếp theo.
 
-## 3. Tile provider cho web dashboard (OQ-005) — vẫn mở
+## 3. ✅ Tile provider cho web dashboard (OQ-005) — đã chốt (R1-7, 07/2026)
 
-- **Trạng thái:** Chưa chọn. `apps/web`'s `TripMap` hiện dùng Leaflet + OSM public tile (kế thừa từ demo), có comment `TODO(production)` sẵn trong code chờ quyết định.
-- **Cần:** technical spike so sánh Protomaps vs Mapbox Free Tier (quota/pricing hiện hành) trước khi đổi sang MapLibre GL JS (TDR-002).
-- Xem: `docs/ARCHITECTURE.md` §9, `docs/04_TECH_DECISION_RECORD.md` TDR-002.
+- **Trạng thái cũ:** Chưa chọn. `apps/web`'s `TripMap` hiện dùng Leaflet + OSM public tile (kế thừa từ demo), có comment `TODO(production)` sẵn trong code chờ quyết định.
+- **Đã làm:** technical spike so sánh Protomaps vs Mapbox Free Tier (quota/pricing 07/2026) — chốt **Protomaps** (hosted API free 1M request/tháng cho MVP/staging, self-host PMTiles + Cloudflare R2 cho production). Chi tiết: `docs/architecture/TDR-tile-provider-spike.md`.
+- **Còn lại:** migrate `apps/web`'s `TripMap.tsx` từ Leaflet sang MapLibre GL JS + wire Protomaps thật — cố ý **chưa làm trong R1-7** (phạm vi R1-7 chỉ là spike/quyết định, không phải code migration; migrate là thay đổi UI thật cần verify trực quan riêng). `apps/mobile`'s `flutter_map` (OQ-006) nên đổi theo song song khi web migrate, để tránh 2 tile source khác nhau.
+- Xem: `docs/ARCHITECTURE.md` §9, `docs/04_TECH_DECISION_RECORD.md` TDR-002, `docs/architecture/TDR-tile-provider-spike.md`.
 
 ## 4. Biometric provider thật (FR-BIOMETRIC-05, R-17) — vẫn mở
 
