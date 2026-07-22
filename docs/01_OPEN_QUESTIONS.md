@@ -44,6 +44,7 @@ Tài liệu này ghi lại các câu hỏi còn cần chốt trước khi chuy�
 - Tile provider MVP/dev: ưu tiên Protomaps nếu phù hợp với MapLibre và chi phí/quota; Mapbox Free Tier là phương án fallback thực dụng.
 - Public OSM tile server chỉ dùng demo nhỏ, không dùng cho heavy production/offline prefetch.
 - Self-host tile server/vector tiles chuyển sang Post-MVP.
+- **Cập nhật (R1-7, 07/2026):** OQ-005 đã chốt final — xem `docs/architecture/TDR-tile-provider-spike.md`.
 
 ---
 
@@ -140,8 +141,8 @@ Tài liệu này ghi lại các câu hỏi còn cần chốt trước khi chuy�
 | OQ-002 | Web dashboard có nằm trong MVP không? | Cao | Có, nhưng chỉ dashboard cơ bản + live map |
 | OQ-003 | Admin role có cần trong MVP không? | Trung bình | Chưa cần full admin; có thể chuẩn bị role field |
 | OQ-004 | Offline queue lưu GPS hay cả obstacle event? | Cao | MVP lưu GPS/trip event trước; obstacle event sau hoặc chỉ warning mock |
-| OQ-005 | Tile provider MVP chọn Protomaps hay Mapbox Free Tier? | Cao | D0.2 ghi cả 2 candidate; D0.3 kiểm quota/cost và chọn final |
-| OQ-006 | ~~Mobile map plugin chọn gì?~~ | Cao | **Đã chốt (R1-5, 07/2026):** `flutter_map` + OSM public tile — khớp trạng thái hiện tại của web (Leaflet + OSM), tránh phụ thuộc OQ-005 vẫn mở. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. |
+| OQ-005 | ~~Tile provider MVP chọn Protomaps hay Mapbox Free Tier?~~ | Cao | **Đã chốt (R1-7, 07/2026):** Protomaps — hosted API (free, 1M request/tháng) cho MVP/staging, self-host PMTiles + Cloudflare R2 cho production. Xem `docs/architecture/TDR-tile-provider-spike.md`. |
+| OQ-006 | ~~Mobile map plugin chọn gì?~~ | Cao | **Đã chốt (R1-5, 07/2026):** `flutter_map` + OSM public tile — khớp trạng thái hiện tại của web (Leaflet + OSM), tránh phụ thuộc OQ-005 lúc đó vẫn mở. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. |
 | OQ-007 | GPS sampling frequency là bao nhiêu? | Cao | Đề xuất 1-5 giây/event khi active trip; cần test pin |
 | OQ-008 | Dữ liệu public warning cần ẩn danh mức nào? | Cao | Chỉ lưu aggregate/crowdsourced event cho bản đồ chung |
 | OQ-009 | Routing MVP dùng mock hay engine thật? | Cao | MVP dùng routing mock theo vehicle trước |
