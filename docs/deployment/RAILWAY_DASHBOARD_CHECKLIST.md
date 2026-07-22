@@ -44,6 +44,8 @@
 
 **Lưu ý tên service thật:** Railway tự đặt tên ngẫu nhiên cho Empty Service (không dùng tên image) — trong lần triển khai này service PostGIS thật sự tên là **`pretty-insight`** (không phải `postgis`). Luôn dùng đúng tên hiển thị trên tab của service đó khi viết reference `${{ServiceName.VAR}}`, không giả định theo tên image.
 
+- [x] **Dọn dẹp:** service `postgis` đầu tiên (tạo nhầm ở project `supportive-quietude`, xem sự cố #2 ở §10) đã **xoá hẳn** — không còn được `@novaway/backend` tham chiếu tới, không có dữ liệu cần giữ.
+
 ## 5. Environment Variables — Backend service
 
 Chỉ nhập trực tiếp trên Dashboard, không gửi giá trị thật vào chat/commit vào repo:
@@ -72,7 +74,7 @@ Theo quyết định đã chốt: **không** deploy `apps/web` trên Railway —
 - [ ] Chọn provider tĩnh (Vercel/Netlify/Cloudflare Pages) — **NEED_USER_DECISION**, chưa chọn cụ thể provider nào ở bước này.
 - [ ] Set biến `VITE_API_BASE_URL=https://novawaybackend-production.up.railway.app/api` trên provider đó.
 - [ ] Sau khi có domain web thật, quay lại điền `WEB_ORIGIN` trên backend (§5) cho đúng CORS.
-- [ ] **Dọn dẹp:** có 1 service `@novaway/web` từng bị tạo nhầm trên Railway lúc đầu (leftover, cấu hình `Builder: DOCKERFILE` dù không có Dockerfile, `Start Command` dùng `dev` — sai hoàn toàn cho production) — đã bị loại khỏi lô deploy đầu tiên bằng "Discard", cần **xoá hẳn** service này để tránh nhầm lẫn về sau.
+- [x] **Dọn dẹp:** service `@novaway/web` từng bị tạo nhầm trên Railway lúc đầu (leftover, cấu hình `Builder: DOCKERFILE` dù không có Dockerfile, `Start Command` dùng `dev` — sai hoàn toàn cho production) — đã bị loại khỏi lô deploy đầu tiên bằng "Discard", và đã **xoá hẳn** khỏi project `patient-stillness`.
 - [x] **Lưu ý:** repo hiện **không có** biến `VITE_WS_URL` hay bất kỳ kết nối `socket.io-client` nào trong `apps/web` — dashboard web (`LiveMapPage`) hiện dùng mock GPS sender phía client (`useMockGpsSender.ts`), chưa thật sự kết nối tới `/realtime` gateway của backend. Đây là gap đã ghi ở `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7. Không thêm biến `VITE_WS_URL` vì code chưa đọc biến đó.
 
 ## 8. Verify sau khi deploy — ĐÃ THỰC HIỆN (trên URL thật)
