@@ -15,12 +15,13 @@ import { BiometricModule } from './biometric/biometric.module';
 import { TripsModule } from './trips/trips.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RoutingModule } from './routing/routing.module';
+import { SyncModule } from './sync/sync.module';
 import { ObservabilityModule } from './observability/metrics.module';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 
-// Remaining domain modules (SyncModule, MismatchDetectionModule,
-// TerrainWarningsModule — see docs/ARCHITECTURE.md §3.1) are added
-// incrementally in their own micro-steps (3.2 onward), not here.
+// TerrainWarningsModule (see docs/ARCHITECTURE.md §3.1) is still not built —
+// GET /api/terrain-warnings (API_CONTRACT.md §9) remains unimplemented,
+// tracked separately, not part of this module's scope.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -52,6 +53,7 @@ import { LoggingInterceptor } from './observability/logging.interceptor';
     TripsModule,
     RealtimeModule,
     RoutingModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor }],

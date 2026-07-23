@@ -38,14 +38,14 @@
 - **Còn lại:** implement `AwsRekognitionBiometricProvider` thật — việc riêng, chưa lên lịch (P2, không khẩn cấp cho staging nội bộ vì mock vẫn dùng được).
 - Xem: `docs/API_CONTRACT.md` §4/§11, `docs/ARCHITECTURE.md` §9, `docs/architecture/TDR-biometric-provider-spike.md`.
 
-## 5. Rate limiting — ✅ login + GPS event xong (R1-4, 07/2026); batch sync N/A
+## 5. ✅ Rate limiting — login + GPS event (R1-4, 07/2026), batch sync (R2-2, 07/2026) — cả 3 phần đã xong
 
-- **Trạng thái:** Đã triển khai cho 2/3 phần trong phạm vi gốc.
+- **Trạng thái:** Đã triển khai đủ 3/3 phần trong phạm vi gốc.
   - **Login** (`POST /api/auth/login`): `@nestjs/throttler`, `ThrottlerGuard` áp riêng cho route này (không global) — 5 lần/60 giây/IP. Verify thật: 5 lần đầu trả `401` (sai mật khẩu), lần thứ 6 trả `429 {error_code: "RATE_LIMITED"}`.
   - **GPS event** (`location:update`, WebSocket): `GpsRateLimiterService` (in-memory fixed-window counter, cùng phong cách `MismatchDetectionService`) — 10 event/giây/user. Verify thật qua `socket.io-client`: gửi dồn 15 event, 10 event đầu được chấp nhận, 5 event sau bị `location:rejected` với `error_code: "RATE_LIMITED"`.
-  - Cả 2 giới hạn trên là **giá trị ban đầu thận trọng, chưa qua benchmark tải thật** — đúng như cảnh báo gốc ở mục này trước khi sửa, cần tinh chỉnh khi có traffic thật.
-  - **Batch sync** (`POST /api/trips/sync`): **không áp dụng được** — endpoint này chỉ mới có hợp đồng tài liệu (`docs/API_CONTRACT.md` §7: request/response shape, giới hạn 500 events/payload đã đặc tả sẵn) nhưng **chưa từng được implement** trong `apps/backend` (không có route, không có `SyncModule` dù `app.module.ts` có để sẵn comment placeholder). Không thể rate-limit một endpoint không tồn tại — cần xây endpoint trước (việc riêng, ngoài phạm vi R1-4).
-- Xem: `docs/API_CONTRACT.md` §7, §11, `docs/SRS.md` NFR-API-01, FR-REALTIME-04, NFR-PERF-01. Code: `apps/backend/src/realtime/gps-rate-limiter.service.ts`, `apps/backend/src/auth/auth.controller.ts`.
+  - **Batch sync** (`POST /api/trips/sync`, R2-2): `@nestjs/throttler`, `ThrottlerGuard` riêng cho route này — 20 request/60 giây/IP (cao hơn login vì use-case hợp lệ — thiết bị reconnect, flush batch đã lưu — có thể xảy ra nhiều hơn 1 lần/phút, khác với login attempt). Verify thật: gửi dồn 22 request, request thứ 17 trở đi trả `429` (số thứ tự dịch xuống do các request thử nghiệm khác trong cùng session đã cộng dồn vào cùng bucket theo IP+route — xác nhận đúng cơ chế đếm, không phải bug).
+  - Cả 3 giới hạn trên là **giá trị ban đầu thận trọng, chưa qua benchmark tải thật** — cần tinh chỉnh khi có traffic thật.
+- Xem: `docs/API_CONTRACT.md` §7, §11, `docs/SRS.md` NFR-API-01, FR-REALTIME-04, NFR-PERF-01. Code: `apps/backend/src/realtime/gps-rate-limiter.service.ts`, `apps/backend/src/auth/auth.controller.ts`, `apps/backend/src/sync/sync.controller.ts`.
 
 ## 6. Hosting / CD cho staging & production ✅ STAGING XONG (production vẫn mở)
 
@@ -80,6 +80,7 @@
 
 - `OQ-005` (tile provider) và biometric provider — đã liệt kê ở mục 3/4, không lặp lại.
 - Exclusion constraint `btree_gist` (dùng ở `vehicle_authorizations`, step `1.5`) mới xác nhận hoạt động trên Postgres local — chưa xác nhận khả dụng trên hosting production cuối cùng (phụ thuộc mục 6, hosting provider chưa chốt).
+- **Phát hiện khi làm R2-2 (07/2026):** `GET /api/terrain-warnings` (`docs/API_CONTRACT.md` §9, `docs/ARCHITECTURE.md` §3.1 `TerrainWarningsModule`) đã có hợp đồng tài liệu từ D0.4 nhưng **chưa từng được implement** trong `apps/backend` — không có route, không có module nào. Phát hiện tình cờ khi sửa comment lỗi thời trong `app.module.ts` (từng ghi "SyncModule chưa build", giờ đã build ở R2-2, nhưng comment gốc còn nhắc tới `TerrainWarningsModule` chung nhóm — kiểm tra lại phát hiện module này vẫn chưa tồn tại). Ngoài phạm vi R2-2 (chỉ build batch sync), chưa đánh giá mức ưu tiên — cần quyết định có đưa vào R2/R3 hay không.
 - Không có mục nào khác còn mở trong `docs/01_OPEN_QUESTIONS.md` sau D0.7 ngoài các mục đã liệt kê ở trên.
 
 ---

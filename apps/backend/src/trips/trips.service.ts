@@ -144,7 +144,9 @@ export class TripsService {
     return { trip, tripLog, warnings };
   }
 
-  private async getOwnedTripOrThrow(id: string, userId: string): Promise<Trip> {
+  // Public: also used by SyncService (POST /api/trips/sync, R2-2) to check
+  // trip ownership before accepting a batch of offline events for it.
+  async getOwnedTripOrThrow(id: string, userId: string): Promise<Trip> {
     const trip = await this.tripsRepository.findOneBy({ id });
     if (!trip) {
       throw new NotFoundException({ error_code: 'NOT_FOUND', message: 'Chuyến đi không tồn tại.' });
