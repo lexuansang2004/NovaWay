@@ -22,4 +22,18 @@ export const envValidationSchema = Joi.object({
   // 5 minutes: long enough to walk from face-scan to bike, short enough
   // that a handoff to a different driver after verifying can't reuse it.
   VERIFICATION_VALIDITY_MINUTES: Joi.number().positive().default(5),
+  // docs/architecture/TDR-biometric-provider-spike.md (R2-6) — 'aws-rekognition'
+  // makes real, billed AWS API calls and requires valid AWS credentials
+  // (via the SDK's standard credential chain, not validated here) plus
+  // confirmed ToS/DPA opt-out of AWS's default video retention — stays
+  // 'mock' until that's confirmed for whichever environment sets this.
+  BIOMETRIC_PROVIDER: Joi.string().valid('mock', 'aws-rekognition').default('mock'),
+  // Face Liveness is only available in a handful of AWS regions — see
+  // https://docs.aws.amazon.com/rekognition/latest/dg/face-liveness.html
+  // (region list current as of 07/2026: us-east-1, us-west-2, eu-west-1,
+  // ap-southeast-1, ap-southeast-2).
+  AWS_REGION: Joi.string().default('us-east-1'),
+  // AWS's own example code/docs use 90 as the pass/fail cutoff for the
+  // Confidence score (0-100) returned by GetFaceLivenessSessionResults.
+  AWS_REKOGNITION_LIVENESS_MIN_CONFIDENCE: Joi.number().min(0).max(100).default(90),
 });
