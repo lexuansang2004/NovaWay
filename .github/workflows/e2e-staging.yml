@@ -7,21 +7,26 @@ name: E2E on staging
 # ci.yml `e2e` job is a fast per-PR gate against a throwaway database, this
 # job is the actual "does staging work" confirmation.
 #
-# Trigger: push to develop (i.e. right after a PR merges) — chosen over
-# cron/manual when this job was set up (see docs/roadmap/
-# SPRINT_R2_PRODUCT_COMPLETION.md R2-4 row's neighbor, R2-5). Known
-# limitation, accepted for now: this does not wait for Railway/Vercel to
-# finish deploying the new commit — it only waits for the backend to report
-# healthy at all, not that it's specifically running the new code (the
-# backend has no build/commit marker in its /health response). Railway
-# builds are usually done well within the timeout below in practice, but a
-# stricter deploy-completion check (e.g. a webhook-driven trigger) is
-# deferred to R2-7 (CD automation), which already anticipates wiring this up
-# properly. `workflow_dispatch` was deliberately NOT added — the trigger
-# question was asked and push-to-develop was chosen as the only trigger.
+# R2-7 — trigger changed from `push: branches: [develop]` to a schedule.
+# Original R2-5 design used push-to-develop for the fastest possible
+# feedback, but that created a real deadlock found live in production:
+# Railway's "Wait for CI" setting (Settings → Wait for CI: "Trigger
+# deployments after all GitHub actions have completed successfully") treats
+# *every* GitHub Actions run on a commit as part of that gate — including
+# this one. Since this job always raced ahead of Railway's own deploy (it
+# ran immediately on push, while the new code wasn't live yet), it always
+# failed, which made Railway permanently skip deploying that commit ("CI
+# check suite failed") — staging silently stayed on stale code across
+# multiple merges (confirmed: still running pre-R2-6 code ~10 minutes after
+# the R2-6 merge, verified via a real HTTP call). A push-triggered workflow
+# can never safely coexist with Railway's all-or-nothing Wait for CI, so
+# this runs on a schedule instead — fully decoupled from any single
+# commit's check suite, so Railway is never blocked by it. `workflow_dispatch`
+# added too, for an on-demand manual run when needed.
 on:
-  push:
-    branches: [develop]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 concurrency:
   group: e2e-staging-${{ github.workflow }}
@@ -53,8 +58,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # See the "Known limitation" note above — this is a health check, not
-      # proof the new commit is live.
+      # Scheduled runs (every 15 min) give deploys ample time to finish
+      # beforehand — this is just a sanity check, not a race-condition guard
+      # like it would need to be if this still ran synchronously on push.
       - name: Wait for staging backend to be healthy
         run: |
           for i in $(seq 1 30); do

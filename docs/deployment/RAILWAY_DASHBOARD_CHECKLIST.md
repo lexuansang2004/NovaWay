@@ -14,7 +14,7 @@
 
 - [x] **Root Directory:** để **trống** (không set) — bắt buộc, vì Dockerfile cần build context là repo root để thấy `packages/shared-types`.
 - [x] **Branch connected to production:** `develop`.
-- [x] **Wait for CI:** **BẬT** — chỉ deploy sau khi GitHub Actions (`.github/workflows/ci.yml`) pass, tránh staging chạy code chưa qua CI.
+- [x] **Wait for CI:** **BẬT** — chỉ deploy sau khi GitHub Actions pass, tránh staging chạy code chưa qua CI. **⚠️ Lưu ý quan trọng (phát hiện thật ở R2-7):** cài đặt này chờ **TẤT CẢ** GitHub Actions chạy trên commit đó (Railway UI ghi "Trigger deployments after all GitHub actions have completed successfully") — không cho chọn check cụ thể. Vì vậy **bất kỳ workflow nào trigger trên `push` tới `develop` đều trở thành một phần gate này**. `.github/workflows/e2e-staging.yml` (R2-5) ban đầu trigger trên `push` đã gây deadlock thật: job đó luôn chạy trước khi Railway deploy xong nên luôn fail, khiến Railway skip deploy vĩnh viễn ("CI check suite failed") — staging bị kẹt ở code cũ qua nhiều lần merge liên tiếp mà không ai biết. Đã sửa bằng cách đổi `e2e-staging.yml` sang trigger theo lịch (cron) thay vì `push` — xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §2/§6. **Bài học:** không thêm workflow mới trigger trên `push: branches: [develop]` nếu chưa xác nhận nó luôn pass ngay tức thời sau push, nếu không sẽ lặp lại deadlock này.
 
 ## 2. Service backend — Build
 
