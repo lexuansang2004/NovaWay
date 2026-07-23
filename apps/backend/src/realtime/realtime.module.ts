@@ -22,5 +22,8 @@ import { GpsRateLimiterService } from './gps-rate-limiter.service';
     }),
   ],
   providers: [RealtimeGateway, GpsEventsService, GpsRateLimiterService],
+  // GpsEventsService reused by SyncModule (POST /api/trips/sync, R2-2) so
+  // the raw_gps_events/gps_event_dedup insert logic isn't duplicated.
+  exports: [GpsEventsService],
 })
 export class RealtimeModule {}

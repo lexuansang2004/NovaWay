@@ -11,6 +11,10 @@ export interface RecordGpsEventInput {
   speedKmh: number;
   accuracyM: number;
   eventTimestamp: string;
+  // DATA_MODEL.md §2.7 sync_channel enum ('realtime' | 'batch'). Defaults to
+  // 'realtime' so RealtimeGateway's existing call sites don't need changing;
+  // SyncService (R2-2, POST /api/trips/sync) passes 'batch' explicitly.
+  syncChannel?: 'realtime' | 'batch';
 }
 
 class DuplicateGpsEventError extends Error {}
@@ -35,7 +39,7 @@ export class GpsEventsService {
         const [{ id: rawGpsEventId }] = await manager.query(
           `INSERT INTO raw_gps_events
              (trip_id, vehicle_id, user_id, client_event_id, location, speed_kmh, accuracy_m, sync_channel, event_timestamp)
-           VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326)::geography, $7, $8, 'realtime', $9)
+           VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326)::geography, $7, $8, $9, $10)
            RETURNING id`,
           [
             input.tripId,
@@ -46,6 +50,7 @@ export class GpsEventsService {
             input.latitude,
             input.speedKmh,
             input.accuracyM,
+            input.syncChannel ?? 'realtime',
             input.eventTimestamp,
           ],
         );

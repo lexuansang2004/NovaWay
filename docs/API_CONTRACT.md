@@ -244,7 +244,7 @@ Request:
 }
 ```
 
-Ràng buộc: tối đa 500 events/mảng `events`. Vượt → `400 BATCH_TOO_LARGE`.
+Ràng buộc: tối đa 500 events/mảng `events`. Vượt → `400 BATCH_TOO_LARGE`. `trip_id` phải thuộc user đã auth (`403` nếu không, `404` nếu không tồn tại) — **không** yêu cầu trip đang `active`: event offline được thu thập *trong lúc* chuyến đi active nhưng thường được đồng bộ *sau khi* rider đã kết thúc chuyến và có mạng trở lại, nên yêu cầu active sẽ chặn đúng use-case endpoint này tồn tại để giải quyết.
 
 Response `200`:
 ```json
@@ -254,12 +254,14 @@ Response `200`:
   "duplicate_count": 5,
   "failed_count": 5,
   "failed_events": [
-    { "client_event_id": "evt_001", "error_code": "INVALID_COORDINATE", "message": "latitude/longitude is out of range" }
+    { "client_event_id": "evt_001", "error_code": "VALIDATION_ERROR", "message": "Sự kiện GPS không hợp lệ." }
   ]
 }
 ```
 
-`status` có thể là `success` (100% accepted, không lỗi/trùng), `partial_success`, hoặc `all_failed`.
+`status` có thể là `success` (100% accepted, không lỗi/trùng), `partial_success`, hoặc `all_failed`. `error_code` của từng `failed_events` hiện chỉ có `VALIDATION_ERROR` (không phân biệt lý do cụ thể — toạ độ sai, thiếu field, v.v. — cùng quy ước với `location:rejected` ở §6) — không phải enum đóng.
+
+**Implemented (R2-2, 07/2026):** `apps/backend/src/sync/`. Rate limit: 20 request/60s/IP (`ThrottlerGuard`, giá trị ban đầu thận trọng chưa qua benchmark tải thật, cùng phong cách R1-4). `vehicle_id` trong mỗi event luôn bị bỏ qua khi ghi — server luôn dùng `vehicle_id` của chính trip (cùng nguyên tắc với `location:update` ở §6, vốn không nhận `vehicle_id` từ client). Body parser JSON limit nâng lên 1MB (mặc định Express là 100KB, quá nhỏ cho batch 500 events thực tế) — xem `apps/backend/src/main.ts`.
 
 ## 8. Error Format (áp dụng toàn hệ thống)
 
@@ -310,4 +312,4 @@ Ghi chú: MVP sinh route mock bằng nội suy tuyến tính giữa `origin`/`de
 - ~~`403` vs `404` cho resource không thuộc sở hữu~~ — **Đã chốt (07/2026, trước step `1.4`)**: dùng `403` kèm error_code cụ thể theo resource (vd. `NOT_VEHICLE_OWNER`), áp dụng cho toàn backend — khớp đúng ví dụ đã có sẵn ở §2. Lý do: vehicle ID (và các resource tương tự sau này) không phải thông tin nhạy cảm cần giấu tồn tại; 403 + error_code rõ ràng giúp FE hiển thị thông báo chính xác hơn "not found" chung chung, và tránh phải query 2 lần (exists-but-not-mine vs not-exists) ở mọi endpoint. `404` chỉ dùng khi resource thật sự không tồn tại (ID sai/đã xoá) — xem §8.
 - Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn — placeholder `provider_payload` sẽ được thay bằng schema thật. **Vẫn mở** sau MVP.
 - ~~Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`~~ — **Đã chốt (07/2026, step `7.1`)**: 5 phút (`VERIFICATION_VALIDITY_MINUTES`, xem `apps/backend/.env.example`).
-- ~~Rate limit cụ thể theo endpoint~~ — **Một phần đã triển khai (R1-4, 07/2026)**: login (`POST /api/auth/login`, `@nestjs/throttler`, 5 lần/60s/IP) và GPS event (`location:update` qua WebSocket, in-memory counter, 10 event/giây/user) — cả hai là giá trị ban đầu thận trọng, chưa qua benchmark tải thật. Batch sync (`POST /api/trips/sync`, §7 dưới) **chưa áp dụng được** — endpoint này mới chỉ có ở dạng hợp đồng tài liệu, chưa được implement trong `apps/backend`. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5.
+- ~~Rate limit cụ thể theo endpoint~~ — **Đã triển khai (R1-4 + R2-2, 07/2026)**: login (`POST /api/auth/login`, `@nestjs/throttler`, 5 lần/60s/IP), GPS event (`location:update` qua WebSocket, in-memory counter, 10 event/giây/user), và batch sync (`POST /api/trips/sync`, §7, `@nestjs/throttler`, 20 request/60s/IP) — cả ba là giá trị ban đầu thận trọng, chưa qua benchmark tải thật. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5.
