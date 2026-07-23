@@ -13,6 +13,15 @@ interface AuthenticatedRequest extends Request {
 export class BiometricController {
   constructor(private readonly biometricService: BiometricService) {}
 
+  // R2-6 — must be called before verify(): the returned session_id is what
+  // the client's AWS Face Liveness capture SDK session is tied to.
+  @Post('verify/session')
+  @HttpCode(HttpStatus.CREATED)
+  async createSession(@Req() req: AuthenticatedRequest, @Param('vehicleId') vehicleId: string) {
+    const { sessionId } = await this.biometricService.createSession(vehicleId, req.user.id);
+    return { session_id: sessionId };
+  }
+
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   async verify(

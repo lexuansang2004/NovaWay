@@ -73,13 +73,14 @@ Trong 3 candidate có API self-serve so sánh được, AWS Rekognition Face Liv
 
 ## Consequence
 
-- **Không có thay đổi code trong PR này** — `MockBiometricProvider` tiếp tục là provider đang chạy; interface `BiometricProvider` (`apps/backend/src/biometric/biometric-provider.interface.ts`) đã đủ tổng quát để nhận `AwsRekognitionBiometricProvider` sau này mà không đổi `BiometricService`/`BiometricController`.
-- Khi có PR implement provider thật (việc riêng, chưa lên lịch — P2, không khẩn cấp): cần xác nhận hợp đồng/DPA với AWS đã tắt lưu video trước khi bật provider thật trong bất kỳ môi trường nào xử lý dữ liệu thật (kể cả staging nếu dùng khuôn mặt thật của người dùng thử nghiệm).
-- `VerifyDto.provider_payload` (hiện là opaque string) sẽ cần đổi schema thật theo yêu cầu input của AWS Rekognition Face Liveness API (session token/reference) khi implement — không đổi contract HTTP `POST /api/vehicles/:id/verify` ở tầng response (đã ghi ở `OPEN_ITEMS_AFTER_MVP.md` §4).
+- **Cập nhật (R2-6, 07/2026): đã implement.** `AwsRekognitionBiometricProvider` thật (`apps/backend/src/biometric/providers/aws-rekognition-biometric.provider.ts`) tồn tại song song `MockBiometricProvider`, chọn qua config `BIOMETRIC_PROVIDER` (mặc định vẫn `mock`). Interface `BiometricProvider` đã đủ tổng quát để nhận provider mới mà không đổi `BiometricService`/`BiometricController` ngoài việc thêm method `createSession()` (đã dự đoán đúng ở lần viết TDR này).
+- **Đã xác nhận kỹ thuật (chưa phải xác nhận hợp đồng/DPA):** gọi thật `CreateFaceLivenessSession`/`GetFaceLivenessSessionResults` qua AWS SDK bằng credential sandbox cá nhân của người dùng — cả hai lệnh gọi hoạt động đúng, bao gồm nhánh lỗi (session chưa có capture thật → `LIVENESS_SESSION_NOT_SUCCEEDED`).
+- **Vẫn đúng như dự đoán ban đầu:** cần xác nhận hợp đồng/DPA với AWS đã tắt lưu video trước khi bật provider thật trong bất kỳ môi trường nào xử lý dữ liệu thật (kể cả staging nếu dùng khuôn mặt thật của người dùng thử nghiệm) — **chưa làm**, `BIOMETRIC_PROVIDER` vẫn mặc định `mock`.
+- `VerifyDto.provider_payload` (opaque string) đã đổi thành `session_id` theo đúng session flow của AWS Face Liveness — thêm endpoint mới `POST /api/vehicles/:id/verify/session` để tạo session trước; contract response của `POST /api/vehicles/:id/verify` không đổi (đã ghi ở `docs/API_CONTRACT.md` §4, `OPEN_ITEMS_AFTER_MVP.md` §4).
 
-## Chưa quyết định (cần làm ở PR implementation riêng)
+## Chưa quyết định / còn nợ (sau R2-6)
 
-- Xác nhận chính thức qua ToS/DPA của AWS rằng opt-out lưu video hoạt động đúng như tài liệu công khai, và vùng lưu trữ/mã hóa đáp ứng Nghị định 13/2023/NĐ-CP — cần review pháp lý trước khi ký, ngoài phạm vi kỹ thuật của spike này.
+- Xác nhận chính thức qua ToS/DPA của AWS rằng opt-out lưu video hoạt động đúng như tài liệu công khai, và vùng lưu trữ/mã hóa đáp ứng Nghị định 13/2023/NĐ-CP — cần review pháp lý trước khi ký, ngoài phạm vi kỹ thuật.
 - Ngân sách chính thức cho AWS Rekognition (chi phí theo lượt xác thực) khi có traffic sản xuất thật.
 - Đánh giá sâu Regula Face SDK/FaceTec (on-device) như một phương án thay thế triệt để hơn nếu yêu cầu compliance sau này đòi hỏi ảnh không bao giờ rời thiết bị.
-- Thiết kế lại `VerifyDto`/`BiometricProvider.verify()` payload shape thật theo AWS Rekognition Face Liveness session flow (client-side session creation → backend xác nhận kết quả) — khác với payload string đơn giản hiện tại.
+- **Xây UI capture liveness thật trên `apps/mobile`** (tích hợp AWS Amplify Face Liveness SDK) — hiện chưa có client nào (web hay mobile) có thể gọi trọn vẹn flow `verify/session` → capture → `verify` thật; verify R2-6 chỉ xác nhận 2 lệnh gọi AWS SDK phía backend hoạt động đúng qua HTTP, không phải click-through UI.

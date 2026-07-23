@@ -88,8 +88,17 @@ test('golden path: login → select vehicle → start trip → see location → 
 
   let verificationId: string;
   await test.step('biometric verify via real API (mock provider)', async () => {
+    // R2-6: verify now requires a session_id from POST .../verify/session
+    // first (matches AWS Rekognition Face Liveness's real two-step flow) —
+    // the mock provider accepts any non-'fail' session id.
+    const sessionRes = await request.post(`${API_BASE_URL}/vehicles/${vehicleId!}/verify/session`, {
+      headers: authHeader,
+    });
+    expect(sessionRes.ok(), await sessionRes.text()).toBeTruthy();
+    const { session_id: sessionId } = (await sessionRes.json()) as { session_id: string };
+
     const res = await request.post(`${API_BASE_URL}/vehicles/${vehicleId!}/verify`, {
-      data: { provider_payload: 'e2e-golden-path' },
+      data: { session_id: sessionId },
       headers: authHeader,
     });
     const body = (await res.json()) as VerifyResponse;

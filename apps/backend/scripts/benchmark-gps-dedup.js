@@ -74,7 +74,7 @@ async function setupTrip(suffix) {
   const verifyRes = await fetch(`${API_BASE_URL}/vehicles/${vehicle.id}/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader },
-    body: JSON.stringify({ provider_payload: 'benchmark' }),
+    body: JSON.stringify({ session_id: 'benchmark' }),
   });
   if (!verifyRes.ok) throw new Error(`biometric verify failed (${verifyRes.status}): ${await verifyRes.text()}`);
   const { verification_id: verificationId } = await verifyRes.json();
