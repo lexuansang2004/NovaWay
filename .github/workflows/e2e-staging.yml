@@ -1,0 +1,77 @@
+name: E2E on staging
+
+# R2-5 (docs/roadmap/SPRINT_R2_PRODUCT_COMPLETION.md) — reruns the golden-path
+# E2E suite against the real deployed staging domains (Vercel + Railway),
+# not the runner-local Postgres/backend the `e2e` job in ci.yml uses. See
+# docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §2 for why the two are separate: the
+# ci.yml `e2e` job is a fast per-PR gate against a throwaway database, this
+# job is the actual "does staging work" confirmation.
+#
+# Trigger: push to develop (i.e. right after a PR merges) — chosen over
+# cron/manual when this job was set up (see docs/roadmap/
+# SPRINT_R2_PRODUCT_COMPLETION.md R2-4 row's neighbor, R2-5). Known
+# limitation, accepted for now: this does not wait for Railway/Vercel to
+# finish deploying the new commit — it only waits for the backend to report
+# healthy at all, not that it's specifically running the new code (the
+# backend has no build/commit marker in its /health response). Railway
+# builds are usually done well within the timeout below in practice, but a
+# stricter deploy-completion check (e.g. a webhook-driven trigger) is
+# deferred to R2-7 (CD automation), which already anticipates wiring this up
+# properly. `workflow_dispatch` was deliberately NOT added — the trigger
+# question was asked and push-to-develop was chosen as the only trigger.
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: e2e-staging-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  # Public staging domains — see docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md
+  # and docs/deployment/VERCEL_WEB_CHECKLIST.md. Not secrets: these URLs are
+  # already documented in-repo and are meaningless without a live deploy.
+  E2E_WEB_BASE_URL: https://nova-way-web.vercel.app
+  E2E_API_BASE_URL: https://novawaybackend-production.up.railway.app/api
+  E2E_WS_BASE_URL: https://novawaybackend-production.up.railway.app
+  STAGING_HEALTH_URL: https://novawaybackend-production.up.railway.app/health
+
+jobs:
+  e2e-staging:
+    name: E2E (Playwright, golden path) — staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # See the "Known limitation" note above — this is a health check, not
+      # proof the new commit is live.
+      - name: Wait for staging backend to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "${{ env.STAGING_HEALTH_URL }}" > /dev/null; then
+              echo "Staging backend is healthy"
+              exit 0
+            fi
+            echo "Not healthy yet, retrying in 10s ($i/30)..."
+            sleep 10
+          done
+          echo "Staging backend did not become healthy in time"
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite against staging
+        working-directory: apps/web
+        run: pnpm test:e2e

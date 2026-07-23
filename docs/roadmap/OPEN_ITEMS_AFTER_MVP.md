@@ -10,17 +10,14 @@
 - **Điều kiện để tiếp tục:** có máy cài Unity Hub + Unity Editor (LTS phù hợp với AR Foundation), và ít nhất một thiết bị Android/iOS hỗ trợ ARCore/ARKit để đo thật.
 - Chi tiết: `docs/REVIEW_NOTES.md` §15, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `8.1`.
 
-## 2. E2E-on-staging test gate ✅ ĐÃ CHẠY PASS THẬT (chưa tự động hoá)
+## 2. ✅ E2E-on-staging test gate — tự động hoá xong (R2-5, 07/2026)
 
-- **Trạng thái:** Đã chạy `apps/web/e2e/golden-path.spec.ts` pass thật nhắm vào staging thật (Vercel + Railway) — R1-2/R1-3 follow-up (07/2026). Yêu cầu gốc của `docs/TEST_STRATEGY.md` §3 ("E2E suite pass trên môi trường staging") **đã đạt được**, nhưng bằng thao tác thủ công, chưa tự động hoá trong CI.
+- **Trạng thái cũ:** Đã chạy `apps/web/e2e/golden-path.spec.ts` pass thật nhắm vào staging thật (Vercel + Railway) — R1-2/R1-3 follow-up, nhưng bằng thao tác thủ công, chưa tự động hoá trong CI.
 - **Yêu cầu gốc:** `docs/TEST_STRATEGY.md` §3 — "Merge vào `main` yêu cầu thêm: E2E suite pass trên môi trường staging."
-- **Đã xong:**
-  1. Viết suite (`apps/web/e2e/golden-path.spec.ts`) — luồng đăng nhập → chọn/kích hoạt xe (UI thật) → bắt đầu/gửi GPS/kết thúc chuyến đi (REST + WebSocket thật) → verify trên Analytics (UI thật). Chi tiết + lý do thiết kế (gap `LiveMapPage` mock) ở `docs/TEST_STRATEGY.md` §3.
-  2. Wire vào CI (`e2e` job, `.github/workflows/ci.yml`) — chạy nhắm Postgres/PostGIS dựng ngay trong runner (không phải staging thật).
-  3. Deploy `apps/web` lên Vercel (`docs/deployment/VERCEL_WEB_CHECKLIST.md`), cập nhật `WEB_ORIGIN` trên backend Railway — CORS xác nhận hoạt động qua trình duyệt thật.
-  4. Chạy suite thủ công với `E2E_WEB_BASE_URL`/`E2E_API_BASE_URL`/`E2E_WS_BASE_URL` trỏ vào domain Vercel + Railway thật — **pass**.
-- **Còn thiếu:** tự động hoá bước 4 — job `e2e` trong CI hiện chỉ chạy nhắm Postgres/backend dựng trong runner (mục đích: gate nhanh cho mọi PR, không phụ thuộc staging đang online), chưa có job/schedule nào tự chạy lại suite nhắm vào staging thật sau mỗi lần deploy. Có thể để thủ công (chạy tay khi cần xác nhận staging) hoặc thêm job CI riêng — chưa quyết định, không khẩn cấp vì gate chính (PR → `develop`/`main`) đã có `e2e` job tự động.
-- **Hiện tại:** `v0.1.0` được merge vào `main` trước khi có gate này — dựa trên unit test + verify thủ công từng bước lúc đó, không hồi tố. Gate này áp dụng cho các lần merge `main` tiếp theo.
+- **R2-5 (tự động hoá):** thêm workflow riêng `.github/workflows/e2e-staging.yml` — trigger: **push vào `develop`** (chạy ngay sau khi PR merge, chọn qua `AskUserQuestion` thay vì cron/thủ công, để phát hiện regression sớm nhất). Chạy `golden-path.spec.ts` nhắm thẳng domain thật (`https://nova-way-web.vercel.app`, `https://novawaybackend-production.up.railway.app`), tách biệt hoàn toàn với job `e2e` trong `ci.yml` (job đó vẫn giữ nguyên, nhắm Postgres/backend dựng trong runner — gate nhanh cho mọi PR, không phụ thuộc staging đang online).
+- **Fix cần thiết để chạy được trong CI:** `apps/web/playwright.config.ts`'s `webServer` (spawn `pnpm dev` cục bộ) phải được **bỏ hẳn** khi `E2E_WEB_BASE_URL` trỏ tới site thật — nếu không, `reuseExistingServer: !process.env.CI` = `false` trong CI sẽ ép Playwright luôn spawn thêm một `pnpm dev` cục bộ dư thừa dù URL đích đã online. Đã sửa: `webServer: isTargetingRemoteSite ? undefined : {...}`. Verify thật: chạy `npx playwright test` với `CI=true` + 3 biến `E2E_*_BASE_URL` trỏ thẳng staging thật — pass, không có tiến trình `pnpm dev` nào bị spawn thừa.
+- **⚠️ Giới hạn đã biết, chấp nhận tạm thời:** job mới **không chờ Railway/Vercel deploy xong** commit mới trước khi chạy — chỉ chờ backend trả `/health` (không có version/commit marker để biết chắc đã chạy đúng bản mới). Trong thực tế Railway build/deploy xong khá nhanh so với các job CI khác nên rủi ro thấp, nhưng đây là một cơ chế còn thô. Việc chờ-deploy-xong-rồi-mới-test đúng nghĩa được để lại cho **R2-7** (CD tự động), vốn đã tính sẵn phần này trong mô tả gốc.
+- **Hiện tại:** `v0.1.0` được merge vào `main` trước khi có gate này — dựa trên unit test + verify thủ công từng bước lúc đó, không hồi tố. Gate này áp dụng cho các lần merge `develop`/`main` tiếp theo.
 
 ## 3. ✅ Tile provider cho web dashboard (OQ-005) — đã chốt (R1-7) và migrate xong (R2-3, 07/2026)
 
