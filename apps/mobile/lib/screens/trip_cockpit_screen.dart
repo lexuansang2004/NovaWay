@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:uuid/uuid.dart';
 import '../config/api_config.dart';
 import '../models/selectable_vehicle.dart';
@@ -12,12 +11,28 @@ import '../services/socket_io_realtime_client.dart';
 import '../session/auth_session.dart';
 import '../theme/app_theme.dart';
 
-// OQ-006 (docs/01_OPEN_QUESTIONS.md) — chốt ở R1-5 (07/2026): flutter_map +
-// OSM public tile, khớp đúng trạng thái HIỆN TẠI của web (Leaflet + OSM
-// public tile, docs/ARCHITECTURE.md §5.1) thay vì hướng MapLibre GL JS
-// tương lai (TDR-002) — tránh phụ thuộc vào OQ-005 (tile provider) vẫn
-// đang mở. Đổi sang maplibre_gl sau, song song với web, khi OQ-005 chốt.
-const _osmTileUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+// R2-4 (docs/roadmap/SPRINT_R2_PRODUCT_COMPLETION.md) — flutter_map ->
+// maplibre_gl + Protomaps, song song với web's TripMap.tsx migration (R2-3).
+// OQ-006 (docs/01_OPEN_QUESTIONS.md) ban đầu chốt flutter_map ở R1-5 để khớp
+// trạng thái web LÚC ĐÓ (Leaflet + OSM public tile); giờ web đã đổi sang
+// MapLibre GL JS + Protomaps nên mobile đổi theo, dùng cùng style "dark".
+//
+// QUAN TRỌNG — khác biệt kiến trúc so với flutter_map: maplibre_gl render
+// qua native platform view (AndroidView/UiKitView/WebView), không phải cây
+// widget Flutter thuần. Vì vậy:
+//   1. Không có khái niệm "tile provider" ở tầng Dart để fake trong test —
+//      NetworkTileProvider/FakeTileProvider (flutter_map) không có tương
+//      đương, đã bỏ khỏi widget này hoàn toàn.
+//   2. Marker/trail không còn là widget khai báo (Marker/PolylineLayer) mà
+//      là annotation mệnh lệnh qua MapLibreMapController (addCircle/addLine),
+//      chỉ tạo được sau khi controller sẵn sàng (onMapCreated) — xem
+//      _updateMapAnnotations.
+//   3. maplibre_gl chỉ hỗ trợ Android/iOS/Web (không có Windows) — verify
+//      trực quan thật không còn dùng `flutter build windows --debug` được
+//      nữa (khác R1-5), chuyển sang `flutter run -d chrome` vì maplibre_gl
+//      hỗ trợ web qua maplibre_gl_web. Chi tiết:
+//      docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §7.
+final String _mapStyle = 'https://api.protomaps.com/styles/v5/dark/en.json?key=${ApiConfig.protomapsApiKey}';
 const _defaultCenter = LatLng(10.7769, 106.7009); // Hồ Chí Minh City
 
 enum _Phase {
@@ -35,7 +50,6 @@ class TripCockpitScreen extends StatefulWidget {
   final String tripId;
   final LocationSource locationSource;
   final RealtimeClient realtimeClient;
-  final TileProvider tileProvider;
 
   TripCockpitScreen({
     super.key,
@@ -43,12 +57,8 @@ class TripCockpitScreen extends StatefulWidget {
     this.tripId = ApiConfig.debugTripId,
     LocationSource? locationSource,
     RealtimeClient? realtimeClient,
-    TileProvider? tileProvider,
   })  : locationSource = locationSource ?? GeolocatorLocationSource(),
-        realtimeClient = realtimeClient ?? SocketIoRealtimeClient(),
-        // Widget tests inject a fake (see test/fakes/fake_tile_provider.dart)
-        // so they never hit the real network for map tiles.
-        tileProvider = tileProvider ?? NetworkTileProvider();
+        realtimeClient = realtimeClient ?? SocketIoRealtimeClient();
 
   @override
   State<TripCockpitScreen> createState() => _TripCockpitScreenState();
@@ -59,7 +69,9 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
 
   static const _maxTrailPoints = 500;
 
-  final MapController _mapController = MapController();
+  MapLibreMapController? _mapController;
+  Circle? _positionMarker;
+  Line? _trailLine;
 
   _Phase _phase = _Phase.idle;
   String? _message;
@@ -82,7 +94,9 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
     _connectionSub?.cancel();
     _rejectionSub?.cancel();
     widget.realtimeClient.disconnect();
-    _mapController.dispose();
+    // _mapController is owned/disposed by the MapLibreMap widget itself
+    // (provided via onMapCreated, not constructed by us) — no explicit
+    // dispose call here, unlike flutter_map's self-owned MapController.
     super.dispose();
   }
 
@@ -125,7 +139,7 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
           _trail.removeAt(0);
         }
       });
-      _mapController.move(point, _mapController.camera.zoom);
+      unawaited(_updateMapAnnotations(point));
       widget.realtimeClient.sendLocation(
         LocationUpdatePayload(
           tripId: widget.tripId,
@@ -138,6 +152,35 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
         ),
       );
     });
+  }
+
+  // Marker/trail are imperative map annotations (not declarative widgets)
+  // with maplibre_gl — create once, then update in place on every fix.
+  Future<void> _updateMapAnnotations(LatLng point) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    if (_positionMarker == null) {
+      _positionMarker = await controller.addCircle(
+        CircleOptions(
+          geometry: point,
+          circleRadius: 10,
+          circleColor: '#0f172a',
+          circleStrokeColor: '#22d3ee',
+          circleStrokeWidth: 3,
+        ),
+      );
+    } else {
+      await controller.updateCircle(_positionMarker!, CircleOptions(geometry: point));
+    }
+
+    if (_trailLine == null) {
+      _trailLine = await controller.addLine(
+        LineOptions(geometry: List.of(_trail), lineColor: '#22d3ee', lineWidth: 4, lineOpacity: 0.8),
+      );
+    } else {
+      await controller.updateLine(_trailLine!, LineOptions(geometry: List.of(_trail)));
+    }
   }
 
   Future<void> _handleStart() async {
@@ -205,41 +248,14 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
         child: Column(
           children: [
             Expanded(
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _lastFix != null
-                      ? LatLng(_lastFix!.latitude, _lastFix!.longitude)
-                      : _defaultCenter,
-                  initialZoom: 16,
+              child: MapLibreMap(
+                key: const Key('trip-map'),
+                styleString: _mapStyle,
+                initialCameraPosition: CameraPosition(
+                  target: _lastFix != null ? LatLng(_lastFix!.latitude, _lastFix!.longitude) : _defaultCenter,
+                  zoom: 16,
                 ),
-                children: [
-                  TileLayer(
-                    urlTemplate: _osmTileUrlTemplate,
-                    userAgentPackageName: 'vn.novaway.mobile',
-                    tileProvider: widget.tileProvider,
-                  ),
-                  if (_trail.length > 1)
-                    PolylineLayer(
-                      polylines: [Polyline(points: _trail, color: AppColors.cyan, strokeWidth: 4)],
-                    ),
-                  if (_lastFix != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: LatLng(_lastFix!.latitude, _lastFix!.longitude),
-                          width: 40,
-                          height: 40,
-                          child: const Icon(
-                            Icons.navigation,
-                            key: Key('trip-position-marker'),
-                            color: AppColors.cyan,
-                            size: 32,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+                onMapCreated: (controller) => _mapController = controller,
               ),
             ),
             Padding(
