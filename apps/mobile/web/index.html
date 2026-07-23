@@ -31,6 +31,14 @@
 
   <title>mobile</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- R2-4: maplibre_gl_web loads maplibre-gl-js via these tags, not a Dart
+       package dependency — required for the web target only. Pinned to
+       5.x to match apps/web's TripMap.tsx (R2-3 found v6 silently breaks
+       tile rendering with the react-map-gl wrapper; same caution applies
+       here since this is the same underlying JS library). -->
+  <script src='https://unpkg.com/maplibre-gl@^5.24.0/dist/maplibre-gl.js'></script>
+  <link href='https://unpkg.com/maplibre-gl@^5.24.0/dist/maplibre-gl.css' rel='stylesheet'/>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
