@@ -4,3 +4,5 @@ packages:
 allowBuilds:
   '@nestjs/core': true
   bcrypt: true
+minimumReleaseAgeExclude:
+  - maplibre-gl@6.0.0

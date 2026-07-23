@@ -29,6 +29,8 @@
 ## 3. Environment Variables
 
 - [x] `VITE_API_BASE_URL` = `https://novawaybackend-production.up.railway.app/api` — set cho **Production and Preview**.
+- [ ] `VITE_WS_BASE_URL` = `https://novawaybackend-production.up.railway.app` (không có `/api`) — thêm ở R2-1 (07/2026, `LiveMapPage` nối `/realtime` WebSocket thật), **chưa set trên Vercel** — cần làm trước khi deploy `develop` mới nhất lên production thật.
+- [ ] `VITE_PROTOMAPS_API_KEY` — thêm ở R2-3 (07/2026, migrate `TripMap` sang MapLibre + Protomaps), lấy key miễn phí tại [protomaps.com/account](https://protomaps.com/account). **Chưa set trên Vercel** — cần làm trước khi deploy, nếu không bản đồ sẽ không hiển thị tile (marker/UI vẫn hoạt động, chỉ tile nền lỗi 401/403). Lưu ý: key có thể bị giới hạn theo origin — xác nhận domain Vercel thật (`nova-way-web.vercel.app`) được phép khi tạo/kiểm tra key.
 
 ## 4. Deploy
 
