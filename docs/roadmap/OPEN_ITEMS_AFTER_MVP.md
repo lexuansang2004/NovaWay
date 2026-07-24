@@ -53,7 +53,7 @@
   - Cả 3 giới hạn trên là **giá trị ban đầu thận trọng, chưa qua benchmark tải thật** — cần tinh chỉnh khi có traffic thật.
 - Xem: `docs/API_CONTRACT.md` §7, §11, `docs/SRS.md` NFR-API-01, FR-REALTIME-04, NFR-PERF-01. Code: `apps/backend/src/realtime/gps-rate-limiter.service.ts`, `apps/backend/src/auth/auth.controller.ts`, `apps/backend/src/sync/sync.controller.ts`.
 
-## 6. ✅ CD tự động cho staging — xong (R2-7, 07/2026; sự cố Vercel phát hiện + sửa khi lên kế hoạch R3, 07/2026); production vẫn mở
+## 6. ✅ CD tự động cho staging — xong (R2-7, 07/2026; sự cố Vercel phát hiện + sửa khi lên kế hoạch R3, 07/2026); production đã chốt (R3-6, 07/2026)
 
 - **Trạng thái:** Staging đã chốt và deploy thật — R1-1/R1-2 (07/2026). Backend: Railway (`docs/deployment/RAILWAY_STAGING_PLAN.md`, `RAILWAY_DASHBOARD_CHECKLIST.md`) — `https://novawaybackend-production.up.railway.app`. Web: Vercel (`docs/deployment/VERCEL_WEB_CHECKLIST.md`) — `https://nova-way-web.vercel.app`. Postgres/PostGIS: Railway Docker Image service (`pretty-insight`).
 - **R2-7 (CD tự động):** cả 2 dịch vụ đã xác nhận **tự động deploy khi push vào `develop`**, không cần bấm tay:
@@ -68,7 +68,7 @@
 - **✅ Verify thật sau fix:** gọi lại bundle JS thật trên `nova-way-web.vercel.app` — xác nhận có MapLibre (không còn Leaflet), có `location:broadcast` — code tới R2-8 đã thật sự sống trên production.
 - **🔴 Sự cố thứ tư (cùng lúc phát hiện) — 2 biến môi trường Vercel chưa từng được set:** `VITE_WS_BASE_URL` và `VITE_PROTOMAPS_API_KEY` (đã ghi "chưa set" trong `VERCEL_WEB_CHECKLIST.md` §3 từ R2-1/R2-3 nhưng chưa ai xác nhận hậu quả thật). Xác nhận qua bundle JS thật: `VITE_WS_BASE_URL` rỗng → WebSocket của `LiveMapPage` cố kết nối `http://localhost:3000` (máy người dùng, không phải backend thật) → **LiveMapPage hoàn toàn không hoạt động trên production** cho tới lúc phát hiện. `VITE_PROTOMAPS_API_KEY` rỗng → URL style bản đồ kết thúc bằng `key=` trống → tile 401/403. **Fix:** người dùng tự set cả 2 biến trên Vercel Dashboard (Production + Preview). Trong lúc sửa, người dùng lỡ ghi đè giá trị `VITE_WS_BASE_URL` (không có `/api`) vào `VITE_API_BASE_URL` (cần có `/api`) — đã phát hiện và sửa lại đúng cả hai trước khi redeploy.
 - Xem: `docs/deployment/VERCEL_WEB_CHECKLIST.md` §1/§3 (đã cập nhật đánh dấu xong).
-- **Còn mở:** production hosting (khác staging) — chưa chốt, chưa cần tới trong sprint này. Fly.io được ghi nhận là ứng viên đánh giá lại qua TDR riêng khi cần scale (`RAILWAY_STAGING_PLAN.md` §7).
+- **✅ Production hosting đã chốt (R3-6, 07/2026):** không dựng hạ tầng mới — Railway + Vercel (môi trường staging hiện tại) chính thức trở thành production luôn cho giai đoạn pilot (chưa có traffic/người dùng thật). Không đổi CD, branch tracking, hay domain. Fly.io vẫn là ứng viên đánh giá lại qua TDR riêng khi có áp lực scale thật. Quyết định đầy đủ: `docs/architecture/TDR-production-hosting.md`.
 - Xem: `docs/ARCHITECTURE.md` §8 (Deployment Topology), §9.
 
 ## 7. ✅ Mobile Trip Cockpit Map view (OQ-006) — `flutter_map` → `maplibre_gl` migrate xong (R2-4, 07/2026)
