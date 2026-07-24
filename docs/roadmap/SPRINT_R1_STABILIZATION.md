@@ -43,9 +43,11 @@ Nguồn: `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`. Không mục nào ở đây đ�
 - [ ] Review lại danh sách "Đã hoãn" trong release notes (8.1 AR, E2E-on-staging) trước khi publish — đảm bảo không gây hiểu nhầm là "hoàn chỉnh 100%".
 - [ ] Sau khi publish, thông báo trong kênh nội bộ dự án kèm link Release + link `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`.
 
-## 5. Đề xuất Branch Protection cho `main`/`develop`
+## 5. ✅ Branch Protection cho `main`/`develop` — đã áp dụng thật (R2-8, 07/2026)
 
-> Đề xuất — hiện tại **chưa có protection nào** trên cả hai nhánh (đã kiểm tra qua GitHub API). Đây là khuyến nghị, cần xác nhận riêng trước khi áp dụng (thay đổi setting repo).
+> Đề xuất ban đầu — hiện đã **áp dụng thật** qua GitHub API sau khi xác nhận riêng với người dùng. So với bảng gốc: thêm check `E2E (Playwright, golden path)` làm bắt buộc (bảng gốc chỉ liệt kê 2/3 check của `ci.yml`, có vẻ thiếu sót) và bật `enforce_admins` (áp dụng protection cho cả admin, không có ngoại lệ).
+>
+> **Verify thật:** thử `git push origin develop` thẳng (không qua PR) — bị GitHub từ chối đúng như dự kiến: `GH006: Protected branch update failed... Changes must be made through a pull request... 3 of 3 required status checks are expected.` Áp dụng cho cả admin (chính người vận hành), không có ngoại lệ.
 
 | Rule | `main` | `develop` | Lý do |
 |---|---|---|---|
