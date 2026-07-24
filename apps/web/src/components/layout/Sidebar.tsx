@@ -6,7 +6,6 @@ import {
   Car,
   History,
   CloudUpload,
-  Settings,
   ChevronsUpDown,
   User,
   ShieldCheck,
@@ -33,7 +32,6 @@ const MAIN_MENU = [
   { to: '/vehicles', label: 'Quản lý phương tiện', Icon: Car },
   { to: '/trip-history', label: 'Lịch sử chuyến đi', Icon: History },
   { to: '/offline-sync', label: 'Offline Sync', Icon: CloudUpload },
-  { to: '/settings', label: 'Cài đặt', Icon: Settings },
 ] as const;
 
 export function Sidebar() {
