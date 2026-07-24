@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { HealthController } from './health.controller';
@@ -10,7 +11,10 @@ describe('HealthController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [{ provide: getDataSourceToken(), useValue: { query: jest.fn() } }],
+      providers: [
+        { provide: getDataSourceToken(), useValue: { query: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('abc1234') } },
+      ],
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
@@ -34,5 +38,13 @@ describe('HealthController', () => {
 
     expect(result.status).toBe('degraded');
     expect(result.database).toEqual({ status: 'error' });
+  });
+
+  it('returns the commit_sha from RAILWAY_GIT_COMMIT_SHA', async () => {
+    dataSource.query.mockResolvedValue([{ '?column?': 1 }]);
+
+    const result = await controller.check();
+
+    expect(result.commit_sha).toBe('abc1234');
   });
 });

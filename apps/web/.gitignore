@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# R3-3 — generated at build time by scripts/write-version.mjs, not source
+public/version.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
