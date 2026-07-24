@@ -16,12 +16,10 @@ import { TripsModule } from './trips/trips.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RoutingModule } from './routing/routing.module';
 import { SyncModule } from './sync/sync.module';
+import { TerrainWarningsModule } from './terrain-warnings/terrain-warnings.module';
 import { ObservabilityModule } from './observability/metrics.module';
 import { LoggingInterceptor } from './observability/logging.interceptor';
 
-// TerrainWarningsModule (see docs/ARCHITECTURE.md §3.1) is still not built —
-// GET /api/terrain-warnings (API_CONTRACT.md §9) remains unimplemented,
-// tracked separately, not part of this module's scope.
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -54,6 +52,7 @@ import { LoggingInterceptor } from './observability/logging.interceptor';
     RealtimeModule,
     RoutingModule,
     SyncModule,
+    TerrainWarningsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor }],
