@@ -108,6 +108,12 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
           _phase = _Phase.connecting;
         case RealtimeConnectionState.connected:
           _phase = _Phase.tracking;
+          // Reconnects (e.g. after a network blip) re-emit `connected`
+          // without necessarily passing through `disconnected` first —
+          // cancel any existing subscription before starting a new one, or
+          // multiple parallel position streams stack up and interleave
+          // out-of-order points into `_trail`, drawing a jumbled zigzag.
+          _positionSub?.cancel();
           _startPositionStream();
         case RealtimeConnectionState.disconnected:
           if (_phase == _Phase.tracking || _phase == _Phase.connecting) {

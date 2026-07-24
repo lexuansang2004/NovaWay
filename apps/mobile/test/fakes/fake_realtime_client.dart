@@ -43,6 +43,13 @@ class FakeRealtimeClient implements RealtimeClient {
     _stateController.add(RealtimeConnectionState.disconnected);
   }
 
+  // Mirrors socket.io's real reconnect behavior: a dropped-then-restored
+  // connection can re-emit `connected` without an intervening
+  // `disconnected` event reaching the app layer first.
+  void simulateReconnect() {
+    _stateController.add(RealtimeConnectionState.connected);
+  }
+
   void simulateRejection(String errorCode) {
     _rejectionController.add(errorCode);
   }
