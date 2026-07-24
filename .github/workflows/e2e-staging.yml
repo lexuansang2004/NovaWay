@@ -42,6 +42,38 @@ env:
   STAGING_HEALTH_URL: https://novawaybackend-production.up.railway.app/health
 
 jobs:
+  # R3-3 (docs/roadmap/SPRINT_R3_VERIFICATION_CD_HARDENING.md) — direct
+  # follow-up to two real incidents (Railway CI-deadlock stale deploy R2-7,
+  # Vercel Production Branch revert) that both left staging silently running
+  # old code for days with every dashboard/CI signal showing green. Compares
+  # each platform's live commit_sha against this workflow's own checkout SHA
+  # — since `develop` is this repo's default branch (confirmed via
+  # `gh repo view --json defaultBranchRef`), `github.sha` on a schedule
+  # trigger is `develop`'s HEAD at run time. No checkout needed — just curl.
+  cd-health-check:
+    name: CD health check (commit drift detection) — staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare backend /health commit_sha with develop HEAD
+        run: |
+          actual=$(curl -sf "${{ env.STAGING_HEALTH_URL }}" | jq -r '.commit_sha // "missing"')
+          expected="${{ github.sha }}"
+          echo "backend commit_sha=$actual expected=$expected"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Backend /health commit_sha ($actual) does not match develop HEAD ($expected) — Railway may be stuck on a stale deploy (see docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md)."
+            exit 1
+          fi
+
+      - name: Compare web /version.json commit_sha with develop HEAD
+        run: |
+          actual=$(curl -sf "${{ env.E2E_WEB_BASE_URL }}/version.json" | jq -r '.commit_sha // "missing"')
+          expected="${{ github.sha }}"
+          echo "web commit_sha=$actual expected=$expected"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Web /version.json commit_sha ($actual) does not match develop HEAD ($expected) — Vercel may be stuck on a stale deploy or Production Branch may have reverted (see docs/deployment/VERCEL_WEB_CHECKLIST.md)."
+            exit 1
+          fi
+
   e2e-staging:
     name: E2E (Playwright, golden path) — staging
     runs-on: ubuntu-latest

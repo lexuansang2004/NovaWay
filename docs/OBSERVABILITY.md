@@ -7,11 +7,12 @@
 Không nằm dưới prefix `/api` (giống `/metrics`, xem `main.ts`).
 
 ```json
-{ "status": "ok", "timestamp": "2026-07-18T13:00:00.000Z", "database": { "status": "ok" } }
+{ "status": "ok", "timestamp": "2026-07-18T13:00:00.000Z", "database": { "status": "ok" }, "commit_sha": "d0beb8f5c55b36df7d674d55965a23b8d54ad69b" }
 ```
 
 - `status: "degraded"` khi Postgres không truy vấn được (`SELECT 1` thất bại) — dấu hiệu đầu tiên cần kiểm tra khi mọi thứ có vẻ "treo".
 - Không kiểm tra WebSocket/socket.io ở đây — nếu gateway down thì cả HTTP server cũng down (cùng một process Nest), `GET /health` không trả lời được là đủ tín hiệu.
+- `commit_sha` (R3-3, `docs/roadmap/SPRINT_R3_VERIFICATION_CD_HARDENING.md`) — lấy từ `RAILWAY_GIT_COMMIT_SHA` (env var Railway tự inject theo mỗi deploy), `"unknown"` khi chạy local hoặc trên môi trường không phải Railway. Dùng để phát hiện tự động khi Railway bị kẹt ở deploy cũ (bài học từ sự cố CD-deadlock/stale-deploy ở R2-7) — xem `.github/workflows/e2e-staging.yml` job `cd-health-check`.
 
 ## 2. Metrics — `GET /metrics`
 
