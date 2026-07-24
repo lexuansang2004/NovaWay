@@ -102,16 +102,16 @@ export function Sidebar() {
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuLabel>Tài khoản</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/account/profile')}>
               <User className="h-4 w-4" /> Hồ sơ cá nhân
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/account/privacy')}>
               <ShieldCheck className="h-4 w-4" /> Quyền riêng tư
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <SlidersHorizontal className="h-4 w-4" /> Cài đặt ứng dụng
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/help')}>
               <HelpCircle className="h-4 w-4" /> Trợ giúp
             </DropdownMenuItem>
             <DropdownMenuSeparator />

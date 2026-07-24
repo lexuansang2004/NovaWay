@@ -23,6 +23,9 @@ function App() {
         <Route path="/trip-history" element={<AnalyticsPage />} />
         <Route path="/offline-sync" element={<ComingSoonPage title="Offline Sync" />} />
         <Route path="/settings" element={<ComingSoonPage title="Cài đặt" />} />
+        <Route path="/account/profile" element={<ComingSoonPage title="Hồ sơ cá nhân" />} />
+        <Route path="/account/privacy" element={<ComingSoonPage title="Quyền riêng tư" />} />
+        <Route path="/help" element={<ComingSoonPage title="Trợ giúp" />} />
       </Route>
     </Routes>
   );
