@@ -16,6 +16,14 @@ const _testVehicle = SelectableVehicle(
   role: VehicleRole.owner,
 );
 
+const _testVehicleNoBrandModel = SelectableVehicle(
+  id: 'b2222222-2222-4222-8222-222222222222',
+  type: 'motorbike',
+  licensePlate: '59B-67890',
+  brandModel: null,
+  role: VehicleRole.owner,
+);
+
 Future<void> _login(WidgetTester tester) async {
   await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'driver@novaway.vn');
   await tester.enterText(find.widgetWithText(TextFormField, 'Mật khẩu'), 'password123');
@@ -98,6 +106,25 @@ void main() {
 
     expect(find.text('Sẵn sàng cho hành trình thông minh tiếp theo.'), findsOneWidget);
     expect(find.text('Honda SH'), findsOneWidget);
+  });
+
+  testWidgets('vehicle list renders vehicles missing brand_model without crashing', (WidgetTester tester) async {
+    await tester.pumpWidget(NovaWayApp(
+      authRepository: FakeAuthRepository(),
+      vehicleRepository: const FakeVehicleRepository([_testVehicleNoBrandModel]),
+    ));
+    await tester.pumpAndSettle();
+
+    await _login(tester);
+
+    expect(find.text('Chọn phương tiện'), findsOneWidget);
+    expect(find.text('59B-67890'), findsOneWidget);
+    expect(find.text('Xe của bạn'), findsOneWidget);
+
+    await tester.tap(find.text('59B-67890'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sẵn sàng cho hành trình thông minh tiếp theo.'), findsOneWidget);
   });
 
   testWidgets('login link navigates to register screen', (WidgetTester tester) async {

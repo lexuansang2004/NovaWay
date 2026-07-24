@@ -65,11 +65,13 @@ class HomeScreen extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      vehicle.brandModel,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                    ),
+                    if (vehicle.brandModel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        vehicle.brandModel!,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       roleLabel,

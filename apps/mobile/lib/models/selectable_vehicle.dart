@@ -4,7 +4,7 @@ class SelectableVehicle {
   final String id;
   final String type;
   final String licensePlate;
-  final String brandModel;
+  final String? brandModel;
   final VehicleRole role;
 
   const SelectableVehicle({
@@ -20,7 +20,7 @@ class SelectableVehicle {
       id: json['id'] as String,
       type: json['type'] as String,
       licensePlate: json['license_plate'] as String,
-      brandModel: json['brand_model'] as String,
+      brandModel: json['brand_model'] as String?,
       role: VehicleRole.owner,
     );
   }
@@ -31,7 +31,7 @@ class SelectableVehicle {
       id: vehicle['id'] as String,
       type: vehicle['type'] as String,
       licensePlate: vehicle['license_plate'] as String,
-      brandModel: vehicle['brand_model'] as String,
+      brandModel: vehicle['brand_model'] as String?,
       role: VehicleRole.borrower,
     );
   }
