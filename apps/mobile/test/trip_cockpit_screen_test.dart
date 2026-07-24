@@ -168,6 +168,38 @@ void main() {
     expect(find.text('Bắt đầu'), findsOneWidget);
   });
 
+  testWidgets('reconnect does not duplicate location sends for a single position fix',
+      (WidgetTester tester) async {
+    final client = FakeRealtimeClient();
+    final location = FakeLocationSource();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TripCockpitScreen(
+          vehicle: _testVehicle,
+          tripId: _testTripId,
+          locationSource: location,
+          realtimeClient: client,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Bắt đầu'));
+    await tester.pumpAndSettle();
+
+    // Simulates a real socket.io reconnect re-emitting `connected` without
+    // an intervening `disconnected` — regression test for the subscription
+    // leak found during R3-2's real-browser verify (docs/roadmap/
+    // OPEN_ITEMS_AFTER_MVP.md §7): without the fix, this stacks a second
+    // parallel position-stream subscription.
+    client.simulateReconnect();
+    await tester.pumpAndSettle();
+
+    location.emit(const LocationFix(latitude: 10.8, longitude: 106.7, speedKmh: 42.5, accuracyM: 5));
+    await tester.pumpAndSettle();
+
+    expect(client.sentLocations, hasLength(1));
+  });
+
   // R2-4: maplibre_gl renders via a native platform view (AndroidView/
   // UiKitView/WebView), not a Dart widget tree — flutter_test's headless
   // environment has no platform-view renderer, so onMapCreated/
