@@ -1,0 +1,83 @@
+name: E2E on staging
+
+# R2-5 (docs/roadmap/SPRINT_R2_PRODUCT_COMPLETION.md) — reruns the golden-path
+# E2E suite against the real deployed staging domains (Vercel + Railway),
+# not the runner-local Postgres/backend the `e2e` job in ci.yml uses. See
+# docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §2 for why the two are separate: the
+# ci.yml `e2e` job is a fast per-PR gate against a throwaway database, this
+# job is the actual "does staging work" confirmation.
+#
+# R2-7 — trigger changed from `push: branches: [develop]` to a schedule.
+# Original R2-5 design used push-to-develop for the fastest possible
+# feedback, but that created a real deadlock found live in production:
+# Railway's "Wait for CI" setting (Settings → Wait for CI: "Trigger
+# deployments after all GitHub actions have completed successfully") treats
+# *every* GitHub Actions run on a commit as part of that gate — including
+# this one. Since this job always raced ahead of Railway's own deploy (it
+# ran immediately on push, while the new code wasn't live yet), it always
+# failed, which made Railway permanently skip deploying that commit ("CI
+# check suite failed") — staging silently stayed on stale code across
+# multiple merges (confirmed: still running pre-R2-6 code ~10 minutes after
+# the R2-6 merge, verified via a real HTTP call). A push-triggered workflow
+# can never safely coexist with Railway's all-or-nothing Wait for CI, so
+# this runs on a schedule instead — fully decoupled from any single
+# commit's check suite, so Railway is never blocked by it. `workflow_dispatch`
+# added too, for an on-demand manual run when needed.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-staging-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  # Public staging domains — see docs/deployment/RAILWAY_DASHBOARD_CHECKLIST.md
+  # and docs/deployment/VERCEL_WEB_CHECKLIST.md. Not secrets: these URLs are
+  # already documented in-repo and are meaningless without a live deploy.
+  E2E_WEB_BASE_URL: https://nova-way-web.vercel.app
+  E2E_API_BASE_URL: https://novawaybackend-production.up.railway.app/api
+  E2E_WS_BASE_URL: https://novawaybackend-production.up.railway.app
+  STAGING_HEALTH_URL: https://novawaybackend-production.up.railway.app/health
+
+jobs:
+  e2e-staging:
+    name: E2E (Playwright, golden path) — staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Scheduled runs (every 15 min) give deploys ample time to finish
+      # beforehand — this is just a sanity check, not a race-condition guard
+      # like it would need to be if this still ran synchronously on push.
+      - name: Wait for staging backend to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "${{ env.STAGING_HEALTH_URL }}" > /dev/null; then
+              echo "Staging backend is healthy"
+              exit 0
+            fi
+            echo "Not healthy yet, retrying in 10s ($i/30)..."
+            sleep 10
+          done
+          echo "Staging backend did not become healthy in time"
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite against staging
+        working-directory: apps/web
+        run: pnpm test:e2e

@@ -50,7 +50,10 @@ describe('BiometricService', () => {
         },
         { provide: VehiclesService, useValue: { findById: jest.fn() } },
         { provide: VehicleAuthorizationService, useValue: { findActiveForBorrower: jest.fn() } },
-        { provide: BIOMETRIC_PROVIDER, useValue: { providerName: 'mock', verify: jest.fn() } },
+        {
+          provide: BIOMETRIC_PROVIDER,
+          useValue: { providerName: 'mock', createSession: jest.fn(), verify: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -64,7 +67,7 @@ describe('BiometricService', () => {
   it('rejects with 404 when the vehicle does not exist', async () => {
     vehiclesService.findById.mockResolvedValue(null);
 
-    await expect(service.verify('missing-vehicle', 'user-id', { provider_payload: 'x' })).rejects.toThrow(
+    await expect(service.verify('missing-vehicle', 'user-id', { session_id: 'x' })).rejects.toThrow(
       NotFoundException,
     );
     expect(provider.verify).not.toHaveBeenCalled();
@@ -75,7 +78,7 @@ describe('BiometricService', () => {
     provider.verify.mockResolvedValue({ result: 'success' });
     repo.save.mockImplementation(async (v) => ({ id: 'verification-id', ...v }) as BiometricVerification);
 
-    const result = await service.verify('vehicle-id', 'owner-id', { provider_payload: 'ok' });
+    const result = await service.verify('vehicle-id', 'owner-id', { session_id: 'ok' });
 
     expect(authorizationService.findActiveForBorrower).not.toHaveBeenCalled();
     expect(result).toEqual({ verificationId: 'verification-id', result: 'success', errorCode: undefined });
@@ -86,7 +89,7 @@ describe('BiometricService', () => {
     authorizationService.findActiveForBorrower.mockResolvedValue(null);
 
     await expect(
-      service.verify('vehicle-id', 'stranger-id', { provider_payload: 'ok' }),
+      service.verify('vehicle-id', 'stranger-id', { session_id: 'ok' }),
     ).rejects.toThrow(ForbiddenException);
     expect(provider.verify).not.toHaveBeenCalled();
     expect(repo.save).not.toHaveBeenCalled();
@@ -98,7 +101,7 @@ describe('BiometricService', () => {
     provider.verify.mockResolvedValue({ result: 'success' });
     repo.save.mockImplementation(async (v) => ({ id: 'verification-id', ...v }) as BiometricVerification);
 
-    await service.verify('vehicle-id', 'borrower-id', { provider_payload: 'ok' });
+    await service.verify('vehicle-id', 'borrower-id', { session_id: 'ok' });
 
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({ vehicleAuthorizationId: 'authorization-id' }),
@@ -110,12 +113,48 @@ describe('BiometricService', () => {
     provider.verify.mockResolvedValue({ result: 'failed', errorCode: 'FACE_NOT_MATCHED' });
     repo.save.mockImplementation(async (v) => ({ id: 'verification-id', ...v }) as BiometricVerification);
 
-    const result = await service.verify('vehicle-id', 'owner-id', { provider_payload: 'fail' });
+    const result = await service.verify('vehicle-id', 'owner-id', { session_id: 'fail' });
 
     expect(result).toEqual({
       verificationId: 'verification-id',
       result: 'failed',
       errorCode: 'FACE_NOT_MATCHED',
+    });
+  });
+
+  describe('createSession', () => {
+    it('rejects with 404 when the vehicle does not exist, never calling the provider', async () => {
+      vehiclesService.findById.mockResolvedValue(null);
+
+      await expect(service.createSession('missing-vehicle', 'user-id')).rejects.toThrow(NotFoundException);
+      expect(provider.createSession).not.toHaveBeenCalled();
+    });
+
+    it('rejects a non-owner with no active authorization with 403, never calling the provider', async () => {
+      vehiclesService.findById.mockResolvedValue(buildVehicle({ userId: 'owner-id' }));
+      authorizationService.findActiveForBorrower.mockResolvedValue(null);
+
+      await expect(service.createSession('vehicle-id', 'stranger-id')).rejects.toThrow(ForbiddenException);
+      expect(provider.createSession).not.toHaveBeenCalled();
+    });
+
+    it('creates a session for the owner', async () => {
+      vehiclesService.findById.mockResolvedValue(buildVehicle({ userId: 'owner-id' }));
+      provider.createSession.mockResolvedValue({ sessionId: 'session-id' });
+
+      const result = await service.createSession('vehicle-id', 'owner-id');
+
+      expect(result).toEqual({ sessionId: 'session-id' });
+    });
+
+    it('creates a session for a borrower with an active authorization', async () => {
+      vehiclesService.findById.mockResolvedValue(buildVehicle({ userId: 'owner-id' }));
+      authorizationService.findActiveForBorrower.mockResolvedValue(buildAuthorization());
+      provider.createSession.mockResolvedValue({ sessionId: 'session-id' });
+
+      const result = await service.createSession('vehicle-id', 'borrower-id');
+
+      expect(result).toEqual({ sessionId: 'session-id' });
     });
   });
 });

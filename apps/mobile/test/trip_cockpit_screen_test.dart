@@ -167,4 +167,37 @@ void main() {
     expect(find.text('Mất kết nối tới máy chủ.'), findsOneWidget);
     expect(find.text('Bắt đầu'), findsOneWidget);
   });
+
+  // R2-4: maplibre_gl renders via a native platform view (AndroidView/
+  // UiKitView/WebView), not a Dart widget tree — flutter_test's headless
+  // environment has no platform-view renderer, so onMapCreated/
+  // onStyleLoadedCallback never fire and there is no Dart-level marker
+  // widget to find.byKey (annotations are native map-layer objects, not
+  // Flutter widgets). This replaces the old R1-5 test's marker assertion
+  // (find.byKey('trip-position-marker')) with a presence-only check that
+  // the map widget itself is mounted. See docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §7.
+  testWidgets('shows the map widget (R2-4)', (WidgetTester tester) async {
+    final client = FakeRealtimeClient();
+    final location = FakeLocationSource();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TripCockpitScreen(
+          vehicle: _testVehicle,
+          tripId: _testTripId,
+          locationSource: location,
+          realtimeClient: client,
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('trip-map')), findsOneWidget);
+
+    await tester.tap(find.text('Bắt đầu'));
+    await tester.pumpAndSettle();
+
+    location.emit(const LocationFix(latitude: 10.8, longitude: 106.7, speedKmh: 30, accuracyM: 5));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('trip-map')), findsOneWidget);
+  });
 }

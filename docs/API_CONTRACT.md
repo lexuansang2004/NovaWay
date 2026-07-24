@@ -116,11 +116,24 @@ Response `200`: `{ "authorizations": [ { "vehicle": {...}, "owner_email": "...",
 
 ## 4. Biometric Verification
 
+### `POST /api/vehicles/:id/verify/session`
+
+R2-6 (`docs/architecture/TDR-biometric-provider-spike.md`) — must be called first. AWS Rekognition Face Liveness is session-based: the client obtains a `session_id` here, then uses AWS's own Face Liveness client SDK (Amplify UI component / RN SDK) to stream the actual liveness capture **directly to AWS**, never through this backend. Only once that capture finishes does the client call `POST /verify` below with the same `session_id`.
+
+Request: no body.
+
+Response `201`:
+```json
+{ "session_id": "..." }
+```
+
+Same permission errors as `POST /verify` below (gated identically — creating a session is a billed AWS operation for the real provider).
+
 ### `POST /api/vehicles/:id/verify`
 
-Request (draft — payload thực tế phụ thuộc `provider` đã chọn ở D0.7, ví dụ multipart cho ảnh/video ngắn hoặc token từ SDK client-side):
+Request:
 ```json
-{ "provider_payload": "..." }
+{ "session_id": "..." }
 ```
 
 Response `200`:
@@ -134,10 +147,12 @@ hoặc
 { "verification_id": "uuid", "result": "failed", "error_code": "FACE_NOT_MATCHED" }
 ```
 
+`error_code` khác có thể gặp: `LIVENESS_SESSION_NOT_SUCCEEDED` (provider AWS thật — session chưa hoàn tất capture, hoặc capture thất bại/hết hạn phía AWS).
+
 Lỗi trước khi verify (không tốn chi phí gọi provider — FR-BIOMETRIC-02):
 - `403 NOT_AUTHORIZED_FOR_VEHICLE` — không phải owner, không có `vehicle_authorizations` active
 
-**Cam kết dữ liệu:** response và toàn bộ log liên quan **không bao giờ** chứa ảnh/video khuôn mặt thô — chỉ `verification_id` và `result` (NFR-PRIVACY-03).
+**Cam kết dữ liệu:** response và toàn bộ log liên quan **không bao giờ** chứa ảnh/video khuôn mặt thô — chỉ `verification_id` và `result` (NFR-PRIVACY-03). Provider AWS thật (`AwsRekognitionBiometricProvider`) chỉ đọc `Status`/`Confidence` từ response của AWS, không bao giờ đọc/log/lưu trường `ReferenceImage`/`AuditImages` mà AWS trả kèm.
 
 ## 5. Trips
 
@@ -177,6 +192,14 @@ Response `200`: chi tiết trip + `trip_log` (nếu đã kết thúc) + danh sá
 
 ## 6. Realtime (WebSocket, namespace `/realtime`)
 
+### Client → Server: `join:trip`
+
+```json
+{ "trip_id": "uuid" }
+```
+
+Cho một client (vd. web dashboard, R2-1 07/2026) tham gia phòng broadcast của một trip để nhận `location:broadcast`/`mismatch:warning` của trip đó, mà không tự gửi `location:update`. Server kiểm tra `trip_id` thuộc user đã auth qua handshake — nếu không, request bị bỏ qua lặng lẽ (không có ack lỗi). Người gửi `location:update` cũng tự động join phòng này (không cần gọi `join:trip` riêng).
+
 ### Client → Server: `location:update`
 
 ```json
@@ -211,6 +234,8 @@ Server validate: `trip_id` thuộc user đã auth qua handshake, toạ độ h�
 { "client_event_id": "uuid", "error_code": "INVALID_COORDINATE" }
 ```
 
+`error_code` không phải enum đóng — các giá trị hiện có: `VALIDATION_ERROR`, `TRIP_NOT_FOUND`, `TRIP_NOT_ACTIVE`, `RATE_LIMITED` (rate limit GPS event, R1-4 07/2026 — `apps/backend/src/realtime/gps-rate-limiter.service.ts`, tối đa 10 event/giây/user, xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5).
+
 ## 7. Offline Batch Sync
 
 ### `POST /api/trips/sync`
@@ -234,7 +259,7 @@ Request:
 }
 ```
 
-Ràng buộc: tối đa 500 events/mảng `events`. Vượt → `400 BATCH_TOO_LARGE`.
+Ràng buộc: tối đa 500 events/mảng `events`. Vượt → `400 BATCH_TOO_LARGE`. `trip_id` phải thuộc user đã auth (`403` nếu không, `404` nếu không tồn tại) — **không** yêu cầu trip đang `active`: event offline được thu thập *trong lúc* chuyến đi active nhưng thường được đồng bộ *sau khi* rider đã kết thúc chuyến và có mạng trở lại, nên yêu cầu active sẽ chặn đúng use-case endpoint này tồn tại để giải quyết.
 
 Response `200`:
 ```json
@@ -244,12 +269,14 @@ Response `200`:
   "duplicate_count": 5,
   "failed_count": 5,
   "failed_events": [
-    { "client_event_id": "evt_001", "error_code": "INVALID_COORDINATE", "message": "latitude/longitude is out of range" }
+    { "client_event_id": "evt_001", "error_code": "VALIDATION_ERROR", "message": "Sự kiện GPS không hợp lệ." }
   ]
 }
 ```
 
-`status` có thể là `success` (100% accepted, không lỗi/trùng), `partial_success`, hoặc `all_failed`.
+`status` có thể là `success` (100% accepted, không lỗi/trùng), `partial_success`, hoặc `all_failed`. `error_code` của từng `failed_events` hiện chỉ có `VALIDATION_ERROR` (không phân biệt lý do cụ thể — toạ độ sai, thiếu field, v.v. — cùng quy ước với `location:rejected` ở §6) — không phải enum đóng.
+
+**Implemented (R2-2, 07/2026):** `apps/backend/src/sync/`. Rate limit: 20 request/60s/IP (`ThrottlerGuard`, giá trị ban đầu thận trọng chưa qua benchmark tải thật, cùng phong cách R1-4). `vehicle_id` trong mỗi event luôn bị bỏ qua khi ghi — server luôn dùng `vehicle_id` của chính trip (cùng nguyên tắc với `location:update` ở §6, vốn không nhận `vehicle_id` từ client). Body parser JSON limit nâng lên 1MB (mặc định Express là 100KB, quá nhỏ cho batch 500 events thực tế) — xem `apps/backend/src/main.ts`.
 
 ## 8. Error Format (áp dụng toàn hệ thống)
 
@@ -298,6 +325,6 @@ Ghi chú: MVP sinh route mock bằng nội suy tuyến tính giữa `origin`/`de
 ## 11. Open Items for D0.7
 
 - ~~`403` vs `404` cho resource không thuộc sở hữu~~ — **Đã chốt (07/2026, trước step `1.4`)**: dùng `403` kèm error_code cụ thể theo resource (vd. `NOT_VEHICLE_OWNER`), áp dụng cho toàn backend — khớp đúng ví dụ đã có sẵn ở §2. Lý do: vehicle ID (và các resource tương tự sau này) không phải thông tin nhạy cảm cần giấu tồn tại; 403 + error_code rõ ràng giúp FE hiển thị thông báo chính xác hơn "not found" chung chung, và tránh phải query 2 lần (exists-but-not-mine vs not-exists) ở mọi endpoint. `404` chỉ dùng khi resource thật sự không tồn tại (ID sai/đã xoá) — xem §8.
-- Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn — placeholder `provider_payload` sẽ được thay bằng schema thật.
-- Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`.
-- Rate limit cụ thể theo endpoint (số request/giây/user) — cần benchmark.
+- ~~Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn~~ — **Đã chốt (R2-6, 07/2026)**: `provider_payload` (opaque string) → `session_id` thật theo flow session của AWS Rekognition Face Liveness (`POST /verify/session` tạo session trước) — xem §4.
+- ~~Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`~~ — **Đã chốt (07/2026, step `7.1`)**: 5 phút (`VERIFICATION_VALIDITY_MINUTES`, xem `apps/backend/.env.example`).
+- ~~Rate limit cụ thể theo endpoint~~ — **Đã triển khai (R1-4 + R2-2, 07/2026)**: login (`POST /api/auth/login`, `@nestjs/throttler`, 5 lần/60s/IP), GPS event (`location:update` qua WebSocket, in-memory counter, 10 event/giây/user), và batch sync (`POST /api/trips/sync`, §7, `@nestjs/throttler`, 20 request/60s/IP) — cả ba là giá trị ban đầu thận trọng, chưa qua benchmark tải thật. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5.

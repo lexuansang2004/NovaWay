@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:uuid/uuid.dart';
 import '../config/api_config.dart';
 import '../models/selectable_vehicle.dart';
@@ -9,6 +10,30 @@ import '../services/realtime_client.dart';
 import '../services/socket_io_realtime_client.dart';
 import '../session/auth_session.dart';
 import '../theme/app_theme.dart';
+
+// R2-4 (docs/roadmap/SPRINT_R2_PRODUCT_COMPLETION.md) — flutter_map ->
+// maplibre_gl + Protomaps, song song với web's TripMap.tsx migration (R2-3).
+// OQ-006 (docs/01_OPEN_QUESTIONS.md) ban đầu chốt flutter_map ở R1-5 để khớp
+// trạng thái web LÚC ĐÓ (Leaflet + OSM public tile); giờ web đã đổi sang
+// MapLibre GL JS + Protomaps nên mobile đổi theo, dùng cùng style "dark".
+//
+// QUAN TRỌNG — khác biệt kiến trúc so với flutter_map: maplibre_gl render
+// qua native platform view (AndroidView/UiKitView/WebView), không phải cây
+// widget Flutter thuần. Vì vậy:
+//   1. Không có khái niệm "tile provider" ở tầng Dart để fake trong test —
+//      NetworkTileProvider/FakeTileProvider (flutter_map) không có tương
+//      đương, đã bỏ khỏi widget này hoàn toàn.
+//   2. Marker/trail không còn là widget khai báo (Marker/PolylineLayer) mà
+//      là annotation mệnh lệnh qua MapLibreMapController (addCircle/addLine),
+//      chỉ tạo được sau khi controller sẵn sàng (onMapCreated) — xem
+//      _updateMapAnnotations.
+//   3. maplibre_gl chỉ hỗ trợ Android/iOS/Web (không có Windows) — verify
+//      trực quan thật không còn dùng `flutter build windows --debug` được
+//      nữa (khác R1-5), chuyển sang `flutter run -d chrome` vì maplibre_gl
+//      hỗ trợ web qua maplibre_gl_web. Chi tiết:
+//      docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §7.
+final String _mapStyle = 'https://api.protomaps.com/styles/v5/dark/en.json?key=${ApiConfig.protomapsApiKey}';
+const _defaultCenter = LatLng(10.7769, 106.7009); // Hồ Chí Minh City
 
 enum _Phase {
   idle,
@@ -42,9 +67,16 @@ class TripCockpitScreen extends StatefulWidget {
 class _TripCockpitScreenState extends State<TripCockpitScreen> {
   static const _uuid = Uuid();
 
+  static const _maxTrailPoints = 500;
+
+  MapLibreMapController? _mapController;
+  Circle? _positionMarker;
+  Line? _trailLine;
+
   _Phase _phase = _Phase.idle;
   String? _message;
   LocationFix? _lastFix;
+  final List<LatLng> _trail = [];
   StreamSubscription<LocationFix>? _positionSub;
   StreamSubscription<RealtimeConnectionState>? _connectionSub;
   StreamSubscription<String>? _rejectionSub;
@@ -62,6 +94,9 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
     _connectionSub?.cancel();
     _rejectionSub?.cancel();
     widget.realtimeClient.disconnect();
+    // _mapController is owned/disposed by the MapLibreMap widget itself
+    // (provided via onMapCreated, not constructed by us) — no explicit
+    // dispose call here, unlike flutter_map's self-owned MapController.
     super.dispose();
   }
 
@@ -96,7 +131,15 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
   void _startPositionStream() {
     _positionSub = widget.locationSource.positionStream().listen((fix) {
       if (!mounted) return;
-      setState(() => _lastFix = fix);
+      final point = LatLng(fix.latitude, fix.longitude);
+      setState(() {
+        _lastFix = fix;
+        _trail.add(point);
+        if (_trail.length > _maxTrailPoints) {
+          _trail.removeAt(0);
+        }
+      });
+      unawaited(_updateMapAnnotations(point));
       widget.realtimeClient.sendLocation(
         LocationUpdatePayload(
           tripId: widget.tripId,
@@ -109,6 +152,35 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
         ),
       );
     });
+  }
+
+  // Marker/trail are imperative map annotations (not declarative widgets)
+  // with maplibre_gl — create once, then update in place on every fix.
+  Future<void> _updateMapAnnotations(LatLng point) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    if (_positionMarker == null) {
+      _positionMarker = await controller.addCircle(
+        CircleOptions(
+          geometry: point,
+          circleRadius: 10,
+          circleColor: '#0f172a',
+          circleStrokeColor: '#22d3ee',
+          circleStrokeWidth: 3,
+        ),
+      );
+    } else {
+      await controller.updateCircle(_positionMarker!, CircleOptions(geometry: point));
+    }
+
+    if (_trailLine == null) {
+      _trailLine = await controller.addLine(
+        LineOptions(geometry: List.of(_trail), lineColor: '#22d3ee', lineWidth: 4, lineOpacity: 0.8),
+      );
+    } else {
+      await controller.updateLine(_trailLine!, LineOptions(geometry: List.of(_trail)));
+    }
   }
 
   Future<void> _handleStart() async {
@@ -158,6 +230,7 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
       _phase = _Phase.idle;
       _message = null;
       _lastFix = null;
+      _trail.clear();
     });
   }
 
@@ -172,40 +245,54 @@ class _TripCockpitScreenState extends State<TripCockpitScreen> {
         title: Text(widget.vehicle.licensePlate),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isTracking ? Icons.gps_fixed : Icons.gps_not_fixed,
-                color: isTracking ? AppColors.emerald : AppColors.textSecondary,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              Text(_statusLabel(), style: const TextStyle(color: AppColors.textPrimary, fontSize: 16)),
-              if (_message != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _message!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        child: Column(
+          children: [
+            Expanded(
+              child: MapLibreMap(
+                key: const Key('trip-map'),
+                styleString: _mapStyle,
+                initialCameraPosition: CameraPosition(
+                  target: _lastFix != null ? LatLng(_lastFix!.latitude, _lastFix!.longitude) : _defaultCenter,
+                  zoom: 16,
                 ),
-              ],
-              if (_lastFix != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  '${_lastFix!.speedKmh.toStringAsFixed(1)} km/h',
-                  style: const TextStyle(color: AppColors.cyan, fontSize: 28, fontWeight: FontWeight.w600),
-                ),
-              ],
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: isTracking ? _handleStop : _handleStart,
-                child: Text(isTracking ? 'Dừng' : 'Bắt đầu'),
+                onMapCreated: (controller) => _mapController = controller,
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(
+                    isTracking ? Icons.gps_fixed : Icons.gps_not_fixed,
+                    color: isTracking ? AppColors.emerald : AppColors.textSecondary,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(_statusLabel(), style: const TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+                  if (_message != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _message!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                  ],
+                  if (_lastFix != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      '${_lastFix!.speedKmh.toStringAsFixed(1)} km/h',
+                      style: const TextStyle(color: AppColors.cyan, fontSize: 28, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: isTracking ? _handleStop : _handleStart,
+                    child: Text(isTracking ? 'Dừng' : 'Bắt đầu'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -57,6 +57,8 @@ Go chỉ cân nhắc sau này cho:
 
 ## TDR-002: Map Stack
 
+> **Cập nhật (R1-7, 07/2026):** Tile provider candidate (OQ-005) đã chốt final — xem `docs/architecture/TDR-tile-provider-spike.md`. Phần "Tile Provider Candidate" bên dưới giữ nguyên như bản gốc D0.2 để tránh mất lịch sử; quyết định final ở doc riêng đó.
+
 ### Decision
 
 Dùng hệ sinh thái **OpenStreetMap** làm nguồn bản đồ. Không phụ thuộc trực tiếp vào public OSM tile server cho production.

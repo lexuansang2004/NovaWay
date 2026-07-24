@@ -142,7 +142,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-BIOMETRIC-02 | Hệ thống kiểm tra người dùng hiện tại có quyền với phương tiện đã chọn (owner, hoặc borrower có uỷ quyền còn hiệu lực) **trước khi** tiến hành xác thực khuôn mặt — tránh chạy xác thực cho một phiên chắc chắn sẽ bị từ chối. |
 | FR-BIOMETRIC-03 | Nếu xác thực khuôn mặt thất bại, người dùng không thể bắt đầu chuyến đi; được thử lại tối đa một số lần hợp lý trước khi phải quay lại bước chọn phương tiện. |
 | FR-BIOMETRIC-04 | Hệ thống **không lưu trữ ảnh khuôn mặt thô**; chỉ lưu kết quả xác thực (thành công/thất bại, thời điểm, phương tiện liên quan). |
-| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể là Open Question, chốt ở D0.4. |
+| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể **đã đánh giá (R1-8, 07/2026): AWS Rekognition Face Liveness** làm primary candidate, xem `docs/architecture/TDR-biometric-provider-spike.md` — chưa implement, MVP vẫn dùng `MockBiometricProvider`. |
 
 ### 1.14. Routing (FR-ROUTING)
 
@@ -201,6 +201,6 @@ Mỗi `FR-*`/`NFR-*` ở đây tương ứng với ít nhất một mục trong 
 ## 6. Open Items for D0.3
 
 - OQ-001: Flutter cho mobile — đề xuất chốt "có" trừ khi có lý do kỹ thuật mới xuất hiện.
-- OQ-006: Plugin bản đồ cho Flutter — cần chọn sau khi OQ-001 chốt và kiểm tra tương thích MapLibre/OSM.
+- ~~OQ-006: Plugin bản đồ cho Flutter~~ — **Đã chốt (R1-5, 07/2026):** `flutter_map` + OSM public tile, xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §7.
 - OQ-007: Tần suất lấy mẫu GPS (đề xuất 1–5 giây/event khi chuyến đi active) — cần test ảnh hưởng pin trước khi chốt.
 - OQ-005: Tile provider final (Protomaps vs Mapbox Free Tier) — cần technical spike trước khi code map.

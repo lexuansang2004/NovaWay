@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+apps/mobile/build
+apps/mobile/.dart_tool
+demo-app
+.git
+.github
+coverage
+*.log
+.env
+.env.*
+!.env.example
+*.docx

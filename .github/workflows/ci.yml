@@ -1,12 +1,12 @@
 name: CI
 
 # docs/TEST_STRATEGY.md §3 — "Mọi PR vào develop phải pass: lint, unit
-# test, integration test." The "E2E suite pass trên môi trường staging"
-# requirement for merges into main is NOT implemented here: no E2E suite
-# exists anywhere in the repo yet, and no staging environment has been
-# chosen (docs/ARCHITECTURE.md §9 "Hosting/CI-CD provider" — still open).
-# This workflow covers the part that's actually achievable today: lint +
-# unit test + build, gating PRs into both develop and main.
+# test, integration test." Merge vào `main` yêu cầu thêm "E2E suite pass
+# trên môi trường staging" — job `e2e` dưới đây chạy suite thật
+# (apps/web/e2e/golden-path.spec.ts) nhưng nhắm vào backend + Postgres/
+# PostGIS được dựng ngay trong runner (service container), KHÔNG phải
+# staging thật (Railway) — chạy trên staging thật là việc riêng, chưa
+# làm ở đây (xem docs/roadmap/OPEN_ITEMS_AFTER_MVP.md §2).
 on:
   pull_request:
     branches: [develop, main]
@@ -51,6 +51,85 @@ jobs:
 
       - name: Test
         run: pnpm -r --if-present test
+
+  e2e:
+    name: E2E (Playwright, golden path)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: novaway
+          POSTGRES_PASSWORD: novaway
+          POSTGRES_DB: novaway
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Same ordering requirement as the `node` job — shared-types must
+      # build before backend/web can resolve it.
+      - name: Build
+        run: pnpm -r --if-present build
+
+      - name: Run backend migrations
+        working-directory: apps/backend
+        run: node ./node_modules/typeorm/cli-ts-node-commonjs.js -d src/database/data-source.ts migration:run
+        env:
+          DATABASE_URL: postgres://novaway:novaway@localhost:5432/novaway
+
+      # Backgrounded — persists for the rest of this job's steps on the
+      # same runner. apps/web's Playwright config starts its own dev
+      # server (webServer), but can't bootstrap a database, so the
+      # backend has to be started here instead.
+      - name: Start backend
+        working-directory: apps/backend
+        run: node dist/main.js > backend.log 2>&1 &
+        env:
+          PORT: 3000
+          NODE_ENV: production
+          DATABASE_URL: postgres://novaway:novaway@localhost:5432/novaway
+          JWT_SECRET: ci-e2e-only-secret-not-used-anywhere-real
+          JWT_EXPIRES_IN: 7d
+          WEB_ORIGIN: http://localhost:5173
+          ROUTING_PROVIDER: mock
+          VERIFICATION_VALIDITY_MINUTES: 5
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "Backend is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not become healthy in time"
+          cat apps/backend/backend.log
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        working-directory: apps/web
+        run: pnpm test:e2e
 
   mobile:
     name: Mobile (analyze, test)
