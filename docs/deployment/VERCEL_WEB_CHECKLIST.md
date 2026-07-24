@@ -13,7 +13,7 @@
 
 - [x] Import repo `lexuansang2004/NovaWay` từ GitHub.
 - [x] **Root Directory:** chọn `apps/web` — qua UI chọn file-tree (bấm **Edit** cạnh Root Directory → duyệt `apps → web` → **Continue**). Vercel phiên bản hiện tại **không có** checkbox "Include source files outside Root Directory" riêng như bản cũ hơn — việc thấy được `packages/shared-types`/`pnpm-workspace.yaml` được xử lý tự động khi chọn Root Directory qua file-tree picker này (đã verify: build thành công, resolve đúng `@novaway/shared-types`).
-- [x] **Branch:** `develop` (mặc định ban đầu hiện `main` — đã đổi lại đúng `develop` trước khi Deploy, xác nhận qua dòng "Importing from GitHub... develop").
+- [x] **Branch:** `develop` (mặc định ban đầu hiện `main` — đã đổi lại đúng `develop` trước khi Deploy, xác nhận qua dòng "Importing from GitHub... develop"). **⚠️ Lưu ý quan trọng (phát hiện thật khi lên kế hoạch R3, 07/2026):** cài đặt này ("Production Branch", nằm ở **Project Settings → Environments → Production → Branch Tracking**, không phải trang Git settings) đã bị **revert về `main`** tại một thời điểm nào đó sau lần deploy đầu tiên (PR #12) — không rõ nguyên nhân chính xác (nghi ngờ đồng bộ theo default branch của GitHub repo). Hậu quả: từ PR #13 tới hết Sprint R2 (PR #29), mọi push vào `develop` chỉ tạo **Preview** deployment (build "Ready" bình thường, GitHub status vẫn báo "Vercel: success"), domain chính `nova-way-web.vercel.app` không được cập nhật vì nó chỉ serve deployment **Production** — nghĩa là **web staging thật đã chạy code từ trước Sprint R2 suốt nhiều tuần mà không ai biết**, cho tới khi phát hiện bằng cách kiểm tra trực tiếp bundle JS đang chạy thật. Đã sửa: đổi lại Branch Tracking về `develop`, xác nhận deployment mới nhất tự động lên Production ngay. **Nên định kỳ kiểm tra lại setting này** (không có cảnh báo nào từ GitHub/CI khi nó bị lệch).
 - [x] Project Name: `nova-way-web`.
 - [x] Application Preset: `Vite` (tự nhận diện).
 
@@ -29,8 +29,8 @@
 ## 3. Environment Variables
 
 - [x] `VITE_API_BASE_URL` = `https://novawaybackend-production.up.railway.app/api` — set cho **Production and Preview**.
-- [ ] `VITE_WS_BASE_URL` = `https://novawaybackend-production.up.railway.app` (không có `/api`) — thêm ở R2-1 (07/2026, `LiveMapPage` nối `/realtime` WebSocket thật), **chưa set trên Vercel** — cần làm trước khi deploy `develop` mới nhất lên production thật.
-- [ ] `VITE_PROTOMAPS_API_KEY` — thêm ở R2-3 (07/2026, migrate `TripMap` sang MapLibre + Protomaps), lấy key miễn phí tại [protomaps.com/account](https://protomaps.com/account). **Chưa set trên Vercel** — cần làm trước khi deploy, nếu không bản đồ sẽ không hiển thị tile (marker/UI vẫn hoạt động, chỉ tile nền lỗi 401/403). Lưu ý: key có thể bị giới hạn theo origin — xác nhận domain Vercel thật (`nova-way-web.vercel.app`) được phép khi tạo/kiểm tra key.
+- [x] `VITE_WS_BASE_URL` = `https://novawaybackend-production.up.railway.app` (không có `/api`) — thêm ở R2-1 (07/2026). **✅ Đã set (07/2026, khi lên kế hoạch R3)** — trước đó thực sự bị bỏ sót nhiều tuần: xác nhận qua bundle JS thật đang chạy trên production, `LiveMapPage` cố kết nối WebSocket tới `http://localhost:3000` (fallback mặc định trong code khi biến rỗng) thay vì backend thật, nghĩa là **LiveMapPage hoàn toàn không hoạt động trên production** cho tới lúc phát hiện và sửa. Trong lúc sửa, người dùng lỡ ghi giá trị này đè lên `VITE_API_BASE_URL` — đã phát hiện và sửa lại đúng cả hai. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §6.
+- [x] `VITE_PROTOMAPS_API_KEY` — thêm ở R2-3 (07/2026). **✅ Đã set (07/2026, khi lên kế hoạch R3)** — cùng đợt phát hiện với `VITE_WS_BASE_URL`, xác nhận qua bundle JS thật: style URL bản đồ kết thúc bằng `key=` trống. Lưu ý: key có thể bị giới hạn theo origin — xác nhận domain Vercel thật (`nova-way-web.vercel.app`) được phép khi tạo/kiểm tra key.
 
 ## 4. Deploy
 
