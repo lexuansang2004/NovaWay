@@ -241,7 +241,7 @@ Thứ tự phụ thuộc FK giữa các bảng (dưới đây) không migrate h�
 6. raw_gps_events (+ gps_event_dedup, partition đầu tiên) — step 3.1 feat/realtime-location-gateway
 7. trip_logs                  — step 7.1 feat/trip-logs-api
 8. vehicle_mismatch_warnings  — step 6.1 feat/telematics-vehicle-mismatch (đã chốt 07/2026 — bảng này không có ứng viên nào khác trong plan, và FK `trip_id` tới `trips` đã thoả từ step 3.1)
-9. terrain_warnings (+ seed data mock ban đầu) — step chưa chốt
+9. terrain_warnings (+ seed data mock ban đầu) — R3-5 (docs/roadmap/SPRINT_R3_VERIFICATION_CD_HARDENING.md) feat/terrain-warnings-api, không phụ thuộc bảng nào khác ngoài FK optional tới trips (đã tồn tại từ step 3.1)
 ```
 
 *Sửa 07/2026 (lần 1):* bản gốc ghi cả 9 bảng migrate ở step `1.2`, gây lỗi — `trip_logs` có FK NOT NULL tới `trips`, nhưng `trips` lại phụ thuộc `biometric_verifications` (step `1.6`), nên không thể tồn tại trước `1.2`. Đã tách theo đúng step nghiệp vụ cần bảng đó.
