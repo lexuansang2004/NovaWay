@@ -165,7 +165,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                             ),
                           ),
                           Text(
-                            '${vehicle.brandModel} · $roleLabel',
+                            vehicle.brandModel != null
+                                ? '${vehicle.brandModel} · $roleLabel'
+                                : roleLabel,
                             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                           ),
                         ],
