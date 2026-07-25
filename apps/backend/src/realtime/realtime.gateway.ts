@@ -29,8 +29,10 @@ function tripRoom(tripId: string): string {
   return `trip:${tripId}`;
 }
 
-// docs/API_CONTRACT.md §6 — namespace /realtime.
-@WebSocketGateway({ namespace: 'realtime', cors: true })
+// docs/API_CONTRACT.md §6 — namespace /realtime. CORS is not set here:
+// it's synced with WEB_ORIGIN centrally via ConfiguredSocketIoAdapter
+// (main.ts), which overrides whatever this decorator would specify.
+@WebSocketGateway({ namespace: 'realtime' })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;

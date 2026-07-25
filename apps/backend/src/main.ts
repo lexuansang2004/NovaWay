@@ -1,10 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ConfiguredSocketIoAdapter } from './realtime/configured-socket-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -24,8 +24,9 @@ async function bootstrap() {
   app.enableCors({ origin: configService.get<string>('WEB_ORIGIN'), credentials: true });
   // Required for @WebSocketGateway (docs/API_CONTRACT.md §6 /realtime namespace)
   // to actually serve socket.io — @nestjs/platform-socket.io being installed is
-  // not enough on its own, the adapter must be attached explicitly.
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // not enough on its own, the adapter must be attached explicitly. Also keeps
+  // WS CORS in sync with WEB_ORIGIN (R4-2) — see ConfiguredSocketIoAdapter.
+  app.useWebSocketAdapter(new ConfiguredSocketIoAdapter(app, configService));
 
   await app.listen(configService.get<number>('PORT', 3000));
 }
