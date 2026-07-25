@@ -6,7 +6,7 @@
 
 | Level | Phạm vi | Công cụ đề xuất | Chạy khi nào |
 |---|---|---|---|
-| Unit | Service/logic đơn lẻ (vd. Vehicle Mismatch rule, batch validation, idempotency check) | Jest (NestJS), Flutter test | Mỗi PR |
+| Unit | Service/logic đơn lẻ (vd. Vehicle Mismatch rule, batch validation, idempotency check, route geometry) | Jest (NestJS), Vitest (`apps/web`, từ R4-3 07/2026), Flutter test | Mỗi PR |
 | Integration | API endpoint + database thật (test DB), WebSocket gateway | Jest + Supertest, NestJS Testing Module, PostgreSQL test container | Mỗi PR liên quan backend |
 | E2E | Luồng người dùng đầu-cuối: đăng nhập → chọn xe → bắt đầu chuyến đi → nhận vị trí trên dashboard → kết thúc chuyến đi | Playwright/Cypress (web), Flutter integration test (mobile) | Trước khi merge vào `develop`, và trên CI (`9.2 chore/ci-cd-pipeline`) |
 | Simulator-based | Mất mạng, thermal/low-light, mock GPS route, nhiều client reconnect đồng thời | Developer Mode/Simulator nội bộ (FR-DEVMODE) | Mỗi khi động tới offline sync, realtime, hoặc AR fallback |
