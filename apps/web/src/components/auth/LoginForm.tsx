@@ -2,12 +2,21 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 
+// R5-1 (docs/roadmap/SPRINT_R5_DEPENDENCY_AND_COVERAGE.md): a "Ghi nhớ đăng
+// nhập" checkbox used to sit below the password field. It was a dead control
+// — LoginPage dropped the flag and authService always writes the token to
+// sessionStorage — so it was removed rather than left promising something the
+// app does not do.
+//
+// Điều kiện để làm lại tính năng này (đừng wire lại trước khi có ít nhất một
+// trong số đó): có refresh token để phiên dài không phải là một JWT sống lâu
+// nằm sẵn trên máy; hoặc có chỗ lưu access token an toàn hơn localStorage
+// (localStorage đọc được bằng XSS, và token ở lại trên máy dùng chung); hoặc
+// dự án ra khỏi giai đoạn pilot và chấp nhận đánh đổi đó một cách có chủ đích.
 export interface LoginSubmitPayload {
   email: string;
   password: string;
-  remember: boolean;
 }
 
 interface LoginFormProps {
@@ -17,7 +26,6 @@ interface LoginFormProps {
 export function LoginForm({ onSubmit }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,7 +34,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit({ email, password, remember });
+      await onSubmit({ email, password });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
@@ -78,20 +86,6 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         </div>
 
         {error && <p className="text-sm font-medium text-red-400">{error}</p>}
-
-        <div className="flex items-center gap-2">
-          {/* TODO(production): "remember" chưa có tác dụng — chờ chiến lược
-              refresh token trước khi wire hành vi ghi nhớ đăng nhập. */}
-          <Checkbox
-            id="remember"
-            checked={remember}
-            onCheckedChange={(checked) => setRemember(checked === true)}
-            className="border-white/25 data-[state=checked]:border-cyan-400 data-[state=checked]:bg-cyan-400 data-[state=checked]:text-slate-950"
-          />
-          <label htmlFor="remember" className="text-sm text-cyan-100/60">
-            Ghi nhớ đăng nhập
-          </label>
-        </div>
 
         <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
           <Button
