@@ -5,6 +5,14 @@ import { UsersService } from '../users/users.service';
 
 const PASSWORD_HASH_ROUNDS = 10;
 
+// Compared against when the email is unknown so an unknown email costs the same
+// bcrypt work as a wrong password — otherwise response time leaks which emails
+// are registered. Not a credential: it never authenticates anything.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
+  'novaway-timing-equalizer',
+  PASSWORD_HASH_ROUNDS,
+);
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -33,7 +41,10 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
-    const passwordMatches = user ? await bcrypt.compare(password, user.passwordHash) : false;
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user ? user.passwordHash : DUMMY_PASSWORD_HASH,
+    );
 
     if (!user || !passwordMatches) {
       throw new UnauthorizedException({

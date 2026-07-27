@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// No session persistence is wired yet (real Login API is step 4.2), so this
-/// always lands on /login — mirrors apps/web's SplashPage at the same stage.
+/// [AuthSession] is in-memory only, so a cold start never has a token to
+/// resume — this always lands on /login. Revisit if session persistence
+/// (shared_preferences / secure storage) is ever added.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
