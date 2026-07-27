@@ -26,14 +26,18 @@ class ApiVehicleRepository implements VehicleRepository {
       Uri.parse('${ApiConfig.baseUrl}/vehicles'),
       headers: _authHeaders,
     );
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200) {
+      // R5-7: status checked before decoding, so a malformed error body
+      // (proxy HTML, empty body) degrades to UNKNOWN_ERROR instead of
+      // throwing FormatException.
+      final errorBody = _tryDecode(response.body);
       throw ApiException(
         statusCode: response.statusCode,
-        errorCode: (body['error_code'] as String?) ?? 'UNKNOWN_ERROR',
-        message: (body['message'] as String?) ?? 'Không lấy được danh sách xe.',
+        errorCode: (errorBody?['error_code'] as String?) ?? 'UNKNOWN_ERROR',
+        message: (errorBody?['message'] as String?) ?? 'Không lấy được danh sách xe.',
       );
     }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
     final vehicles = body['vehicles'] as List<dynamic>;
     return vehicles
         .cast<Map<String, dynamic>>()
@@ -46,19 +50,30 @@ class ApiVehicleRepository implements VehicleRepository {
       Uri.parse('${ApiConfig.baseUrl}/authorizations/me'),
       headers: _authHeaders,
     );
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200) {
+      final errorBody = _tryDecode(response.body);
       throw ApiException(
         statusCode: response.statusCode,
-        errorCode: (body['error_code'] as String?) ?? 'UNKNOWN_ERROR',
-        message: (body['message'] as String?) ?? 'Không lấy được danh sách uỷ quyền.',
+        errorCode: (errorBody?['error_code'] as String?) ?? 'UNKNOWN_ERROR',
+        message: (errorBody?['message'] as String?) ?? 'Không lấy được danh sách uỷ quyền.',
       );
     }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
     final authorizations = body['authorizations'] as List<dynamic>;
     return authorizations
         .cast<Map<String, dynamic>>()
         .where((a) => a['status'] == 'active')
         .map(SelectableVehicle.fromAuthorizationJson)
         .toList();
+  }
+}
+
+/// Returns the decoded body, or null if it isn't valid JSON — mirrors
+/// api_auth_repository.dart's helper of the same name/purpose.
+Map<String, dynamic>? _tryDecode(String body) {
+  try {
+    return jsonDecode(body) as Map<String, dynamic>;
+  } on FormatException {
+    return null;
   }
 }

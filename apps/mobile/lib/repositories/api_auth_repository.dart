@@ -15,15 +15,21 @@ class ApiAuthRepository implements AuthRepository {
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200) {
+      // R5-7: status is checked before decoding — same order register()
+      // already used below — so a malformed error body (e.g. HTML from a
+      // proxy on a 502) degrades to ApiException's UNKNOWN_ERROR fallback
+      // instead of throwing FormatException from a successful-response
+      // assumption that no longer holds.
+      final errorBody = _tryDecode(response.body);
       throw ApiException(
         statusCode: response.statusCode,
-        errorCode: (body['error_code'] as String?) ?? 'UNKNOWN_ERROR',
-        message: (body['message'] as String?) ?? 'Đăng nhập thất bại.',
+        errorCode: (errorBody?['error_code'] as String?) ?? 'UNKNOWN_ERROR',
+        message: (errorBody?['message'] as String?) ?? 'Đăng nhập thất bại.',
       );
     }
 
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
     final user = body['user'] as Map<String, dynamic>;
     return LoginResult(
       accessToken: body['access_token'] as String,
@@ -40,12 +46,23 @@ class ApiAuthRepository implements AuthRepository {
     );
 
     if (response.statusCode != 201) {
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final errorBody = _tryDecode(response.body);
       throw ApiException(
         statusCode: response.statusCode,
-        errorCode: (body['error_code'] as String?) ?? 'UNKNOWN_ERROR',
-        message: (body['message'] as String?) ?? 'Đăng ký thất bại.',
+        errorCode: (errorBody?['error_code'] as String?) ?? 'UNKNOWN_ERROR',
+        message: (errorBody?['message'] as String?) ?? 'Đăng ký thất bại.',
       );
     }
+  }
+}
+
+/// Returns the decoded body, or null if it isn't valid JSON — a malformed
+/// error response (proxy HTML, empty body) degrades to the caller's
+/// ??-fallback message instead of throwing FormatException.
+Map<String, dynamic>? _tryDecode(String body) {
+  try {
+    return jsonDecode(body) as Map<String, dynamic>;
+  } on FormatException {
+    return null;
   }
 }
