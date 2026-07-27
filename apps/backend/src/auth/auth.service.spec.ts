@@ -6,6 +6,14 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
 
+// `bcrypt` is a CJS native binding whose exports are non-configurable, so
+// jest.spyOn cannot wrap them — mock the module but delegate to the real
+// implementation so every other test keeps exercising real hashing.
+jest.mock('bcrypt', () => {
+  const actual = jest.requireActual('bcrypt');
+  return { ...actual, compare: jest.fn(actual.compare) };
+});
+
 describe('AuthService', () => {
   let authService: AuthService;
   let usersService: jest.Mocked<UsersService>;
@@ -97,6 +105,22 @@ describe('AuthService', () => {
       await expect(authService.login('nobody@example.com', 'password123')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+
+    it('still runs a bcrypt comparison for an unknown email so response time does not leak it', async () => {
+      const compareMock = bcrypt.compare as unknown as jest.Mock;
+      compareMock.mockClear();
+      usersService.findByEmail.mockResolvedValue(null);
+
+      await expect(authService.login('nobody@example.com', 'password123')).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      expect(compareMock).toHaveBeenCalledTimes(1);
+      const [, hashArg] = compareMock.mock.calls[0];
+      // A real cost-10 bcrypt hash, so the unknown-email path costs the same
+      // work as comparing against a registered user's hash.
+      expect(hashArg).toMatch(/^\$2[aby]\$10\$/);
     });
   });
 
