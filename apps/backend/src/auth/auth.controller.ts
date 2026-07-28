@@ -14,8 +14,14 @@ interface AuthenticatedRequest extends Request {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // R6-1 (docs/roadmap/SPRINT_R6_SECURITY_HARDENING.md) — unauthenticated,
+  // same abuse profile as login below (no legitimate reason to call this
+  // more than a few times/min from one IP). Same AppModule 'default'
+  // throttler (5 attempts/min) — was measured to have zero protection
+  // before this: 8 back-to-back real requests, all 201, never a 429.
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto.email, dto.password);
   }
