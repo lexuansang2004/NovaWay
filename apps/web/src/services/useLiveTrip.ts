@@ -11,14 +11,30 @@ const ACTIVE_TRIP_POLL_MS = 5000;
 // OPEN_ITEMS_AFTER_MVP.md §7) — bounds memory for a long-running trip.
 const MAX_TRAIL_POINTS = 500;
 
+// R5-9 (docs/roadmap/SPRINT_R5_DEPENDENCY_AND_COVERAGE.md) — the socket only
+// ever listened for 'connect' and 'location:broadcast'. If the connection
+// dropped (token expired, backend restarted) the position just stopped
+// updating with zero feedback — silently wrong, worse than an error shown.
+// Loosely mirrors apps/mobile's RealtimeConnectionState (services/
+// realtime_client.dart); web only watches a trip, never starts/stops one,
+// so it doesn't need mobile's 'rejected' state.
+type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
 interface LiveTripState {
   trip: Trip | null;
   position: LatLng | null;
   speedKmh: number;
   trail: LatLng[];
+  connectionStatus: ConnectionStatus;
 }
 
-const EMPTY_STATE: LiveTripState = { trip: null, position: null, speedKmh: 0, trail: [] };
+const EMPTY_STATE: LiveTripState = {
+  trip: null,
+  position: null,
+  speedKmh: 0,
+  trail: [],
+  connectionStatus: 'connecting',
+};
 
 // Web dashboard only *watches* a trip started on the rider's phone (biometric
 // vehicle binding, FR-BIOMETRIC-01, is a mobile-only flow) — no start/stop
@@ -66,7 +82,21 @@ export function useLiveTrip() {
       const socket = io(`${WS_BASE_URL}/realtime`, { auth: { token }, transports: ['websocket'] });
       socketRef.current = socket;
 
-      socket.on('connect', () => socket.emit('join:trip', { trip_id: activeTrip.id }));
+      socket.on('connect', () => {
+        socket.emit('join:trip', { trip_id: activeTrip.id });
+        setState((s) => ({ ...s, connectionStatus: 'connected' }));
+      });
+
+      // socket.io's default `reconnection: true` (unset here, so it applies)
+      // keeps retrying on its own — this only has to reflect that state, not
+      // drive any retry logic. A later 'connect' flips connectionStatus back.
+      socket.on('disconnect', () => {
+        setState((s) => ({ ...s, connectionStatus: 'disconnected' }));
+      });
+
+      socket.on('connect_error', () => {
+        setState((s) => ({ ...s, connectionStatus: 'error' }));
+      });
 
       socket.on('location:broadcast', (payload: LocationBroadcastPayload) => {
         if (payload.trip_id !== activeTripIdRef.current) return;
@@ -76,6 +106,7 @@ export function useLiveTrip() {
           position,
           speedKmh: payload.speed_kmh,
           trail: [...s.trail, position].slice(-MAX_TRAIL_POINTS),
+          connectionStatus: 'connected',
         }));
       });
     }
