@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import Map, { Marker, Source, Layer, type MapRef } from 'react-map-gl/maplibre';
-import type { MapLibreMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { buildSegmentLengths, splitRouteAtDistance } from '@/services/routeGeometry';
 
@@ -34,7 +33,13 @@ if (!PROTOMAPS_API_KEY) {
   // hơn để debug so với một lỗi runtime im lặng. Lấy key miễn phí tại protomaps.com/account.
   console.warn('VITE_PROTOMAPS_API_KEY chưa được cấu hình — bản đồ sẽ không hiển thị tile.');
 }
-const MAP_STYLE = `https://api.protomaps.com/styles/v5/dark/en.json?key=${PROTOMAPS_API_KEY ?? ''}`;
+// `light` chứ không phải `dark` — bản đồ nền tối trước đây bị đọc thành "quá tối/nâu"
+// (khu đô thị dày nhãn quán ăn/cà phê amber trên nền xám gần đen). Không ẩn nhãn địa
+// điểm (POI) — người dùng muốn giữ nguyên, chỉ cần nền sáng hơn để dễ đọc. `light` (thay
+// vì `white`) vì roads (#ffffff) tương phản rõ trên nền xám (#cccccc), còn `white` có
+// roads gần như vô hình trên nền trắng; nước cũng ngả cyan (#80deea), hợp accent màu
+// cyan/emerald của NovaWay hơn xám trung tính của `white`.
+const MAP_STYLE = `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_API_KEY ?? ''}`;
 
 export type LatLng = [number, number];
 
@@ -53,18 +58,6 @@ interface TripMapProps {
 
 function toLngLat([lat, lng]: LatLng): [number, number] {
   return [lng, lat];
-}
-
-// Protomaps' hosted `dark` style colors food/drink venues (restaurant/fast_food/cafe/bar)
-// in amber (#F19B6E) on its `pois` layer — dense areas like central HCMC end up covered
-// in orange-tinted labels, reading as a brownish, cluttered map. Business POI labels
-// (cafes, shops, museums, ...) aren't relevant to tracking a vehicle's live position, so
-// the whole layer is hidden rather than restyled — `getLayer` guards against a future
-// Protomaps style version renaming/removing it and throwing on `setLayoutProperty`.
-function hidePoiClutter(map: MapLibreMap) {
-  if (map.getLayer('pois')) {
-    map.setLayoutProperty('pois', 'visibility', 'none');
-  }
 }
 
 function toLineString(points: LatLng[]): LineStringFeature {
@@ -127,7 +120,6 @@ export function TripMap({ route, position, progressMeters, trail = [], children 
       initialViewState={{ longitude: position[1], latitude: position[0], zoom: 16 }}
       mapStyle={MAP_STYLE}
       style={{ position: 'absolute', inset: 0, zIndex: 0 }}
-      onLoad={(e) => hidePoiClutter(e.target)}
     >
       {/* Trail: lịch sử vị trí GPS thật đã đi qua — mờ, dashed, khác hẳn guidance route.
           Vẽ trước để guidance (nếu có) luôn nổi lên trên nếu trùng đoạn. */}
