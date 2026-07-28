@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfiguredSocketIoAdapter } from './realtime/configured-socket-io.adapter';
@@ -9,6 +10,13 @@ import { ConfiguredSocketIoAdapter } from './realtime/configured-socket-io.adapt
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+
+  // R6-2 (docs/roadmap/SPRINT_R6_SECURITY_HARDENING.md) — responses had zero
+  // security headers (measured: curl -D - showed no X-Content-Type-Options,
+  // X-Frame-Options, HSTS, or CSP, plus an active `X-Powered-By: Express`
+  // fingerprint leak). helmet's defaults, applied first so every response —
+  // including error responses from HttpExceptionFilter — gets them.
+  app.use(helmet());
 
   // Express's default JSON body limit is 100kb — too small for
   // POST /api/trips/sync's documented max of 500 events (docs/API_CONTRACT.md
