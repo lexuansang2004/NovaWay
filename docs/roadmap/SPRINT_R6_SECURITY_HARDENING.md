@@ -1,0 +1,53 @@
+# NovaWay — Sprint R6: Abuse Protection & Response Hardening
+
+> Sprint thứ sáu, sau `Sprint R5: Dependency Hygiene & Coverage of Real Runtime Code` (`docs/roadmap/SPRINT_R5_DEPENDENCY_AND_COVERAGE.md`, đóng 8/9 mục 27–28/07/2026, cộng 2 fix UX ngoài backlog theo phản hồi trực tiếp). R5 đã dọn sạch dependency (advisory 30 → 4, critical 1 → 0) và phủ test cho tầng networking/contract chính (`HttpExceptionFilter`, `apiClient`, 2 repository mobile, `envValidationSchema`). R6 chuyển trọng tâm sang hai chỗ chưa ai đụng tới: **bề mặt lạm dụng chưa được chặn** (throttling chỉ áp cho 3/6 endpoint mutating thật, response thiếu security header) và **vài file logic thật cuối cùng chưa có test**, phát hiện qua coverage report thật chứ không suy đoán.
+
+## 1. Sprint Goal
+
+Chặn đúng những chỗ có thể bị lạm dụng thật (đo được bằng request thật, không suy đoán), và phủ nốt 3 file logic thật còn thiếu test mà audit + coverage report chỉ ra. Không thêm tính năng sản phẩm mới, không đổi kiến trúc.
+
+## 2. Phương pháp audit (đã chạy thật trước khi viết backlog này, 28/07/2026)
+
+- `pnpm audit --json` toàn workspace — vẫn đúng **4 advisory** như cuối R5 (`@hono/node-server`, `fast-uri` qua `shadcn` CLI, `react-router` không dùng RSC, `brace-expansion` cần `typeorm` major) — không có advisory mới, không mục backlog nào từ hướng này.
+- `pnpm outdated -r` + `flutter pub outdated` — không có bản vá bảo mật nào bị bỏ lỡ; các bản major còn lại (`typeorm`, `eslint`, `jest`, `typescript`, `maplibre-gl` — cái này **cố ý ghim**, xem `TripMap.tsx`) đều đã có quyết định từ trước, không lặp lại.
+- Đối chiếu `docs/API_CONTRACT.md` với route thật — vẫn khớp 1:1 (21/21), không drift.
+- Grep `TODO`/`FIXME`/`console.log`/`debugPrint` trên code đã commit (loại trừ `*.spec.*`/`*_test.*`) — **sạch hoàn toàn**, không còn gì sót.
+- `npx jest --coverage` trên backend — 58% statement, nhưng đọc theo từng thư mục lộ ra 2 file logic thật (không phải DTO/controller/migration) có coverage thấp bất thường: `src/routing` (46%, do `vehicle-speed.ts`) và `src/observability` (46%, do `logging.interceptor.ts`).
+- Rà lại toàn bộ mutating endpoint (`@Post`/`@Patch`/`@Delete`) xem có `@UseGuards(ThrottlerGuard)` hay không — chỉ 2/6 route loại này có (`auth/login`, `trips/sync`). Verify thật bằng HTTP cho từng route còn thiếu (mục 4).
+- Kiểm tra response header thật của backend đang chạy bằng `curl -D -` — không có security header nào.
+- Liệt kê file `apps/web/src`/`apps/mobile/lib` không có test tương ứng, đọc từng file loại bỏ interface/DTO/wiring thuần — còn đúng 1 file có branching logic thật đáng test (`authService.ts`).
+- Grep `dangerouslySetInnerHTML`/`eval`/raw SQL ngoài migration — sạch, không phát hiện injection surface mới.
+
+## 3. Ngoài phạm vi (Out of Scope) — kèm lý do đã kiểm chứng
+
+- **`typeorm` 0.3.x → 1.1.0**, **NestJS's remaining transitive advisories**, **`react-router` RSC advisory** — giữ nguyên mọi quyết định từ R4/R5, không có dữ kiện mới để xét lại.
+- **`maplibre-gl` 5.24.0 → 6.0.0** — vẫn ghim, lý do đã ghi trong `TripMap.tsx` (R2-3): v6 làm canvas WebGL render trống hoàn toàn khi dùng qua `react-map-gl`.
+- **Rate limit cho `GET` endpoint** (`/vehicles`, `/trips`, `/terrain-warnings`, ...) — chỉ đọc dữ liệu của chính user đó (đã qua `JwtAuthGuard`), không có chi phí bên thứ ba, không có input để lạm dụng ghi. Khác hẳn `register`/`biometric verify`/`routes/preview` ở mục 4.
+- **`routes/preview` throttling** — cân nhắc rồi gộp chung vào R6-1 vì cùng một cơ chế sửa, nhưng đánh dấu ưu tiên thấp hơn: `ROUTING_PROVIDER=osrm` (nơi spam endpoint này mới thật sự đụng tới OSRM demo server công cộng) là cờ chỉ dùng ở dev/test theo comment sẵn có trong `env.validation.ts`, production mặc định `mock`.
+- **Password complexity/max-length** — `RegisterDto` hiện chỉ có `@MinLength(8)`, không có complexity rule hay `@MaxLength`. Không đủ bằng chứng đây là vấn đề thật (bcrypt tự cắt ở 72 byte, không tỷ lệ chi phí theo độ dài input vượt ngưỡng đó) — không đưa vào backlog vì chưa đo được rủi ro cụ thể, tránh suy đoán.
+- **`tripsService.ts`/`vehiclesService.ts`/`utils.ts` (web)** — đọc từng file: toàn bộ chỉ là 1 dòng delegate sang `apiClient` đã test ở R5-6, không có nhánh logic riêng đáng test.
+- **`users.service.ts` (backend)** — 3 hàm CRUD một dòng, không có nhánh; hành vi thật đã được `auth.service.spec.ts` exercise gián tiếp qua mock. Coverage thấp (0% function) nhưng không có logic thật để khoá.
+- **`useLiveTrip.ts` (web)** — giữ nguyên quyết định R5-9: cần DOM thật (`renderHook`) để test, `vitest.config.ts` cố ý không có `jsdom`/`@testing-library/react`. Không đổi.
+
+## 4. Backlog
+
+| # | Việc | Ưu tiên | Vì sao | Bằng chứng / Rủi ro |
+|---|---|---|---|---|
+| R6-1 | Thêm rate limit cho 3 endpoint mutating chưa được bảo vệ: `POST /api/auth/register`, `POST /api/vehicles/:id/verify/session`, `POST /api/vehicles/:id/verify` | P0 | Đây không phải rủi ro lý thuyết — đã đo được thật, không cần đăng nhập, khai thác được ngay hôm nay. `verify/session` còn nghiêm trọng hơn: khi `BIOMETRIC_PROVIDER=aws-rekognition` (hiện mặc định `mock`, nhưng sẽ bật khi lên production thật) mỗi lần gọi là một lệnh AWS Rekognition **tính phí thật** (`CreateFaceLivenessSession`) — khoá trước khi bật provider thật, không phải sau khi đã tốn tiền, đúng tinh thần rate limit login/GPS/sync đã làm ở R1-4/R2-2 | **Verify thật bằng HTTP** (28/07/2026): 8 lần gọi liên tiếp `POST /api/auth/register` (email random mỗi lần) → cả 8 đều `201`, không lần nào `429`. Đối chiếu `app.module.ts:39-43`: `ThrottlerModule.forRoot(...)` đăng ký nhưng **không áp global**, comment tự ghi rõ "chỉ áp nơi có `@UseGuards(ThrottlerGuard)` tường minh" — hiện chỉ có ở `auth.controller.ts:28` (login) và `sync.controller.ts:26` (sync). `register` (`auth.controller.ts:17-21`), `verify/session` (`biometric.controller.ts:18`), `verify` (`biometric.controller.ts:25`) đều thiếu. `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5 xác nhận phạm vi throttling gốc chỉ tính 3 route (login/GPS/sync) — `register`/`biometric` chưa từng được xét, không phải quyết định cố ý bỏ qua. Kèm `routes/preview` (`routing.controller.ts:17`, ưu tiên thấp hơn — xem mục 3) nếu còn thời gian |
+| R6-2 | Thêm `helmet` — response hiện thiếu mọi security header chuẩn | P1 | Zero-cost, well-established best practice cho NestJS/Express — một dòng `app.use(helmet())`. Không có exploit cụ thể đã biết, nhưng đang tự lộ fingerprint framework, đúng loại "defense-in-depth rẻ, không sửa thì mãi để trống" | **Đo thật**: `curl -D - http://localhost:3000/health` — response header không có `X-Content-Type-Options`, `X-Frame-Options`, `Strict-Transport-Security`, `Content-Security-Policy`; có `X-Powered-By: Express` (helmet mặc định strip header này, giúp giảm bề mặt fingerprint cho kẻ nhắm CVE theo framework). `helmet` chưa từng xuất hiện trong `package.json`/`main.ts`/toàn bộ `docs/` — chưa từng được cân nhắc, không phải quyết định cố ý bỏ qua |
+| R6-3 | Viết test cho `durationMinFromDistance` (`vehicle-speed.ts`) | P2 | Hàm thuần, cài đặt trực tiếp FR-ROUTING-02 ("khác nhau theo loại xe") kèm một quy tắc nghiệp vụ dễ quên khi sửa sau này (sàn tối thiểu 1 phút) — hiện chỉ được exercise **gián tiếp** qua 2 test khác ("motorbike nhanh hơn car"), chưa test nào khoá đúng hằng số tốc độ hay case biên | `apps/backend/src/routing/vehicle-speed.ts:14-16`. Coverage thật xác nhận: `src/routing` 46% (thư mục có cả `routing.service.spec.ts` đã pass đầy đủ, phần thiếu chính là file này). Đáng khoá: `motorbike` = 35 km/h, `car` = 28 km/h đúng hằng số; quãng đường rất ngắn/0 → sàn `Math.max(1, ...)` không bao giờ trả 0 phút; làm tròn đúng (`Math.round`) |
+| R6-4 | Viết test cho `LoggingInterceptor` | P2 | Interceptor global, cài đặt NFR-OBS-01, có branching thật (bỏ qua context không phải HTTP — vd. WebSocket; nhánh thành công vs lỗi; fallback status `\|\| 500` khi response chưa set status lúc lỗi) chưa từng có test | `apps/backend/src/observability/logging.interceptor.ts:11-42`. Coverage thật xác nhận: `src/observability` 46% dù `metrics.service.spec.ts` đã pass đầy đủ — phần thiếu là đúng file này. Đáng khoá: `context.getType() !== 'http'` → gọi `next.handle()` thẳng, không log/không tăng counter; request thành công → `record()` với status thật; request lỗi (exception ném ra) → vẫn `record()`, dùng `response.statusCode \|\| 500` làm fallback; `metricsService.increment` được gọi đúng label `method`/`status` |
+| R6-5 | Viết test cho `authService.ts` (web) — nhánh 401 của `fetchCurrentUser()` | P1 | Đây là nơi quyết định "phiên còn hợp lệ hay không" cho toàn bộ web app (`AppLayout`'s auth guard gọi hàm này mỗi lần mount) — sai một trong hai hướng đều là bug thật: xoá session ở **mọi** lỗi (kể cả lỗi mạng thoáng qua) sẽ đăng xuất người dùng oan; không xoá ở `401` sẽ để người dùng kẹt lại với token đã hết hạn. Cùng mức độ quan trọng contract như `apiClient.ts` đã test ở R5-6, nhưng tới giờ vẫn chưa có test | `apps/web/src/services/authService.ts:24-36`. Test được ngay bằng Vitest sẵn có (`environment: 'node'`) — không cần `jsdom`, chỉ cần `vi.stubGlobal('sessionStorage', ...)` với một object giả implement `getItem`/`setItem`/`removeItem` (đúng pattern R5-6 đã dùng cho `fetch`, không phải case buộc phải có DOM thật như `useLiveTrip`). Đáng khoá: `login()` ghi đúng token vào `sessionStorage`; `fetchCurrentUser()` không có token → trả `null` ngay, không gọi API; lỗi `401` → gọi `clearAuthSession()` rồi trả `null`; lỗi khác (500, network) → **ném lại** nguyên trạng, không xoá session |
+
+**Đề xuất thứ tự làm:** R6-1 (P0, khai thác được ngay hôm nay, làm trước tiên) → R6-2 (P1, một dòng, làm nhanh) → R6-5 (P1, contract quan trọng) → R6-3/R6-4 (P2, độc lập nhau, làm song song được, cuối sprint nếu còn thời gian).
+
+## 5. Definition of Done cho Sprint R6
+
+- [ ] R6-1 hoàn tất — `register`, `verify/session`, `verify` đều có `@UseGuards(ThrottlerGuard)`; verify lại bằng chính phép đo đã dùng ở mục 4 (8+ request liên tiếp, xác nhận có `429` xuất hiện).
+- [ ] R6-2 hoàn tất — `curl -D -` vào backend thật cho thấy đủ security header chuẩn, không còn `X-Powered-By: Express`.
+- [ ] R6-5 hoàn tất — `authService.ts` có test khoá đúng nhánh 401 vs lỗi khác.
+- [ ] `pnpm -r --if-present test` + `flutter test` + E2E golden path pass sau **mỗi** mục, không dồn cuối sprint.
+- [ ] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` được cập nhật nếu phát hiện thêm gap tài liệu-thực tế trong lúc làm.
+- [ ] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 4.
+
+**Ghi chú:** R6-3/R6-4 (P2) có thể kéo sang R7 nếu hết thời gian — không bắt buộc cho DoD tối thiểu, nhưng cùng phát hiện thật đáng chú ý (coverage report chỉ thẳng ra, không phải suy đoán).
