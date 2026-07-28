@@ -33,7 +33,13 @@ if (!PROTOMAPS_API_KEY) {
   // hơn để debug so với một lỗi runtime im lặng. Lấy key miễn phí tại protomaps.com/account.
   console.warn('VITE_PROTOMAPS_API_KEY chưa được cấu hình — bản đồ sẽ không hiển thị tile.');
 }
-const MAP_STYLE = `https://api.protomaps.com/styles/v5/dark/en.json?key=${PROTOMAPS_API_KEY ?? ''}`;
+// `light` chứ không phải `dark` — bản đồ nền tối trước đây bị đọc thành "quá tối/nâu"
+// (khu đô thị dày nhãn quán ăn/cà phê amber trên nền xám gần đen). Không ẩn nhãn địa
+// điểm (POI) — người dùng muốn giữ nguyên, chỉ cần nền sáng hơn để dễ đọc. `light` (thay
+// vì `white`) vì roads (#ffffff) tương phản rõ trên nền xám (#cccccc), còn `white` có
+// roads gần như vô hình trên nền trắng; nước cũng ngả cyan (#80deea), hợp accent màu
+// cyan/emerald của NovaWay hơn xám trung tính của `white`.
+const MAP_STYLE = `https://api.protomaps.com/styles/v5/light/en.json?key=${PROTOMAPS_API_KEY ?? ''}`;
 
 export type LatLng = [number, number];
 
