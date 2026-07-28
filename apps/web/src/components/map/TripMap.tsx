@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import Map, { Marker, Source, Layer, type MapRef } from 'react-map-gl/maplibre';
+import type { MapLibreMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { buildSegmentLengths, splitRouteAtDistance } from '@/services/routeGeometry';
 
@@ -52,6 +53,18 @@ interface TripMapProps {
 
 function toLngLat([lat, lng]: LatLng): [number, number] {
   return [lng, lat];
+}
+
+// Protomaps' hosted `dark` style colors food/drink venues (restaurant/fast_food/cafe/bar)
+// in amber (#F19B6E) on its `pois` layer — dense areas like central HCMC end up covered
+// in orange-tinted labels, reading as a brownish, cluttered map. Business POI labels
+// (cafes, shops, museums, ...) aren't relevant to tracking a vehicle's live position, so
+// the whole layer is hidden rather than restyled — `getLayer` guards against a future
+// Protomaps style version renaming/removing it and throwing on `setLayoutProperty`.
+function hidePoiClutter(map: MapLibreMap) {
+  if (map.getLayer('pois')) {
+    map.setLayoutProperty('pois', 'visibility', 'none');
+  }
 }
 
 function toLineString(points: LatLng[]): LineStringFeature {
@@ -114,6 +127,7 @@ export function TripMap({ route, position, progressMeters, trail = [], children 
       initialViewState={{ longitude: position[1], latitude: position[0], zoom: 16 }}
       mapStyle={MAP_STYLE}
       style={{ position: 'absolute', inset: 0, zIndex: 0 }}
+      onLoad={(e) => hidePoiClutter(e.target)}
     >
       {/* Trail: lịch sử vị trí GPS thật đã đi qua — mờ, dashed, khác hẳn guidance route.
           Vẽ trước để guidance (nếu có) luôn nổi lên trên nếu trùng đoạn. */}
