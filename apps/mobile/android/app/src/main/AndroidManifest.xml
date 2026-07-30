@@ -1,4 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Never actually declared until now — apps/mobile has only ever run via
+         `flutter test` (fakes, no real permission prompt) and `flutter run -d
+         chrome` (web target, browser Geolocation permission, not this
+         manifest). A real Android build/install would have the GPS
+         permission request silently fail (OS won't prompt for an
+         undeclared permission) and, in a release build specifically (debug/
+         profile variants happen to carry INTERNET already, but only for
+         Flutter's own dev tooling — see src/debug and src/profile), every
+         network call would fail outright. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- geolocator_location_source.dart only ever calls the base
+         Geolocator.getPositionStream (no AndroidSettings/foreground-service
+         config), so this app never runs location tracking while backgrounded
+         — no FOREGROUND_SERVICE_LOCATION/POST_NOTIFICATIONS needed, matching
+         what the code actually does rather than the plugin's full example. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="mobile"
         android:name="${applicationName}"
