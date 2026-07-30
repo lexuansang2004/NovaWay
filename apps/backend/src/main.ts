@@ -11,6 +11,13 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
+  // R7-3 (docs/roadmap/SPRINT_R7_PERFORMANCE_AND_RELIABILITY.md) — Railway
+  // sends SIGTERM to the old container on every redeploy. Without this,
+  // Nest never runs onModuleDestroy/etc. before exiting, so the open
+  // Postgres pool and WebSocket connections get cut instead of closed
+  // cleanly. No args = listens for both SIGTERM and SIGINT.
+  app.enableShutdownHooks();
+
   // R6-2 (docs/roadmap/SPRINT_R6_SECURITY_HARDENING.md) — responses had zero
   // security headers (measured: curl -D - showed no X-Content-Type-Options,
   // X-Frame-Options, HSTS, or CSP, plus an active `X-Powered-By: Express`
