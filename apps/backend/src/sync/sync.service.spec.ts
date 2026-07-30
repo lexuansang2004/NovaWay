@@ -108,4 +108,24 @@ describe('SyncService', () => {
     expect(result.status).toBe('all_failed');
     expect(gpsEventsService.recordEvent).not.toHaveBeenCalled();
   });
+
+  it('never has more than EVENT_CONCURRENCY (5) recordEvent calls in flight at once', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    gpsEventsService.recordEvent.mockImplementation(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight--;
+      return { persisted: true };
+    });
+
+    const events = Array.from({ length: 23 }, () => validEvent());
+    const result = await service.syncEvents(USER_ID, { trip_id: TRIP_ID, events });
+
+    expect(maxInFlight).toBeLessThanOrEqual(5);
+    expect(result.accepted).toBe(23);
+    expect(gpsEventsService.recordEvent).toHaveBeenCalledTimes(23);
+  });
 });
