@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- iOS itself is deferred (R3-4, docs/roadmap/OPEN_ITEMS_AFTER_MVP.md —
+	     no Mac/real device available yet), but this key costs nothing to add
+	     now and removes one rework step later: without it, iOS terminates the
+	     process outright the moment geolocator_location_source.dart's
+	     Geolocator.requestPermission() tries to show the system prompt —
+	     missing this key isn't "permission denied", it's a crash. Only
+	     "when in use" — the app never requests background/"always" location
+	     (see the matching comment in the Android manifest). -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NovaWay cần vị trí của bạn để theo dõi hành trình khi chuyến đi đang diễn ra.</string>
 </dict>
 </plist>
