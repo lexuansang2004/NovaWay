@@ -7,8 +7,6 @@ class AuthSession {
   static String? token;
   static String? userEmail;
 
-  static bool get isAuthenticated => token != null;
-
   static void set({required String token, required String userEmail}) {
     AuthSession.token = token;
     AuthSession.userEmail = userEmail;
