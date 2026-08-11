@@ -2,6 +2,14 @@
 
 > Step D0.4. Áp dụng cho mọi AI agent (Codex, Claude Code, hoặc agent khác) làm việc trên repo này từ sau khi Requirement Baseline v1.0 được chốt (D0.7). Đây là quy tắc bắt buộc, không phải gợi ý.
 
+## Repository routing và phân công nhóm
+
+- **Repo nguồn duy nhất để phát triển sản phẩm:** `https://github.com/lexuansang2004/NovaWay`. Mọi thay đổi code, build, test, fix, feature branch và PR của NovaWay phải thực hiện tại repo này. Trước khi sửa hoặc push, agent phải kiểm tra `git remote get-url origin`; nếu không trỏ tới repo trên thì dừng và báo người dùng.
+- **Repo bài nộp/cộng tác:** `https://github.com/lexuansang2004/KLTN_DHKTPM18C`. Chỉ dùng repo này khi người dùng yêu cầu chuẩn bị bài nộp, snapshot hoặc chia phần việc nhóm. Không coi đây là source of truth và không âm thầm phát triển tính năng NovaWay tại đây.
+- Khi lập kế hoạch **7 phần cho Sang / 3 phần cho Văn**, agent phải chia thành 10 work package có phạm vi, đầu ra và tiêu chí nghiệm thu rõ ràng. Ba phần của Văn phải là công việc Văn thực sự tự làm (có thể là code, test, tài liệu, QA hoặc review có nội dung), dùng tài khoản/email GitHub của Văn và đi qua branch/PR riêng khi phù hợp.
+- **Không tạo đóng góp giả:** agent không được đổi tác giả commit, phát lại/chia nhỏ code của Sang dưới tên Văn, tạo commit rỗng "cho có", hoặc hướng dẫn thao tác nhằm khiến giáo viên/người review hiểu sai ai là người thực hiện.
+- Nếu người dùng yêu cầu chia việc nhưng chưa có phạm vi đủ rõ, agent đề xuất phương án 70/30 hợp lệ theo khối lượng và độ khó; không đo tỷ lệ chỉ bằng số commit. Mỗi contributor phải tự push phần mình làm và để lại bằng chứng review/test phù hợp.
+
 ## Golden rule
 
 **Không code trước khi Requirement Baseline v1.0 được duyệt.** Trạng thái hiện tại: đang ở D0.4 (Architecture) trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` — chưa tới D0.7.
