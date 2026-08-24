@@ -106,7 +106,7 @@ Chi tiết vị trí trong micro-step plan: xem `NovaWay_COMPLETE_MICRO_STEP_PLA
 
 ## 8. R&D Track
 
-- Unity AR Terrain Mesh prototype (tách biệt hoàn toàn khỏi mobile app chính cho tới khi đạt test gate riêng: FPS, nhiệt độ, pin, độ ổn định, fallback ánh sáng yếu).
+- Unity AR Terrain Mesh prototype (tách biệt hoàn toàn khỏi mobile app chính cho tới khi đạt test gate riêng: FPS, nhiệt độ, pin, độ ổn định, fallback ánh sáng yếu). **Baseline cụ thể (08/2026):** đây là một prototype nghiên cứu độc lập cho báo cáo hội đồng, không phải tính năng NovaWay MVP — phạm vi/thiết bị/timeline đầy đủ ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md`.
 - Thuật toán phát hiện ổ gà/vật cản bằng camera AI.
 
 ## 9. Assumptions & Dependencies

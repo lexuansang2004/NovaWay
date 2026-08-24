@@ -300,6 +300,8 @@ Response `200`:
 
 Response `200`: `{ "warnings": [ { "id", "location": {"lat", "lng"}, "severity", "description" }, ... ] }`.
 
+> **Không nhầm với AR Terrain Thesis Prototype (08/2026):** prototype Unity/ARKit ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` không gọi endpoint này hay bất kỳ endpoint nào khác của NovaWay — không có backend/API dependency, mesh và dữ liệu RTK ở lại local.
+
 ## 10. Routing (mock, step `5.1`)
 
 > Bổ sung 07/2026 — tự rà trước khi code step `5.1`: `ARCHITECTURE.md` §3.2/§7 mô tả `RoutingProvider` từ D0.4 nhưng chưa từng có contract HTTP tương ứng ở đây. Xem `SRS.md` §1.14 (FR-ROUTING), `REVIEW_NOTES.md` §14.

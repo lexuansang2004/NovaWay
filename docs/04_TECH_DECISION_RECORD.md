@@ -149,6 +149,8 @@ Unity AR Terrain Mesh làm project riêng:
 
 Chỉ tích hợp vào mobile app sau khi R&D đạt test gate.
 
+> **Cập nhật (08/2026):** quyết định tech stack cụ thể cho R&D prototype này (dùng cho báo cáo hội đồng, không phải hạng mục MVP) — xem TDR-012.
+
 ---
 
 ## TDR-004: Realtime Scale Strategy
@@ -380,3 +382,45 @@ Các cảnh báo quan trọng khi đang lái phải dùng driver-friendly overla
 ### Reason
 
 Người dùng đang lái xe cần UI tối giản, ít gây mất tập trung và không che khuất bản đồ quá lâu.
+
+---
+
+## TDR-012: AR Terrain Thesis Prototype Stack (08/2026)
+
+### Decision
+
+Prototype nghiên cứu "AR Terrain Mesh" (R&D track ở TDR-003, không phải hạng mục MVP) dùng:
+
+```text
+Unity 6.3 LTS + ARKit Scene Reconstruction (LiDAR)
+Thiết bị chính: iPhone 15 Pro Max
+Fallback compatibility-only: iPhone 11 Pro (không có LiDAR Scene Reconstruction)
+Build/deploy: MacBook Air M4 (Apple Silicon) qua Xcode, Apple Account miễn phí (Personal Team)
+Export: `mesh_ar_local.ply` (AR-local, step 8.3) → `mesh_enu.ply` georeferenced + `transform_ar_to_enu.json` (step 8.4, bắt buộc); `mesh_enu.glb` (stretch goal, step 8.7)
+Georeference: hai luồng tách biệt — RTK WGS84 → local ENU; Unity AR-local → local ENU qua pipeline hai bước (C_AXIS cho axis/handedness conversion, rồi rigid transform R_AR_TO_ENU/t_AR_TO_ENU, scale=1) — 5 control points + 3 checkpoint độc lập
+```
+
+Chi tiết đầy đủ: `docs/research/AR_TERRAIN_THESIS_BASELINE.md`.
+
+### Context
+
+R&D track này (đã mở ở TDR-003, hoãn ở `docs/REVIEW_NOTES.md` §15 vì thiếu Unity/thiết bị AR thật) nay phục vụ mục tiêu cụ thể: chứng minh tính khả thi kỹ thuật cho báo cáo hội đồng, với deadline code freeze `2026-11-15`.
+
+### Options
+
+| Option | Ưu điểm | Nhược điểm | Quyết định |
+|---|---|---|---|
+| Unity + ARKit Scene Reconstruction (LiDAR) trên iPhone | LiDAR cho mesh chất lượng cao, AR Foundation abstraction sẵn có cho ARKit | Chỉ chạy tốt trên thiết bị có LiDAR (iPhone 12 Pro trở lên); cần license Unity (Student hoặc Personal — xem Risk §13 trong baseline doc) | Chọn |
+| Native ARKit/RealityKit (không qua Unity) | Miễn phí hoàn toàn, không phụ thuộc license Unity dưới bất kỳ hình thức nào | Phải viết lại từ đầu nếu đổi hướng giữa chừng — **phát sinh chi phí chuyển stack nếu thay đổi sau khi triển khai Unity đã bắt đầu** (chưa có Unity project tại thời điểm quyết định này) | **Loại (rejected)** cho quyết định hiện tại — chỉ xem xét lại nếu đã xác nhận Unity Personal **không đáp ứng điều kiện eligibility/license terms tại thời điểm đăng ký** (không phải giả định trước là dùng được), hoặc nếu Unity/AR Foundation gặp blocker kỹ thuật đã được chứng minh cụ thể trong lúc triển khai `8.1`/`8.2`. Không tự động chuyển sang phương án này chỉ vì Unity Student license bị SheerID từ chối — phải kiểm tra Unity Personal trước; nếu Unity Personal cũng không đủ điều kiện, dừng lại và báo Review Manager thay vì tự quyết định đổi stack |
+| RTK streaming trực tiếp vào ARKit trong lúc quét | Có thể georeference realtime | Phức tạp, rủi ro cao, không cần thiết cho mục tiêu chứng minh khả thi | Không chọn — chỉ dùng RTK đo điểm khống chế rời rạc (5 control + 3 checkpoint), không streaming |
+| Apple Developer Program trả phí | Cho phép TestFlight/App Store | Không cần thiết — không phát hành, chỉ demo trực tiếp từ Mac | Không chọn |
+
+### Rationale
+
+Mục tiêu là chứng minh khả thi kỹ thuật trong khung thời gian cố định (tới 15/11/2026), không phải xây sản phẩm hoàn chỉnh. Unity + ARKit Scene Reconstruction tận dụng LiDAR sẵn có trên iPhone 15 Pro Max mà không cần tự viết thuật toán tái tạo mesh từ đầu — quyết định này dựa trên đặc tính kỹ thuật của ARKit/Unity, không dựa trên giả định người dùng đã có kinh nghiệm Unity từ trước. RTK chỉ đo điểm khống chế (không streaming) giữ cho phiên quét AR đơn giản, tránh rủi ro đồng bộ hoá thời gian thực giữa hai hệ thống độc lập.
+
+### Consequence
+
+- Không cam kết kết quả cho diện tích >50×50 m hoặc sai số bắt buộc ≤2 cm — ngoài khả năng của iPhone LiDAR để cam kết trong khung thời gian này.
+- **Về license Unity:** tại thời điểm chốt baseline này, người dùng **chưa xác nhận** Unity Student đã được SheerID duyệt — chỉ mới dự kiến đăng ký. Thứ tự xử lý bắt buộc: (1) đăng ký Unity Student — nếu SheerID duyệt, dùng Unity Student; (2) nếu SheerID từ chối, kiểm tra Unity Personal **eligibility/license terms tại đúng thời điểm đăng ký** (điều khoản có thể đổi theo thời gian/quy mô, không giả định trước); (3) chỉ dùng Unity Personal nếu xác nhận đáp ứng điều kiện; (4) **nếu Unity Personal không đáp ứng điều kiện, dừng lại và báo Review Manager** — không tự ý đổi tech stack (native ARKit/RealityKit) hoặc tự ý mua license trả phí; chỉ khi đã dừng-báo và có quyết định riêng, hoặc phát sinh blocker kỹ thuật cụ thể đã chứng minh với Unity/AR Foundation, mới đánh giá lại việc chuyển sang native ARKit/RealityKit.
+- Track này không có backend/API dependency — không thêm bảng/endpoint vào `docs/DATA_MODEL.md`/`docs/API_CONTRACT.md` của sản phẩm chính.

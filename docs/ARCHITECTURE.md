@@ -127,6 +127,7 @@ Mobile --location:update--> WebSocket Gateway (NestJS) --location:broadcast--> W
 
 - Routing MVP: `RoutingProvider` mock trả route khác nhau theo `vehicleType` (step `5.1`). Routing thật (OSRM/GraphHopper) là step `5.2`, đổi implementation, không đổi contract gọi từ web/mobile.
 - AR Terrain Mesh: dự án Unity/AR Foundation **hoàn toàn tách biệt** khỏi monorepo chính (repo riêng hoặc thư mục riêng ngoài `apps/`), có test gate riêng (FPS, nhiệt, pin, low-light — xem `docs/03_REQUIREMENT_DELTA_V0_2.md` §5.1). Không merge vào `apps/mobile` cho tới khi đạt gate.
+- **Cập nhật (08/2026):** thư mục cụ thể đã chốt là `research/ar-terrain-unity/` (ngoài `apps/`, tạo ở step `8.1` — chưa tồn tại tại thời điểm baseline tài liệu `8.0`). Prototype này là AR Terrain Thesis Prototype (báo cáo hội đồng), không có dependency vào `apps/backend`/`apps/web`/`apps/mobile`/`packages/shared-types`, và không gọi bất kỳ API nào của NovaWay. Chi tiết đầy đủ: `docs/research/AR_TERRAIN_THESIS_BASELINE.md`.
 
 ## 8. Deployment Topology (mức khái niệm — nhiều điểm còn mở)
 
