@@ -177,6 +177,8 @@
 - When màn hình sử dụng phương tiện được mở
 - Then hệ thống chuyển sang chế độ chỉ hiển thị cảnh báo trên bản đồ (không bật camera/AR), không crash
 
+> **R&D note (08/2026):** "AR Terrain Mesh" (Unity/ARKit, prototype nghiên cứu độc lập cho báo cáo hội đồng) không có `FR-*` tương ứng trong `SRS.md` vì đây không phải tính năng MVP — Definition of Done riêng của track này (mesh LiDAR thật, PLY export, RMSE 3D ≤10cm...) nằm ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` §15, không trộn vào các `AC-AR-*` ở trên (vốn chỉ nói về AR Lite/fallback trong MVP).
+
 ## 9. Mobile Background Location (FR-BGLOC)
 
 **AC-BGLOC-01** — Notification khi tracking nền (Android)

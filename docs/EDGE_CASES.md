@@ -61,6 +61,8 @@
 | Pin yếu | **[OPEN]** — cần chốt ngưỡng % pin để tự tắt AR/camera phòng ngừa |
 | Camera không khả dụng (bị chiếm bởi app khác, lỗi phần cứng) | App không crash, chuyển fallback bản đồ (FR-AR-04) |
 
+> **R&D note (08/2026):** các edge case của AR Terrain Thesis Prototype (mất tracking ARKit giữa phiên quét, thiết bị không có LiDAR Scene Reconstruction, RTK FLOAT thay vì FIX, RMSE 3D vượt ngưỡng...) là edge case của một prototype nghiên cứu độc lập, không phải của tính năng AR Lite trong MVP ở bảng trên — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md` §4, §8, §13.
+
 ## 6. Vehicle Mismatch Detection
 
 | Case | Hành vi kỳ vọng |

@@ -122,5 +122,5 @@
 ## 4. Out of Scope for MVP Testing
 
 - Load test quy mô lớn (nghìn client đồng thời) — chỉ test số lượng nhỏ đủ để xác nhận cơ chế backoff/jitter hoạt động đúng logic, không phải benchmark hiệu năng thật.
-- Test tự động cho AR Terrain Mesh (R&D) — thuộc test plan riêng của prototype Unity, tách khỏi app chính.
+- Test tự động cho AR Terrain Mesh (R&D) — thuộc test plan riêng của prototype Unity, tách khỏi app chính. Test gate cụ thể (baseline **APPROVED 2026-08-24** — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md` §8, §10, §15) không chạy trong CI/CD gate của sản phẩm chính (§3 ở trên), vì bắt buộc đo trên thiết bị AR thật, không thể verify bằng CLI/browser automation: **iPhone 15 Pro Max** dùng để test mesh capture/georeference/performance (FPS, pin, nhiệt, low-light); **iPhone 11 Pro** chỉ dùng test compatibility/failure-path (không có LiDAR Scene Reconstruction) — hai thiết bị **không** cùng được test mesh, không suy diễn ngược lại.
 - Penetration testing/security audit toàn diện — chỉ có test baseline (payload validation, auth guard, rate limit) ở MVP.
