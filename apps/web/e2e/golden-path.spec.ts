@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
-import { io } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 
 // docs/roadmap/SPRINT_R1_STABILIZATION.md R1-3 — minimal E2E for the golden
 // flow: đăng nhập → chọn xe → bắt đầu chuyến đi → thấy vị trí → kết thúc.
@@ -39,6 +39,112 @@ interface TripEndResponse {
   trip_log: { distance_km: number; duration_minutes: number };
 }
 
+interface LocationBroadcastPayload {
+  trip_id: string;
+  vehicle_id: string;
+  latitude: number;
+  longitude: number;
+  speed_kmh: number;
+  timestamp: string;
+}
+
+interface LocationRejectedPayload {
+  client_event_id: string;
+  error_code: string;
+}
+
+const LOCATION_ACK_TIMEOUT_MS = 5000;
+
+// Sends one `location:update` and waits for the server's own acknowledgement
+// instead of a fixed sleep. RealtimeGateway.handleLocationUpdate only emits
+// `location:broadcast` *after* GpsEventsService.recordEvent has persisted the
+// row into raw_gps_events (apps/backend/src/realtime/realtime.gateway.ts) —
+// so receiving the matching broadcast is the one signal that actually proves
+// persistence before the "end trip" step queries raw_gps_events for the
+// distance calculation. A fixed setTimeout is not a valid sync signal: it
+// leaves an ordering/observability weakness where "end trip" could race an
+// in-flight insert under variable CI load. (The historical distance_km === 0
+// failures on PR #73 had a separately confirmed primary cause — the
+// raw_gps_events missing-partition defect, docs/REVIEW_NOTES.md §17 — this
+// fix addresses the synchronization weakness itself, see §18.)
+async function sendLocationUpdateAndAwaitAck(
+  socket: Socket,
+  point: { latitude: number; longitude: number },
+  tripId: string,
+): Promise<void> {
+  const clientEventId = randomUUID();
+  const timestamp = new Date().toISOString();
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timeoutHandle);
+      socket.off('location:broadcast', onBroadcast);
+      socket.off('location:rejected', onRejected);
+    };
+
+    const settleResolve = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+
+    const settleReject = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    function onBroadcast(payload: LocationBroadcastPayload) {
+      // Only resolve for *this* point's broadcast — trip_id + coordinates +
+      // timestamp uniquely identify it (the broadcast payload does not echo
+      // back client_event_id, see docs/API_CONTRACT.md §6).
+      if (
+        payload.trip_id === tripId &&
+        payload.latitude === point.latitude &&
+        payload.longitude === point.longitude &&
+        payload.timestamp === timestamp
+      ) {
+        settleResolve();
+      }
+    }
+
+    function onRejected(payload: LocationRejectedPayload) {
+      if (payload.client_event_id === clientEventId) {
+        settleReject(
+          new Error(
+            `location:update rejected (error_code=${payload.error_code}, trip=${tripId}, client_event_id=${clientEventId})`,
+          ),
+        );
+      }
+    }
+
+    const timeoutHandle = setTimeout(() => {
+      settleReject(
+        new Error(
+          `Timed out after ${LOCATION_ACK_TIMEOUT_MS}ms waiting for location:broadcast/location:rejected ` +
+            `(trip=${tripId}, client_event_id=${clientEventId}, point=${JSON.stringify(point)})`,
+        ),
+      );
+    }, LOCATION_ACK_TIMEOUT_MS);
+
+    socket.on('location:broadcast', onBroadcast);
+    socket.on('location:rejected', onRejected);
+
+    socket.emit('location:update', {
+      trip_id: tripId,
+      client_event_id: clientEventId,
+      speed_kmh: 25,
+      accuracy_m: 5,
+      timestamp,
+      ...point,
+    });
+  });
+}
+
 test('golden path: login → select vehicle → start trip → see location → end trip', async ({
   page,
   request,
@@ -74,7 +180,12 @@ test('golden path: login → select vehicle → start trip → see location → 
     // embeds a Date.now()-based timestamp and can share the same digits.
     await expect(page.getByText(licensePlate, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Đặt đang dùng' }).click();
-    await expect(page.getByText('Đang hoạt động')).toBeVisible();
+    // exact: true -- the page's static description paragraph ("... chọn
+    // phương tiện đang hoạt động.") also contains this phrase, and
+    // Playwright's default text match is a case-insensitive substring, so it
+    // would otherwise resolve to 2 elements (strict-mode violation) or race
+    // against which one mounts first (docs/REVIEW_NOTES.md §18).
+    await expect(page.getByText('Đang hoạt động', { exact: true })).toBeVisible();
   });
 
   let vehicleId: string;
@@ -119,27 +230,28 @@ test('golden path: login → select vehicle → start trip → see location → 
 
   await test.step('send real GPS over WebSocket /realtime (same pipeline as mobile)', async () => {
     const socket = io(`${WS_BASE_URL}/realtime`, { auth: { token }, transports: ['websocket'] });
-    await new Promise<void>((resolve, reject) => {
-      socket.on('connect', () => resolve());
-      socket.on('connect_error', (err) => reject(err));
-    });
-
-    const points = [
-      { latitude: 10.7769, longitude: 106.7009 },
-      { latitude: 10.78, longitude: 106.705 },
-    ];
-    for (const point of points) {
-      socket.emit('location:update', {
-        trip_id: tripId!,
-        client_event_id: randomUUID(),
-        speed_kmh: 25,
-        accuracy_m: 5,
-        timestamp: new Date().toISOString(),
-        ...point,
+    try {
+      await new Promise<void>((resolve, reject) => {
+        socket.on('connect', () => resolve());
+        socket.on('connect_error', (err) => reject(err));
       });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const points = [
+        { latitude: 10.7769, longitude: 106.7009 },
+        { latitude: 10.78, longitude: 106.705 },
+      ];
+      // Sequential + awaited: each point's location:broadcast (proof it was
+      // persisted to raw_gps_events) must land before sending the next one,
+      // so both are guaranteed committed before "end trip" below queries
+      // raw_gps_events for the distance calculation (docs/REVIEW_NOTES.md
+      // §18 — replaces the old fixed-sleep ordering weakness).
+      for (const point of points) {
+        await sendLocationUpdateAndAwaitAck(socket, point, tripId!);
+      }
+    } finally {
+      // finally: a failed assertion/timeout above must not leak the socket.
+      socket.close();
     }
-    socket.close();
   });
 
   await test.step('end trip via real API — expect a real non-zero distance', async () => {
