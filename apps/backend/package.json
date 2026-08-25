@@ -12,7 +12,8 @@
     "migration:run": "node ./node_modules/typeorm/cli-ts-node-commonjs.js -d src/database/data-source.ts migration:run",
     "migration:revert": "node ./node_modules/typeorm/cli-ts-node-commonjs.js -d src/database/data-source.ts migration:revert",
     "migration:generate": "node ./node_modules/typeorm/cli-ts-node-commonjs.js -d src/database/data-source.ts migration:generate",
-    "benchmark:gps-dedup": "node scripts/benchmark-gps-dedup.js"
+    "benchmark:gps-dedup": "node scripts/benchmark-gps-dedup.js",
+    "test:partition-integration": "node scripts/verify-raw-gps-partitions.js"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1092.0",

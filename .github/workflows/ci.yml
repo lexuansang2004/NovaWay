@@ -93,6 +93,18 @@ jobs:
         env:
           DATABASE_URL: postgres://novaway:novaway@localhost:5432/novaway
 
+      # docs/REVIEW_NOTES.md §17 — step 9.3 (fix/raw-gps-partition-availability).
+      # Runs immediately after migrations, before the backend starts, so a
+      # regression in ensure_raw_gps_partitions() (idempotency, current/next
+      # UTC-month partition creation, concurrency, or the explicit-UTC bound
+      # fix) fails the job here instead of surfacing later as a confusing
+      # golden-path E2E failure.
+      - name: Verify raw_gps_events partition maintenance
+        working-directory: apps/backend
+        run: pnpm test:partition-integration
+        env:
+          DATABASE_URL: postgres://novaway:novaway@localhost:5432/novaway
+
       # Backgrounded — persists for the rest of this job's steps on the
       # same runner. apps/web's Playwright config starts its own dev
       # server (webServer), but can't bootstrap a database, so the
