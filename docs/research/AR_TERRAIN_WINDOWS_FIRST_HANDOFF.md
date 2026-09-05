@@ -16,7 +16,7 @@
 | iPhone 11 Pro | Có sẵn theo người dùng; chưa có evidence smoke iOS |
 | MacBook Air M4 | Chưa sẵn có, chưa có ETA được xác nhận; chờ người dùng báo |
 | iPhone 16 Pro | Thiết bị LiDAR dự kiến; chưa xác nhận sẵn có, chưa kiểm chứng runtime |
-| Kết quả | Smoke cục bộ `8.1a` đã chạy theo xác nhận người dùng; source-control/evidence review và PR checks chưa hoàn tất. `8.1b` chờ Mac; iOS/LiDAR/RTK **chưa PASS** |
+| Kết quả | PR #76 (commit `3d8cfb4`, sau rework thêm commit mới cùng branch) mở vào `develop`, required GitHub checks **PASS**. Review Manager: **CHANGES REQUESTED** (2026-09-05) → đã áp dụng rework (xem §3 dưới) → chờ review lại. Chưa merge. `8.1b`/iOS/LiDAR/RTK **NOT RUN** |
 
 ## 2. Step 8.1a — Windows Editor bootstrap
 
@@ -37,12 +37,24 @@ Commit khi đủ gate và được review: `chore: add ar terrain unity windows 
 - [x] Thêm Unity-local `.gitattributes`: cố định LF cho scene/meta/config/source dạng text khi chuyển Windows → macOS và giữ ảnh/font/model/audio/video/plugin ở dạng binary.
 - [x] Smoke cục bộ theo xác nhận người dùng: Editor import xong, scene chạy Play Mode ≥60 giây, cube/nhãn hiển thị, đã stop/save, đóng/mở lại và chạy lại. Ảnh lần chạy sau khi mở lại cho thấy Console 0 error/0 warning; thời lượng là user-reported, không phải phép đo tự động/video liên tục. Kiểm tra lại bằng Editor batch mode ngày 05/09 cũng import/compile và thoát thành công với mã 0.
 - [x] Đặt `ToolchainSmoke.unity` làm scene build đầu tiên. Audit ngày 05/09 phát hiện cấu hình template còn trỏ tới `SampleScene.unity`; sau khi Unity đã đóng, đã đổi `EditorBuildSettings.asset` sang đúng path/GUID của `ToolchainSmoke` và kiểm tra lại ở tầng source.
-- [x] Evidence Windows được giữ ngoài Git dưới `2026-09-04_windows_editor_smoke_8.1a/device_lenovo-windows/`: có ảnh Play Mode, SHA-256 ảnh, run record với version/source base/phân loại sự cố và dirty-source manifest checksum của đúng bộ file đưa vào review.
-- [ ] `git diff --check`, review đúng phạm vi, required PR checks xanh trước merge; không ghi toàn bộ nhóm `8.1` PASS.
+- [x] Evidence Windows được giữ ngoài Git dưới `2026-09-04_windows_editor_smoke_8.1a/device_lenovo-windows/`: có ảnh Play Mode, SHA-256 ảnh, run record với version/source base/phân loại sự cố. **Lưu ý (05/09, sau rework):** ảnh Play Mode này được chụp **trước** khi dọn template asset và sửa `ShaderGraphSettings.asset` (§3 dưới) — vẫn đúng là bằng chứng Play Mode ban đầu, nhưng không phải ảnh của đúng bộ source cuối cùng đã commit. Xác minh cho bộ source cuối cùng là batch-mode reopen do agent tự chạy (mục dưới), không phải ảnh này.
+- [x] `git diff --check` (cả staged lẫn unstaged) pass.
+- [x] Review đúng phạm vi: không có thay đổi `apps/*`; không có AR Foundation/ARKit/LiDAR/PLY/RTK/georeference; asset/`.meta` không thiếu, không mồ côi; `ToolchainSmoke` vẫn là build scene duy nhất; không có secret/credential/email.
+- [x] Required GitHub PR checks xanh (lint/test/build, E2E, Mobile) — GitHub CI **không** chạy Unity, nên đây chỉ là bằng chứng cho phần Node/Web/Mobile không đổi, không phải bằng chứng Unity import/compile.
+- [ ] Review Manager duyệt lại rework (đang **CHANGES REQUESTED** tính đến 2026-09-05); merge — **chưa xảy ra**. Không ghi toàn bộ nhóm `8.1` PASS.
 
 Nếu Hub chưa nhận Student license: ghi lỗi cụ thể và kiểm tra/support; không tự đổi Personal, kích hoạt Pro trial hay mua license. Student subscription ACTIVE và license tại máy là hai trạng thái khác nhau.
 
 Sự cố đã quan sát trong quá trình bootstrap Windows (không được xoá khỏi báo cáo): lần import đầu có lỗi hết bộ nhớ và VirtualArtifacts khi RAM trống rất thấp; sau khi đóng ứng dụng khác rồi mở lại, scene import/chạy được. Một lần mở lại có cảnh báo VS/Unity messaging không bind được UDP `56202`; kiểm tra read-only cho thấy port nằm trong excluded UDP range của Windows. Ảnh chạy cuối có Console 0 warning nhưng chưa đủ để khẳng định nguyên nhân port đã hết vĩnh viễn. Không thay firewall/port reservation, không xoá Library và không nâng Editor để che sự cố.
+
+## 3. Rework sau Review Manager CHANGES REQUESTED (2026-09-05)
+
+Review Manager tự kiểm tra độc lập commit `3d8cfb4`/PR #76, ra verdict CHANGES REQUESTED trước khi merge. Chi tiết đầy đủ: `docs/REVIEW_NOTES.md` §22. Tóm tắt các sửa đổi, tất cả agent tự thực hiện và tự verify bằng Unity `6000.3.23f1` cài sẵn trên máy này:
+
+1. **Bất ổn khi mở lại (`ShaderGraphSettings.asset`):** tái hiện độc lập từ `Library` sạch lẫn `Library` đã có — Unity luôn ghi thêm một khoảng trắng cuối dòng vào `m_Name:`/`m_EditorClassIdentifier:` (giá trị rỗng) mỗi lần reimport, ổn định/xác định. Đã chấp nhận bản serialize canonical này làm nội dung commit, và thêm attribute `-whitespace` (giới hạn đúng các đuôi YAML MonoBehaviour/ScriptableObject của Unity, không đổi whitespace behavior toàn repo) vào `.gitattributes` để `git diff --check` không coi đây là lỗi. Verify: hai lần mở lại liên tiếp sau khi áp dụng (một từ `Library` sạch, một từ `Library` đã có) đều không tạo thêm sai khác nào; `git diff --check` pass ở cả hai trạng thái.
+2. **Dọn template onboarding:** xoá `Assets/Readme.asset`+`.meta`, `Assets/TutorialInfo/`+`.meta`, `Assets/Scenes/SampleScene.unity`+`.meta` theo đúng cặp asset/`.meta` — đã xác nhận qua tìm GUID rằng không asset nào khác tham chiếu tới ba mục này. TextMesh Pro và Input System giữ nguyên (đã xác nhận `ToolchainSmoke.unity` dùng TMP cho label, và `EditorBuildSettings.asset` tham chiếu đúng GUID `InputSystem_Actions.inputactions`).
+3. **Evidence tái tạo được:** manifest nguồn đầy đủ (danh sách file + SHA-256 từng file + thuật toán + checksum của manifest + commit head cuối) được thêm vào `2026-09-05_source_manifest_8.1a_rework/` cùng thư mục evidence ngoài Git — xem đường dẫn/checksum cụ thể ở cuối mục này sau khi push.
+4. **Tách trạng thái:** Windows Play Mode thủ công = user-reported/manual-observed; batch-mode import/compile = agent-executed automated local check (agent tự chạy Unity `6000.3.23f1`, có log/exit code); GitHub checks = PASS (không kiểm Unity); Review Manager = CHANGES REQUESTED cho tới khi review lại; merged = NO; `8.1b`/iOS/LiDAR/RTK = NOT RUN.
 
 ## 3. iPhone 11 Pro trong lúc chưa có Mac
 

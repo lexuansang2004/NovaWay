@@ -32,6 +32,33 @@
 *.wlt text eol=lf
 *.txt text eol=lf
 
+# Unity's YAML serializer for MonoBehaviour/ScriptableObject-backed assets
+# (ProjectSettings/*.asset, scenes, prefabs, materials, etc.) writes a single
+# trailing space on fields whose string value is empty (e.g. m_Name,
+# m_EditorClassIdentifier) every time the asset is resaved by the Editor —
+# reproduced deterministically across repeated imports of this project. That
+# is Unity's own canonical serialized form, not an error to flag or strip;
+# stripping it would just have Unity re-add it on the next Editor launch.
+*.unity -whitespace
+*.prefab -whitespace
+*.asset -whitespace
+*.mat -whitespace
+*.controller -whitespace
+*.anim -whitespace
+*.overrideController -whitespace
+*.physicMaterial -whitespace
+*.physicsMaterial2D -whitespace
+*.renderTexture -whitespace
+*.spriteatlas -whitespace
+*.terrainlayer -whitespace
+*.guiskin -whitespace
+*.preset -whitespace
+*.playable -whitespace
+*.mask -whitespace
+*.brush -whitespace
+*.flare -whitespace
+*.fontsettings -whitespace
+
 # Preserve binary assets byte-for-byte.
 *.png binary
 *.jpg binary
