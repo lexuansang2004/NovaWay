@@ -2,9 +2,11 @@
 
 > Step `8.0` (`docs/ar-terrain-thesis-baseline`) — **APPROVED**. Đây là baseline chính thức cho **AR Terrain Scanning R&D Prototype**: một prototype nghiên cứu độc lập cho báo cáo hội đồng, **không phải tính năng của sản phẩm NovaWay MVP**. Tương ứng nhánh R&D đã mô tả từ D0.4 (`docs/03_REQUIREMENT_DELTA_V0_2.md` §5.1, `docs/04_TECH_DECISION_RECORD.md` TDR-003, `docs/ARCHITECTURE.md` §7) và trạng thái hoãn ghi ở `docs/REVIEW_NOTES.md` §15 — người dùng đã chốt phạm vi/lịch trình để mở lại nhóm step `8.x`, tài liệu hoá đầy đủ ở đây và ở `docs/REVIEW_NOTES.md` §16.
 >
-> Nguồn sự thật cho tài liệu này: Git history, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`, các `docs/*.md` đã commit, và — từ step `8.1` trở đi — kết quả test thật trên iPhone/Mac (log, video, dataset đo thực địa). Không có nội dung nào trong tài liệu này được suy ra từ ghi nhớ của bất kỳ AI agent nào.
+> Nguồn sự thật: Git history, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`, tài liệu được duyệt và evidence có nguồn gốc rõ ràng. Test Windows Editor chỉ chứng minh phạm vi Windows; kết quả iOS/LiDAR/RTK phải có log, video hoặc dataset từ đúng thiết bị thật. Quyết định mới chưa commit phải được ghi rõ là thay đổi working tree, không trình bày như đã merge.
 >
 > **Trạng thái: step `8.0` — APPROVED / COMPLETED.** Review Manager approved step `8.0` on 2026-08-24, sau hai vòng rework (xem lịch sử đầy đủ ở `docs/REVIEW_NOTES.md` §16, không xoá) và việc chốt xong axis-conversion contract (§6) + branch-scope rule cho `8.6` (§11). Baseline này nay là căn cứ chính thức để triển khai từ step `8.1` trở đi.
+
+> **Cập nhật vận hành được chủ dự án đồng ý ngày 2026-09-04:** làm trên Lenovo Windows trước; MacBook Air M4 hiện chưa sẵn có, người dùng sẽ báo khi có máy. Step `8.1` tách thành `8.1a` (Windows Editor bootstrap) và `8.1b` (Mac/Xcode/iPhone smoke test), với gate riêng (§11). Unity Student subscription đã ACTIVE theo xác nhận người dùng ngày 2026-09-03; kích hoạt license trên máy và các test vẫn phải được kiểm chứng. Không thay đổi phạm vi nghiên cứu, không coi quyết định này là test PASS. Xem `docs/REVIEW_NOTES.md` §20 và `docs/research/AR_TERRAIN_WINDOWS_FIRST_HANDOFF.md`.
 
 ## 1. Objective
 
@@ -14,7 +16,7 @@ Prototype này là điều kiện để đóng test gate còn treo của step `8
 
 ## 2. In Scope
 
-- App Unity độc lập, chạy trực tiếp trên **iPhone 15 Pro Max** (có LiDAR).
+- App Unity độc lập, chạy trực tiếp trên **iPhone 16 Pro** (có LiDAR) — thiết bị chính cho mesh LiDAR thật (xem §4 về tình trạng sẵn có hiện tại).
 - Quét mesh địa hình thật bằng **ARKit Scene Reconstruction** (LiDAR) — dữ liệu mesh thật, không phải overlay phẳng hay obstacle mock.
 - Mesh **geometry-only**: vertices, triangle faces, normals (nếu ARKit cung cấp được); có thể tô màu đơn sắc hoặc theo độ cao (height-based coloring) để trực quan hoá; **không bắt buộc texture từ camera**.
 - Khu vực quét bắt buộc: **10×10 m**.
@@ -31,7 +33,7 @@ Không làm trong phạm vi prototype này — vi phạm bất kỳ mục nào d
 - Không tích hợp vào `apps/mobile` hoặc bất kỳ app nào trong `apps/` trước buổi bảo vệ.
 - Không phát hành App Store/TestFlight.
 - Không mua Apple Developer Program ($99/năm).
-- Không dùng cloud/VPS (Virtual Private Server) hay Google VPS (Visual Positioning System) cho phép đo chính — mesh và dữ liệu ở lại local (điện thoại/MacBook).
+- Không dùng cloud/VPS (Virtual Private Server) hay Google VPS (Visual Positioning System) cho phép đo chính — mesh và dữ liệu ở lại local (điện thoại/Lenovo/MacBook).
 - Không truyền RTK realtime trực tiếp vào ARKit trong lúc quét — RTK chỉ dùng để đo toạ độ 5 control point + 3 checkpoint bằng thiết bị RTK riêng, **không** streaming vào phiên AR.
 - Không có backend/API cho prototype này — không thêm bảng hay endpoint nào vào `docs/DATA_MODEL.md`/`docs/API_CONTRACT.md` của sản phẩm chính (xem ghi chú đã thêm ở hai file đó).
 - Không mở rộng diện tích quét quá 20×20 m (xem §3 "stretch goal" trong bảng dưới) trong phạm vi Definition of Done chính.
@@ -46,21 +48,23 @@ Không làm trong phạm vi prototype này — vi phạm bất kỳ mục nào d
 
 ## 4. Thiết bị và vai trò từng thiết bị
 
+> **Đính chính thiết bị và tình trạng sử dụng (2026-09-04):** baseline `8.0` ghi nhầm iPhone 15 Pro Max; chủ dự án đã đính chính thiết bị LiDAR dự kiến là **iPhone 16 Pro**, hiện chưa xác nhận sẵn có/chưa kiểm chứng vật lý. **Lenovo Windows và iPhone 11 Pro có sẵn; Mac chưa sẵn có.** iPhone 11 Pro chỉ được chuẩn bị khi chưa có Mac, sau đó dùng smoke test iOS `8.1b` và compatibility `8.6`; không có LiDAR Scene Reconstruction. Không dùng Windows Editor hoặc iPhone 11 Pro làm bằng chứng quét LiDAR thật. Galaxy Z Fold5/Android/ARCore không thuộc baseline. Lịch sử đính chính ở §19 và quyết định Windows-first ở §20 của `docs/REVIEW_NOTES.md`.
+
 | Thiết bị | Vai trò |
 |---|---|
-| **iPhone 15 Pro Max** | Thiết bị chính — có LiDAR, dùng để chạy ARKit Scene Reconstruction và tạo mesh thật cho toàn bộ Definition of Done. |
-| **iPhone 11 Pro** | **Không có LiDAR Scene Reconstruction** — chỉ dùng để kiểm tra compatibility/failure path: app phải phát hiện đúng thiết bị không hỗ trợ, hiển thị thông báo rõ ràng, và **không được giả vờ tạo mesh thật** trên thiết bị này (không fallback bằng plane-detection giả lập rồi trình bày như mesh LiDAR thật). |
-| **MacBook Air M4 (Apple Silicon)** | Máy build/deploy — cài Unity Editor + Xcode, build app và cài trực tiếp lên iPhone qua cáp (không qua App Store/TestFlight). |
-| **Lenovo Windows** | Chỉ dùng cho tài liệu, Git, và sửa C# **sau khi** Unity project thật đã được tạo/compile trên Mac — không tạo Unity project, không build/chạy iOS build từ máy này (Unity/Xcode iOS toolchain không chạy trên Windows). |
+| **iPhone 16 Pro** | Thiết bị chính dự kiến cho mesh LiDAR thật ở `8.2` trở đi; hiện chưa xác nhận sẵn có/chưa kiểm chứng vật lý. Cần `8.1b` PASS, cài/chạy smoke test trên chính iPhone 16 Pro và runtime Scene Reconstruction capability check trước khi triển khai LiDAR. |
+| **iPhone 11 Pro** | Có sẵn theo người dùng; **không có LiDAR Scene Reconstruction**. Khi chưa có Mac: chỉ ghi nhận model/iOS/dung lượng trống và chuẩn bị cáp USB phù hợp (máy dùng Lightning). Khi có Mac: chạy smoke test `8.1b` ≥60 giây. Ở `8.6`: kiểm chứng app phát hiện và thông báo không hỗ trợ LiDAR, không giả vờ tạo mesh thật. Không coi kết nối với Lenovo là đã build/cài/chạy app iOS. |
+| **MacBook Air M4 (Apple Silicon)** | Hiện **chưa sẵn có**, chưa có ngày bàn giao được xác nhận. Khi người dùng báo có máy: kiểm tra macOS/Xcode/iOS compatibility, cài đúng Unity Editor patch đã khoá trên Windows và iOS Build Support, build/ký/cài app iOS bằng Xcode. Không thay project bằng một project Mac mới. |
+| **Lenovo Windows** | Máy phát triển giai đoạn hiện tại: Ryzen 7 7435HS, RAM 24 GB, RTX 4060 Laptop 8 GB, Windows 11. Được cài Hub/Editor, tạo và chạy project tối thiểu trên Windows ở `8.1a`; làm C#/test độc lập khi micro-step tương ứng được duyệt. Không chạy Xcode hoặc ký/cài app iOS locally; không dùng webcam/Editor simulation thay test LiDAR thật. |
 | **Thiết bị RTK (thuê)** | Đo toạ độ WGS84 thật cho 5 control point + 3 checkpoint — không tham gia vào phiên quét AR (xem §3, §6). |
 
 ## 5. Kiến trúc Standalone
 
 - Vị trí trong repo: **`research/ar-terrain-unity/`** — nằm **ngoài `apps/`**, đúng nguyên tắc đã ghi từ D0.4 (`docs/ARCHITECTURE.md` §7: "AR Terrain Mesh: dự án Unity/AR Foundation hoàn toàn tách biệt khỏi monorepo chính... Không merge vào `apps/mobile` cho tới khi đạt gate").
 - Không có dependency nào vào `apps/backend`, `apps/web`, `apps/mobile`, hay `packages/shared-types`.
-- Không gọi bất kỳ API nào của NovaWay (không xác thực, không gửi GPS qua `/realtime`, không dùng `TerrainWarningSource`/`terrain_warnings`) — dữ liệu mesh và toạ độ ở lại hoàn toàn local trên thiết bị/Mac.
+- Không gọi bất kỳ API nào của NovaWay (không xác thực, không gửi GPS qua `/realtime`, không dùng `TerrainWarningSource`/`terrain_warnings`) — dữ liệu mesh và toạ độ ở lại hoàn toàn local trên thiết bị/Lenovo/Mac.
 - Repo Git hiện tại (`NovaWay`) lưu toàn bộ những gì cần để **tái tạo lại Unity project** (source code, scenes, prefabs, config assets, `.meta` tương ứng, `ProjectSettings/`, `Packages/manifest.json`+`packages-lock.json`) cộng với tài liệu/test script/manifest dataset — **không** lưu asset build lớn hay dataset thô. Danh sách đầy đủ: §16.
-- Bước tạo Unity project thật (mở Unity Hub, `Unity 6.3 LTS`, thêm module iOS Build Support, tạo project rỗng) diễn ra ở step `8.1` (chore/ar-terrain-toolchain), **không** ở step `8.0` này.
+- Bước tạo Unity project thật diễn ra ở `8.1a` (`chore/ar-terrain-toolchain`) trên Windows: Unity 6.3 LTS, scene không-AR tối thiểu; chưa thêm AR Foundation/ARKit hoặc logic LiDAR. `8.1b` mở lại **cùng project** trên Mac, thêm iOS Build Support và kiểm chứng Xcode/iPhone. Ghi đúng patch trong `ProjectSettings/ProjectVersion.txt`, giữ package lock và `.meta`; không tự nâng phiên bản khi chuyển máy.
 
 ## 6. Coordinate Contract: RTK WGS84 → ENU, và Unity AR-local → ENU
 
@@ -195,7 +199,7 @@ Export mesh chia làm **hai giai đoạn riêng biệt, không gộp lẫn** —
 ### 9.1. Step `8.3` — `mesh_ar_local.ply` (AR-local, CHƯA georeference)
 
 - Export mesh geometry-only (vertices, triangle faces, normals nếu có) **trực tiếp trong hệ toạ độ AR-local** của phiên quét (§6) — **chưa áp transform ENU nào**, đơn vị mét (đơn vị gốc của ARKit).
-- Verify: mở lại bằng công cụ độc lập với Unity (Blender, MeshLab, hoặc CloudCompare) trên MacBook — xác nhận vertices/triangle faces/normals hợp lý, đúng trục (không lộn Y-up/Z-up), đúng đơn vị mét.
+- Verify: mở lại bằng công cụ độc lập với Unity (Blender, MeshLab, hoặc CloudCompare) trên Windows hoặc Mac — xác nhận vertices/triangle faces/normals hợp lý, đúng trục (không lộn Y-up/Z-up), đúng đơn vị mét.
 - **File này KHÔNG được gọi là "PLY ENU" hay coi là kết quả georeferenced** — nó chỉ chứng minh mesh capture + export pipeline hoạt động đúng về mặt hình học.
 
 ### 9.2. Step `8.4` — `mesh_enu.ply` (georeferenced, bắt buộc cho Definition of Done)
@@ -244,7 +248,7 @@ Quy trình tạo `mesh_enu.ply`: sau khi `C_AXIS` đã khoá và transform `R_AR
 - **Thermal state** của iPhone (dùng `ProcessInfo.thermalState` phía iOS, hoặc chỉ số tương đương lộ ra qua Unity/native plugin) trước/trong/sau phiên quét.
 - Hành vi khi **mất tracking** (ARKit tracking state chuyển sang limited/not-available) — app không được crash, phải có thông báo/khôi phục hợp lý.
 - Hành vi trong **điều kiện ánh sáng yếu** — ghi nhận ảnh hưởng tới chất lượng mesh (không nhất thiết phải "pass/fail" cứng, nhưng phải được đo và báo cáo).
-- So sánh **iPhone 15 Pro Max** (LiDAR, chính) với **iPhone 11 Pro** (fallback, không LiDAR) — chỉ so sánh khả năng phát hiện/thông báo không hỗ trợ, không so sánh chất lượng mesh (vì 11 Pro không tạo mesh LiDAR thật).
+- So sánh **iPhone 16 Pro** (LiDAR, chính) với **iPhone 11 Pro** (fallback, không LiDAR) — chỉ so sánh khả năng phát hiện/thông báo không hỗ trợ, không so sánh chất lượng mesh (vì 11 Pro không tạo mesh LiDAR thật).
 
 ## 11. Timeline tới 15/11/2026
 
@@ -253,8 +257,9 @@ Quy trình tạo `mesh_enu.ply`: sau khi `C_AXIS` đã khoá và transform `R_AR
 | Thời gian | Micro-step | Công việc | Đầu ra bắt buộc |
 |---|---|---|---|
 | 24–28/08/2026 | `8.0` | Baseline tài liệu | Tài liệu này + cross-reference đồng bộ — **APPROVED** bởi Review Manager ngày 2026-08-24 |
-| 29/08–06/09/2026 | `8.1` | Unity/Xcode/device smoke test | App Unity rỗng build qua Xcode, chạy thật trên iPhone 15 Pro Max |
-| 07–20/09/2026 | `8.2` | LiDAR mesh capture | ARKit Scene Reconstruction tạo mesh thật trên khu vực nhỏ, rồi 10×10 m |
+| 04–06/09/2026 (mục tiêu Windows, chưa PASS) | `8.1a` | Windows Editor bootstrap trên Lenovo, license Student tại máy, một scene không-AR | Scene có camera/light/cube/nhãn smoke, chạy Play Mode ≥60 giây không lỗi Console; đóng/mở lại project thành công; source-control/phiên bản/evidence đúng. Không chứng minh iOS hoặc LiDAR. |
+| Khi có Mac — chưa có ETA; mốc iOS cũ 06/09 hiện AT RISK | `8.1b` | Mở cùng project trên Mac, kiểm tra toolchain, build/ký/cài bằng Xcode; iPhone 11 Pro là thiết bị smoke ban đầu | Chạy app thật ≥60 giây; lặp install/launch trên iPhone 16 Pro trước `8.2`. Không coi kết quả Windows là iOS PASS. |
+| 07–20/09/2026 (mục tiêu gốc, AT RISK khi chưa có Mac/thiết bị) | `8.2` | Sau `8.1b` PASS: có iPhone 16 Pro vật lý, smoke install/launch trên chính máy và runtime capability check; rồi LiDAR mesh capture | Mesh LiDAR thật trên khu vực nhỏ rồi 10×10 m; không thay bằng dữ liệu tổng hợp hoặc iPhone 11 Pro. |
 | 21/09–04/10/2026 | `8.3` | Export `mesh_ar_local.ply` (AR-local, chưa georeference — §9.1) | Mesh mở được bằng Blender/MeshLab/CloudCompare, đúng trục/đơn vị mét (hệ AR-local) |
 | 05–18/10/2026 | `8.4` (phần a — triển khai) | Khoá phương pháp chọn tâm marker (decision gate §6, nếu chưa chốt) → code hoá Luồng 1 (WGS84→ENU) + Luồng 2 (rigid 6-DoF primary AR-local→ENU, §6) → test bằng **fixture/synthetic test data** (không phải RTK thật) → định nghĩa schema `transform_ar_to_enu.json` (§9.2) | Code georeference chạy đúng trên dữ liệu giả lập — **chưa được tuyên bố đã hoàn thành georeference thực địa** |
 | 19–25/10/2026 | `8.4` (phần b — field validation) + `8.5` pilot | **RTK field test lần 1**: đo 5 control point + 3 checkpoint thật (thuê RTK đợt 1) → hoàn thành georeference thực địa **đầu tiên** → tạo `mesh_enu.ply` thật đầu tiên → chạy **pilot** Measurement Gate/Accuracy KPI (§8) trên dữ liệu này | Bộ dữ liệu RTK thật + `mesh_enu.ply` thật đầu tiên + danh sách lỗi phát hiện được — **đây là test gate thực địa thật sự của `8.4`, đồng thời là pilot run của `8.5`** |
@@ -263,6 +268,15 @@ Quy trình tạo `mesh_enu.ply`: sau khi `C_AXIS` đã khoá và transform `R_AR
 | (stretch, không ảnh hưởng deadline) | `8.7` **(stretch, optional)** | GLB export + demo hardening | `mesh_enu.glb` (nếu kịp) — có thể bỏ nếu ảnh hưởng PLY/RTK validation/code freeze |
 | 16–30/11/2026 | — | Báo cáo, slide, rehearsal (phần tổng quan/phương pháp nên viết dần từ tháng 9–10, không dồn hết vào cửa sổ này) | Báo cáo hoàn chỉnh, slide, tập trình bày ≥ 3 lần |
 
+**Dependency/gate sau quyết định Windows-first (2026-09-04):**
+
+- `8.1a` = một micro-step độc lập trên branch hiện có `chore/ar-terrain-toolchain`; commit dự kiến: `chore: add ar terrain unity windows toolchain smoke test`. Phạm vi chỉ bootstrap/scene smoke, tài liệu/config/evidence; không gộp PLY, georeference hoặc LiDAR.
+- `8.1b` = branch dự kiến `chore/ar-terrain-ios-toolchain`, chỉ tạo sau khi `8.1a` được review/merge và người dùng xác nhận có Mac; commit: `chore: add ar terrain unity ios toolchain smoke test`.
+- `8.1a` PASS không làm `8.1b` PASS và không đủ mở `8.2`. Nhóm toolchain `8.1` chỉ hoàn tất khi cả hai gate đạt. Review/required CI vẫn bắt buộc trước merge; không bypass.
+- PLY bằng mesh mẫu và unit test WGS84→ENU/rigid/RMSE có thể được chuẩn bị trên Windows **sau khi tách và duyệt micro-step độc lập trong plan**, không triển khai trong `8.1a`, không tự mở `8.3`/`8.4` khi gate cũ chưa đạt. Decision gate marker-center picking ở §6 vẫn giữ nguyên; không khoá `C_AXIS` runtime bằng giả định từ fixture.
+- Backend/Web/MVP không phụ thuộc track AR; có thể tiếp tục các micro-step riêng đã được duyệt, không sửa `apps/*` trên branch AR này, không tự merge PR #71.
+- Mac chưa có ETA: không lùi ngầm code freeze `2026-11-15` hoặc thay mốc thực địa bằng test Editor. Khi người dùng báo có máy, đánh giá lại lịch `8.1b`/`8.2` trước khi cam kết lịch phục hồi.
+
 **Quy tắc branch-scope: không trộn bug fix vào `test/ar-terrain-performance-validation` (`8.6`):**
 
 - `8.6` (`test/ar-terrain-performance-validation`) **chỉ** được chứa: đo FPS/pin/nhiệt, low-light, mất tracking, iPhone 11 Pro compatibility-only, regression validation, tạo báo cáo/evidence. **Không** implement bug fix trên branch này.
@@ -270,7 +284,8 @@ Quy trình tạo `mesh_enu.ply`: sau khi `C_AXIS` đã khoá và transform `R_AR
 - Không được coi các fix "chưa biết trước sẽ phát sinh gì" là nằm sẵn trong phạm vi `8.6` — phạm vi của `8.6` được khoá cố định như liệt kê ở trên, bất kể có bao nhiêu `fix/*` branch phát sinh trước đó.
 
 **Điều kiện cảnh báo (đưa vào Risk & Fallback, §13):**
-- Nếu chưa chạy mesh thật trên iPhone trước **07/09/2026** → đánh dấu timeline **AT RISK**.
+- **Checkpoint thiết bị: chậm nhất 2026-09-06** phải xác nhận Mac và iPhone 16 Pro sẵn có để thực hiện gate iOS/LiDAR; nếu không, giữ track AR **AT RISK**. Đây là checkpoint rủi ro của kế hoạch gốc, không phải ngày người dùng đã hứa giao máy.
+- Nếu hết **07/09/2026** chưa chạy mesh thật trên iPhone 16 Pro → đánh dấu timeline **AT RISK**.
 - Nếu chưa export `mesh_ar_local.ply` ổn định trước **04/10/2026** → bỏ `8.7` (GLB) và mọi tính năng trình diễn phụ, tập trung PLY pipeline (`8.3`/`8.4`) + RMSE.
 - Nếu RTK lần 1 (field test, tạo `mesh_enu.ply` thật đầu tiên) chưa xong trước **25/10/2026** → không được trì hoãn tới ngày bảo vệ; phải báo Review Manager ngay lập tức — đây là mốc RTK duy nhất trước code freeze để phát hiện lỗi georeference kịp sửa.
 
@@ -280,8 +295,12 @@ Evidence (dataset đo thực địa, video, mesh export dung lượng lớn) **l
 
 ```text
 <evidence-root>/ar-terrain-thesis/
+  YYYY-MM-DD_windows_editor_smoke_8.1a/
+    device_lenovo-windows/       (Windows Editor only — không phải iOS/LiDAR evidence)
+  YYYY-MM-DD_ios_toolchain_smoke_8.1b/
+    device_iphone-11-pro/         (iOS smoke only — không phải LiDAR evidence)
   2026-10-2x_benchmark_round1/
-    device_iphone-15-pro-max/
+    device_iphone-16-pro/
       mesh_ar_local.ply          (output step 8.3 — AR-local, chưa georeference)
       mesh_enu.ply               (output step 8.4 — georeferenced, bắt buộc)
       transform_ar_to_enu.json   (sidecar bắt buộc đi kèm mesh_enu.ply — xem §9.2)
@@ -296,10 +315,12 @@ Evidence (dataset đo thực địa, video, mesh export dung lượng lớn) **l
 
 Chỉ ghi thêm một dạng session/raw representation khác (vd. export định dạng ARKit gốc) vào cấu trúc trên **nếu app thực sự triển khai và tài liệu hoá rõ định dạng đó** ở step tương ứng — baseline này không giả định trước một định dạng raw cụ thể nào ngoài `mesh_ar_local.ply`/`mesh_enu.ply`/`transform_ar_to_enu.json` đã chốt ở §9.
 
+Evidence toolchain `8.1a`/`8.1b` phải ghi OS/device, Hub/Editor version, thời điểm, kết quả thực tế và source commit; nếu source chưa commit, ghi thêm trạng thái dirty + checksum của diff, không giả vờ commit đó đã chứa source đang test. Không commit license/serial/token, Apple signing identity, UDID hoặc ảnh tài khoản chưa che thông tin cá nhân. Editor test không có RTK/scan thì ghi N/A, không điền số giả.
+
 Quy tắc đặt tên dataset — mỗi phiên đo cần ghi (trong tên thư mục/file và/hoặc `scan_manifest.json` đi kèm):
 
 - Ngày đo (`YYYY-MM-DD`).
-- Thiết bị (`iphone-15-pro-max` / `iphone-11-pro`).
+- Thiết bị: `lenovo-windows` cho Editor smoke `8.1a`; `iphone-11-pro` cho iOS smoke `8.1b`/compatibility `8.6`; `iphone-16-pro` cho LiDAR thật. Ghi đúng môi trường, không gắn nhãn evidence Windows/iPhone 11 Pro thành LiDAR.
 - Phiên bản app (tag/commit hash của `research/ar-terrain-unity/` tại thời điểm build).
 - Điều kiện ánh sáng (mô tả ngắn: nắng gắt/nhiều mây/hoàng hôn/tối...).
 - Thời lượng scan.
@@ -315,7 +336,7 @@ Bộ evidence mang tới hội đồng (không đổi so với yêu cầu ngư�
 - Bảng toạ độ marker (5 control + 3 checkpoint).
 - Biểu đồ sai số tại checkpoint, RMSE ngang, RMSE cao độ, RMSE 3D.
 - FPS theo thời gian; mức pin trước/sau; thermal state.
-- So sánh iPhone 15 Pro Max và fallback iPhone 11 Pro.
+- So sánh iPhone 16 Pro và fallback iPhone 11 Pro.
 - File GLB (`mesh_enu.glb`) hoặc QR để hội đồng tự xoay mô hình 3D (nếu đạt stretch goal §9.3/step `8.7`).
 - Một slide nêu rõ: đây là prototype R&D, không phải thiết bị đo đạc được chứng nhận.
 
@@ -323,14 +344,15 @@ Bộ evidence mang tới hội đồng (không đổi so với yêu cầu ngư�
 
 | Risk | Khả năng | Ảnh hưởng | Fallback |
 |---|---|---|---|
-| Chưa chạy được mesh thật trên iPhone trước 07/09/2026 | Trung bình | Cao — timeline AT RISK | Ưu tiên tuyệt đối `8.1`/`8.2`, tạm hoãn mọi việc tài liệu phụ ngoài baseline |
+| **Mac chưa sẵn có (người dùng xác nhận 2026-09-04), iPhone 16 Pro chưa xác nhận sẵn có/chưa kiểm chứng** | Hiện hữu; chưa có ETA | Cao — gate iOS `8.1b` và LiDAR `8.2` đang chờ thiết bị, lịch gần nhất AT RISK | Làm `8.1a` trên Lenovo; checkpoint thiết bị 06/09, mesh thật đầu tiên 07/09 là mục tiêu rủi ro chứ không cam kết. Khi có máy, kiểm tra toolchain và cập nhật lịch; không dùng iPhone 11 Pro/Editor thay LiDAR. |
+| Chưa chạy được mesh thật trên iPhone 16 Pro trước 07/09/2026 | Trung bình | Cao — timeline AT RISK | Ưu tiên tuyệt đối `8.1`/`8.2`, tạm hoãn mọi việc tài liệu phụ ngoài baseline |
 | `mesh_ar_local.ply` (step `8.3`) chưa export ổn định trước 04/10/2026 | Trung bình | Cao | Bỏ `8.7` (GLB) và tính năng trình diễn phụ, dồn lực cho pipeline PLY (`8.3`/`8.4`) + RMSE |
 | RTK đợt 1 (field test lần 1 — tạo `mesh_enu.ply` thật đầu tiên, không chỉ benchmark) trễ quá 25/10/2026 | Thấp–Trung bình | Cao | Không trì hoãn tới ngày bảo vệ — báo Review Manager ngay để cân nhắc rút phạm vi (vd. giảm xuống chỉ 10×10 m, bỏ 20×20 m) |
 | Accuracy KPI FAIL (RMSE 3D > 10 cm) ở lần đo chính thức | Trung bình (chưa có dữ liệu thật để ước lượng chính xác) | Trung bình — không chặn báo cáo/Measurement Gate, chỉ đánh dấu Accuracy KPI chưa đạt (§8) | Báo cáo trung thực (§8), phân tích nguyên nhân, không sửa/loại điểm để làm đẹp số liệu |
 | Apple free provisioning hết hạn (7 ngày) đúng lúc cần demo | Cao (cơ chế hệ thống, chắc chắn xảy ra nếu không rebuild định kỳ) | Trung bình | Lịch rebuild định kỳ: 14–15/11 (cài bản final), 26–27/11 (build lại đúng source đã khoá), 1 ngày trước buổi báo cáo (mở app, quét thử, kiểm tra provisioning); mang MacBook + cáp USB-C tới buổi bảo vệ để cài lại nếu cần |
 | iPhone 11 Pro vô tình "giả vờ" tạo mesh thật (dùng plane detection thay LiDAR mà không cảnh báo) | Thấp nếu tuân thủ §4 | Cao — sai lệch kết quả nghiên cứu | Phát hiện sớm có thể quan sát từ `8.1`/`8.2`, nhưng test gate chính thức/bắt buộc là `8.6` (`test/ar-terrain-performance-validation`, mandatory): app phải phát hiện đúng thiết bị không có LiDAR Scene Reconstruction và hiển thị thông báo rõ ràng, không tạo mesh giả |
 | Diện tích/độ chính xác yêu cầu vượt phạm vi (>50×50 m hoặc ≤2 cm bắt buộc) | Thấp (ngoài baseline đã chốt) | Cao nếu xảy ra | Không cam kết trong baseline này — nếu hội đồng yêu cầu, cần một baseline/spike riêng, không mở rộng ngầm phạm vi `8.x` hiện tại |
-| Unity Student license không được SheerID duyệt (**hiện chưa xác nhận đã được duyệt** — người dùng mới dự kiến đăng ký) | Trung bình (chưa xác nhận) | Thấp | Thứ tự xử lý bắt buộc, ngay trong tuần đầu (`8.0`/`8.1`): (1) đăng ký Unity Student — nếu SheerID duyệt, dùng Unity Student; (2) nếu SheerID **không** duyệt, kiểm tra Unity Personal **eligibility/license terms tại đúng thời điểm đăng ký** (điều khoản có thể thay đổi theo doanh thu/quy mô — không giả định trước là chắc chắn đủ điều kiện); (3) chỉ dùng Unity Personal nếu xác nhận đáp ứng điều kiện; (4) **nếu không đáp ứng điều kiện Unity Personal, dừng lại và báo Review Manager** — không tự ý đổi sang native ARKit/RealityKit, không tự ý mua license trả phí. Native ARKit/RealityKit chỉ được xem xét lại (qua quyết định riêng, không tự động) nếu Unity Personal cũng không dùng được, hoặc Unity/AR Foundation gặp blocker kỹ thuật đã được chứng minh cụ thể |
+| Unity Student subscription đã ACTIVE (người dùng xác nhận 2026-09-03), nhưng activation trên máy chưa kiểm chứng | Cần kiểm tra ở `8.1a` | Có thể chặn Editor | Đăng nhập đúng Student Unity ID trong Hub và xác nhận license hợp lệ. Nếu lỗi, kiểm tra/support; không mua Pro/trial hoặc tự đổi Personal/native stack. Không ghi license activation PASS chỉ từ email subscription. |
 
 ## 14. Chi Phí Dự Kiến
 
@@ -338,12 +360,12 @@ Bộ evidence mang tới hội đồng (không đổi so với yêu cầu ngư�
 
 | Khoản | Ước tính | Ghi chú |
 |---|---:|---|
-| Unity Student (dự kiến) — hoặc Unity Personal nếu đủ điều kiện | 0 đồng | Dự kiến đăng ký Unity Student ngay ở `8.0`/`8.1` (chưa xác nhận SheerID duyệt tại thời điểm chốt baseline này). Nếu SheerID không duyệt: kiểm tra Unity Personal eligibility/license terms tại đúng thời điểm đăng ký, chỉ dùng nếu đáp ứng điều kiện; nếu không đáp ứng, dừng và báo Review Manager thay vì tự ý đổi stack hoặc mua license (xem §13, TDR-012). Không chờ tới gần deadline (Unity Industry Trial chỉ 30 ngày, không đủ bao phủ cả dự án) |
+| Unity Student — subscription đã ACTIVE | 0 đồng | Người dùng đã cung cấp xác nhận ngày 2026-09-03; kích hoạt trên Lenovo/Mac phải kiểm tra riêng. Không mua Unity Pro/Industry trial; tài nguyên Synty/Odin không cần cho smoke test. |
 | Xcode | 0 đồng | Cài trên MacBook Air M4 |
 | Apple Account miễn phí | 0 đồng | Personal Team — build/cài trực tiếp lên iPhone qua cáp, không qua App Store/TestFlight |
 | Apple Developer Program | Không mua | Không cần cho phạm vi prototype này |
 | Cloud/VPS | Không dùng | Mesh và dữ liệu ở lại local |
-| Thiết bị chính (iPhone 15 Pro Max, iPhone 11 Pro, MacBook Air M4) | 0 đồng | Đã có sẵn |
+| Thiết bị (Lenovo, iPhone 11 Pro, MacBook Air M4, iPhone 16 Pro) | 0 đồng nếu sử dụng thiết bị sẵn có/mượn được như dự kiến | Hiện chỉ Lenovo và iPhone 11 Pro sẵn có; Mac và iPhone 16 Pro chưa có ETA được xác nhận. Không tự mua/thuê thiết bị hoặc Mac cloud; nếu cần phát sinh chi phí phải báo chủ dự án trước. |
 | Marker/phụ kiện (tripod nhỏ, in marker, pin dự phòng) | ~100.000–500.000 đồng | Không cố định, tuỳ số lượng thực tế cần |
 | RTK — hai đợt thuê (benchmark cuối tháng 10 + chính thức đầu/giữa tháng 11) | ~1–3 triệu đồng | Tổng cho cả 2 đợt, tuỳ nhà cung cấp/kỹ thuật viên/di chuyển; ưu tiên đơn vị cho thuê đã kèm tài khoản CORS/NTRIP |
 | CORS/NTRIP riêng (nếu nơi thuê RTK không kèm sẵn) | Chưa ghi giá cố định | Chỉ phát sinh nếu cần — không đăng ký thuê bao dài hạn chỉ để phục vụ báo cáo |
@@ -356,7 +378,9 @@ Track `8.x` được coi là hoàn tất (tới mức phục vụ báo cáo hộ
 
 **Mục bắt buộc (không phụ thuộc trị số RMSE):**
 
-- [ ] App Unity chạy độc lập trên iPhone 15 Pro Max, tạo mesh LiDAR thật (ARKit Scene Reconstruction) trên khu vực **10×10 m**.
+- [ ] `8.1a` Windows Editor smoke và `8.1b` Mac/Xcode/iPhone smoke đều PASS theo gate riêng ở §11; việc cài Hub hoặc có Student subscription không tự làm gate nào PASS.
+
+- [ ] App Unity chạy độc lập trên iPhone 16 Pro, tạo mesh LiDAR thật (ARKit Scene Reconstruction) trên khu vực **10×10 m**.
 - [ ] iPhone 11 Pro: app phát hiện đúng thiết bị không hỗ trợ LiDAR Scene Reconstruction, hiển thị thông báo rõ ràng, không giả vờ tạo mesh thật — validation chính thức ở step `8.6` (mandatory).
 - [ ] `mesh_ar_local.ply` (step `8.3`) export được, mở lại bằng công cụ độc lập (Blender/MeshLab/CloudCompare), đúng trục và đơn vị mét.
 - [ ] `mesh_enu.ply` (step `8.4`, **georeferenced** — không phải `mesh_ar_local.ply`) export được, kèm sidecar `transform_ar_to_enu.json` đầy đủ (origin WGS84, height type, `axis_conversion` (`C_AXIS`, kể cả khi identity), rotation (`R_AR_TO_ENU`, proper — determinant +1), translation, scale policy, đơn vị).
@@ -374,7 +398,7 @@ Track `8.x` được coi là hoàn tất (tới mức phục vụ báo cáo hộ
 
 ## 16. Quy Tắc Source Control Unity — Commit Đủ Để Tái Tạo Project, Không Commit File Lớn
 
-Git (repo `NovaWay`) phải lưu **đủ để Unity project tái tạo lại được từ đầu** trên một máy Mac khác — không chỉ C# script:
+Git (repo `NovaWay`) phải lưu **đủ để Unity project tái tạo lại được từ đầu** trên Windows hoặc Mac — không chỉ C# script:
 
 - `Assets/**/*.cs` (toàn bộ source code C#).
 - Unity scenes (`*.unity`).
@@ -383,16 +407,17 @@ Git (repo `NovaWay`) phải lưu **đủ để Unity project tái tạo lại đ
 - Materials/shaders cần cho demo.
 - Small reference images cần thiết (vd. marker pattern dùng để nhận diện, không phải ảnh/video quét).
 - **Toàn bộ file `.meta` tương ứng** với mọi asset ở trên — Unity dùng `.meta` để giữ GUID/import settings; **không được xoá `.meta` của bất kỳ asset nào đang track**, kể cả khi asset đó tưởng chừng không quan trọng, vì mất `.meta` làm vỡ tham chiếu GUID giữa các asset khác.
-- `ProjectSettings/`.
+- `ProjectSettings/`, gồm `ProjectVersion.txt` khoá exact Editor patch để Windows/Mac dùng cùng phiên bản.
 - `Packages/manifest.json` và `Packages/packages-lock.json`.
 - Test code/config (nếu có test tự động cho logic transform/RMSE, tách khỏi Unity Editor state).
-- `.gitignore` (riêng cho Unity, thêm ở step `8.1`).
+- `.gitignore` (riêng cho Unity, thêm ở step `8.1a`).
 - Tài liệu (`docs/**`).
 - Manifest/checksum của dataset (`scan_manifest.json` — JSON nhỏ, không phải bản thân dataset).
 
 **Không commit:**
 
 - `Library/`, `Temp/`, `Logs/`, `Obj/`, `Build/`/`Builds/` của Unity.
+- `UserSettings/` và cấu hình workspace/IDE cục bộ không cần để tái tạo project.
 - Xcode `DerivedData/`.
 - Generated Xcode build output (project Xcode do Unity tự sinh ra khi build iOS — sinh lại được từ Unity project, không cần track).
 - Video quét (raw hoặc đã dựng) dung lượng lớn.
@@ -412,4 +437,5 @@ Toàn bộ evidence dataset thật (video, raw scan, mesh export đầy đủ c�
 - `docs/PRD.md` §8 — R&D Track.
 - `docs/RISK_REGISTER.md` — rủi ro kỹ thuật liên quan.
 - `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §1 — trạng thái trước đây (hoãn) của step `8.1` gốc, nay cập nhật theo baseline này.
-- `docs/REVIEW_NOTES.md` §15 (hoãn), §16 (baseline tài liệu hoá, step `8.0` APPROVED 2026-08-24).
+- `docs/REVIEW_NOTES.md` §15 (hoãn), §16 (baseline tài liệu hoá, step `8.0` APPROVED 2026-08-24), §19 (đính chính thiết bị), §20 (Windows-first 2026-09-04).
+- `docs/research/AR_TERRAIN_WINDOWS_FIRST_HANDOFF.md` — checklist triển khai và bàn giao Windows → Mac.

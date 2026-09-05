@@ -393,14 +393,17 @@ Prototype nghiên cứu "AR Terrain Mesh" (R&D track ở TDR-003, không phải 
 
 ```text
 Unity 6.3 LTS + ARKit Scene Reconstruction (LiDAR)
-Thiết bị chính: iPhone 15 Pro Max
-Fallback compatibility-only: iPhone 11 Pro (không có LiDAR Scene Reconstruction)
-Build/deploy: MacBook Air M4 (Apple Silicon) qua Xcode, Apple Account miễn phí (Personal Team)
+Thiết bị chính: iPhone 16 Pro (đính chính 08/2026 — tạm thời không có sẵn, chưa kiểm chứng vật lý; xem docs/REVIEW_NOTES.md §19)
+Windows bootstrap (8.1a): Lenovo Ryzen 7 7435HS / RAM 24 GB / RTX 4060 8 GB; scene không-AR
+Thiết bị vật lý cho step 8.1b (iOS smoke only, sau khi có Mac): iPhone 11 Pro
+Fallback compatibility-only (step 8.6): iPhone 11 Pro (không có LiDAR Scene Reconstruction)
+Build/deploy iOS (8.1b): MacBook Air M4 (hiện chưa sẵn có, chưa có ETA) qua Xcode, Apple Account miễn phí (Personal Team)
+Unity license: Student subscription ACTIVE theo người dùng 2026-09-03; activation trên máy kiểm chứng riêng
 Export: `mesh_ar_local.ply` (AR-local, step 8.3) → `mesh_enu.ply` georeferenced + `transform_ar_to_enu.json` (step 8.4, bắt buộc); `mesh_enu.glb` (stretch goal, step 8.7)
 Georeference: hai luồng tách biệt — RTK WGS84 → local ENU; Unity AR-local → local ENU qua pipeline hai bước (C_AXIS cho axis/handedness conversion, rồi rigid transform R_AR_TO_ENU/t_AR_TO_ENU, scale=1) — 5 control points + 3 checkpoint độc lập
 ```
 
-Chi tiết đầy đủ: `docs/research/AR_TERRAIN_THESIS_BASELINE.md`.
+Chi tiết đầy đủ: `docs/research/AR_TERRAIN_THESIS_BASELINE.md`. **Bổ sung được chủ dự án đồng ý 2026-09-04:** Windows được tạo/chạy project thật ở `8.1a`; Mac cần cho build/ký/cài iOS ở `8.1b`. Không tự coi Windows là iOS/LiDAR PASS; xem `docs/REVIEW_NOTES.md` §20 và checklist `docs/research/AR_TERRAIN_WINDOWS_FIRST_HANDOFF.md`.
 
 ### Context
 
@@ -417,10 +420,10 @@ R&D track này (đã mở ở TDR-003, hoãn ở `docs/REVIEW_NOTES.md` §15 vì
 
 ### Rationale
 
-Mục tiêu là chứng minh khả thi kỹ thuật trong khung thời gian cố định (tới 15/11/2026), không phải xây sản phẩm hoàn chỉnh. Unity + ARKit Scene Reconstruction tận dụng LiDAR sẵn có trên iPhone 15 Pro Max mà không cần tự viết thuật toán tái tạo mesh từ đầu — quyết định này dựa trên đặc tính kỹ thuật của ARKit/Unity, không dựa trên giả định người dùng đã có kinh nghiệm Unity từ trước. RTK chỉ đo điểm khống chế (không streaming) giữ cho phiên quét AR đơn giản, tránh rủi ro đồng bộ hoá thời gian thực giữa hai hệ thống độc lập.
+Mục tiêu là chứng minh khả thi kỹ thuật trong khung thời gian cố định (tới 15/11/2026), không phải xây sản phẩm hoàn chỉnh. Unity + ARKit Scene Reconstruction dùng khả năng LiDAR của iPhone 16 Pro (thiết bị thực tế chưa được kiểm chứng) mà không cần tự viết thuật toán tái tạo mesh từ đầu — quyết định này dựa trên đặc tính kỹ thuật của ARKit/Unity, không dựa trên giả định người dùng đã có kinh nghiệm Unity từ trước. RTK chỉ đo điểm khống chế (không streaming) giữ cho phiên quét AR đơn giản, tránh rủi ro đồng bộ hoá thời gian thực giữa hai hệ thống độc lập.
 
 ### Consequence
 
 - Không cam kết kết quả cho diện tích >50×50 m hoặc sai số bắt buộc ≤2 cm — ngoài khả năng của iPhone LiDAR để cam kết trong khung thời gian này.
-- **Về license Unity:** tại thời điểm chốt baseline này, người dùng **chưa xác nhận** Unity Student đã được SheerID duyệt — chỉ mới dự kiến đăng ký. Thứ tự xử lý bắt buộc: (1) đăng ký Unity Student — nếu SheerID duyệt, dùng Unity Student; (2) nếu SheerID từ chối, kiểm tra Unity Personal **eligibility/license terms tại đúng thời điểm đăng ký** (điều khoản có thể đổi theo thời gian/quy mô, không giả định trước); (3) chỉ dùng Unity Personal nếu xác nhận đáp ứng điều kiện; (4) **nếu Unity Personal không đáp ứng điều kiện, dừng lại và báo Review Manager** — không tự ý đổi tech stack (native ARKit/RealityKit) hoặc tự ý mua license trả phí; chỉ khi đã dừng-báo và có quyết định riêng, hoặc phát sinh blocker kỹ thuật cụ thể đã chứng minh với Unity/AR Foundation, mới đánh giá lại việc chuyển sang native ARKit/RealityKit.
+- **Về license Unity (cập nhật 2026-09-04):** người dùng xác nhận Student subscription ACTIVE ngày 03/09. Đăng nhập đúng Unity ID trên từng máy và kiểm tra activation; email subscription không thay bằng chứng license tại máy. Thứ tự Student → Personal eligibility nếu Student không dùng được là phương án dự phòng đã ghi ở baseline gốc, không phải lý do tiếp tục chờ SheerID trong trạng thái đã duyệt. Nếu gặp lỗi activation, kiểm tra/support trước; không tự mua Pro/Industry, dùng paid trial hoặc đổi native stack.
 - Track này không có backend/API dependency — không thêm bảng/endpoint vào `docs/DATA_MODEL.md`/`docs/API_CONTRACT.md` của sản phẩm chính.

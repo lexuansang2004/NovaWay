@@ -1,0 +1,84 @@
+# Keep Unity text assets stable when moving between Windows and macOS.
+*.cs text eol=lf
+*.cginc text eol=lf
+*.hlsl text eol=lf
+*.shader text eol=lf
+*.shadergraph text eol=lf
+*.shadersubgraph text eol=lf
+*.json text eol=lf
+*.inputactions text eol=lf
+*.asmdef text eol=lf
+*.asmref text eol=lf
+*.meta text eol=lf
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.mat text eol=lf
+*.controller text eol=lf
+*.anim text eol=lf
+*.overrideController text eol=lf
+*.physicMaterial text eol=lf
+*.physicsMaterial2D text eol=lf
+*.renderTexture text eol=lf
+*.spriteatlas text eol=lf
+*.terrainlayer text eol=lf
+*.guiskin text eol=lf
+*.preset text eol=lf
+*.playable text eol=lf
+*.mask text eol=lf
+*.brush text eol=lf
+*.flare text eol=lf
+*.fontsettings text eol=lf
+*.wlt text eol=lf
+*.txt text eol=lf
+
+# Unity's YAML serializer for MonoBehaviour/ScriptableObject-backed assets
+# (ProjectSettings/*.asset, scenes, prefabs, materials, etc.) writes a single
+# trailing space on fields whose string value is empty (e.g. m_Name,
+# m_EditorClassIdentifier) every time the asset is resaved by the Editor —
+# reproduced deterministically across repeated imports of this project. That
+# is Unity's own canonical serialized form, not an error to flag or strip;
+# stripping it would just have Unity re-add it on the next Editor launch.
+*.unity -whitespace
+*.prefab -whitespace
+*.asset -whitespace
+*.mat -whitespace
+*.controller -whitespace
+*.anim -whitespace
+*.overrideController -whitespace
+*.physicMaterial -whitespace
+*.physicsMaterial2D -whitespace
+*.renderTexture -whitespace
+*.spriteatlas -whitespace
+*.terrainlayer -whitespace
+*.guiskin -whitespace
+*.preset -whitespace
+*.playable -whitespace
+*.mask -whitespace
+*.brush -whitespace
+*.flare -whitespace
+*.fontsettings -whitespace
+
+# Preserve binary assets byte-for-byte.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.tga binary
+*.psd binary
+*.tif binary
+*.tiff binary
+*.exr binary
+*.hdr binary
+*.ttf binary
+*.otf binary
+*.fbx binary
+*.obj binary
+*.blend binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.mp4 binary
+*.mov binary
+*.dll binary
