@@ -299,3 +299,27 @@ Không có code nào được viết cho mục này — đây thuần tuý là s
 **Đánh số lại §3 trùng lặp:** `docs/research/AR_TERRAIN_WINDOWS_FIRST_HANDOFF.md` khi thêm mục "Rework" ở §22 đã vô tình đặt trùng số `## 3` với mục "iPhone 11 Pro trong lúc chưa có Mac" đã có sẵn. Đã chuyển mục Rework xuống cuối tài liệu thành `## 8`, giữ nguyên `## 1`–`## 7` không đổi, và cập nhật hai tham chiếu nội bộ `(xem §3 dưới)` → `(xem §8 dưới)`/`(§8)`. Xác nhận numbering hiện tại 1–8 liên tục, không trùng.
 
 **Không lặp lại phần điều tra kỹ thuật Unity đã pass ở §22** (hai lần mở lại liên tiếp, asset/`.meta`, build scene, `apps/*`, GitHub CI) — các phát hiện này chỉ là sai sót tài liệu/evidence, không phải phát hiện kỹ thuật mới về Unity.
+
+## 24. Review Manager APPROVED, PR #76 squash-merge vào `develop` — step `8.1a` COMPLETED (2026-09-05)
+
+**Xác nhận độc lập cuối cùng của Review Manager** trước khi cho phép merge, dựa trên chính commit `ad260c4` (rework thứ hai, §23):
+
+- PR #76: state OPEN → **MERGED**, target `develop`, mergeable/CLEAN trước khi merge.
+- Required GitHub checks (`Backend + Web + shared-types`, `E2E (Playwright, golden path)`, `Mobile (analyze, test)`, `Vercel`): tất cả **PASS**.
+- `SOURCE_MANIFEST.md` (evidence ngoài Git, phạm vi giới hạn đúng commit `3e77992` theo §23): 141/141 hash blob Git khớp, 0 file thiếu/thừa so với path list, self-checksum khớp, checksum file ngoài `3a7d31fa56b4a4c110133cf8d8d7307f207c2312b8620d2defd5f53e125bd18e` xác nhận đúng.
+- Xác minh Unity độc lập, **sau merge**, từ một worktree cô lập tạo mới từ `origin/develop` (không phải branch cũ của PR): hai lần chạy liên tiếp `Unity.exe -batchmode -nographics -quit` (một từ `Library` sạch, một từ `Library` đã có từ lần trước) — cả hai thoát mã 0, log kết thúc bằng `Exiting batchmode successfully now!`, không còn tiến trình `Unity.exe` treo lại (xác nhận qua `tasklist`), `git status` sạch sau mỗi lần (0 sai lệch), 0 lỗi compile.
+- Asset/`.meta` dưới `Assets/`: 0 thiếu, 0 mồ côi. `EditorBuildSettings.asset`: build scene duy nhất vẫn là `Assets/Scenes/ToolchainSmoke.unity`.
+- `apps/backend`, `apps/web`, `apps/mobile`: không có thay đổi nào trong toàn bộ PR #76 (so với `6c17812`).
+- File sửa đổi có sẵn ở local `develop` (`apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift`): không bị đụng tới trong suốt PR #76 và các bước xác minh.
+
+**Quyết định (Review Manager): APPROVED.** PR #76 được **squash-merge** vào `develop` bằng đúng commit message đã ghi trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` cho step `8.1a`:
+
+```
+chore: add ar terrain unity windows toolchain smoke test
+```
+
+**Merge commit: `9b8a692fb7284c9e84382319f527c344ca57dfd9`** (2026-09-05T04:21:35Z). Các commit riêng lẻ trên branch (`3d8cfb4`, `3e77992`, `802c992`, `ad260c4`) không xuất hiện trong lịch sử `develop` do squash — nội dung đầy đủ của chúng nằm trong commit squash này.
+
+**Trạng thái cuối:** step `8.1a` (Windows Unity Editor toolchain smoke test) — **COMPLETED**. `8.1b` (Mac/Xcode/iPhone), và mọi phần iOS/LiDAR/RTK — **NOT RUN**, không được coi là đã đạt chỉ vì `8.1a` đã merge. `8.2` vẫn chờ đúng tiền đề đã ghi ở baseline §4/§11 và micro-step plan (`8.1b` PASS + iPhone 16 Pro vật lý + runtime Scene Reconstruction capability check).
+
+**Bảo toàn:** không sửa lại lịch sử đã ghi ở §22/§23 (giữ nguyên, không viết đè); không force-push, không rewrite history trên `chore/ar-terrain-toolchain` trước khi merge; không sửa `apps/*`; không đụng dirty local `develop` (bao gồm `apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift`); không chạm PR #71. Bản ghi này (§24) là micro-step tài liệu riêng, độc lập, trên branch mới `docs/ar-terrain-8-1a-post-merge-status` (không tái sử dụng branch `chore/ar-terrain-toolchain` đã merge), commit message kế hoạch: `docs: record ar terrain toolchain merge verification`.

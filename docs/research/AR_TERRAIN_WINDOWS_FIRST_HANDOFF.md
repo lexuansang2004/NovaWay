@@ -16,7 +16,7 @@
 | iPhone 11 Pro | Có sẵn theo người dùng; chưa có evidence smoke iOS |
 | MacBook Air M4 | Chưa sẵn có, chưa có ETA được xác nhận; chờ người dùng báo |
 | iPhone 16 Pro | Thiết bị LiDAR dự kiến; chưa xác nhận sẵn có, chưa kiểm chứng runtime |
-| Kết quả | PR #76 (commit `3d8cfb4`, sau rework thêm commit mới cùng branch) mở vào `develop`, required GitHub checks **PASS**. Review Manager: **CHANGES REQUESTED** (2026-09-05) → đã áp dụng rework (xem §8 dưới) → chờ review lại. Chưa merge. `8.1b`/iOS/LiDAR/RTK **NOT RUN** |
+| Kết quả | PR #76 required GitHub checks **PASS**; sau hai vòng CHANGES REQUESTED (xem §8) và rework tương ứng, Review Manager **APPROVED** và squash-merge vào `develop` (2026-09-05, commit `9b8a692fb7284c9e84382319f527c344ca57dfd9`) — xem §9. **Step `8.1a` COMPLETED.** `8.1b`/iOS/LiDAR/RTK **NOT RUN** |
 
 ## 2. Step 8.1a — Windows Editor bootstrap
 
@@ -41,7 +41,7 @@ Commit khi đủ gate và được review: `chore: add ar terrain unity windows 
 - [x] `git diff --check` (cả staged lẫn unstaged) pass.
 - [x] Review đúng phạm vi: không có thay đổi `apps/*`; không có AR Foundation/ARKit/LiDAR/PLY/RTK/georeference; asset/`.meta` không thiếu, không mồ côi; `ToolchainSmoke` vẫn là build scene duy nhất; không có secret/credential/email.
 - [x] Required GitHub PR checks xanh (lint/test/build, E2E, Mobile) — GitHub CI **không** chạy Unity, nên đây chỉ là bằng chứng cho phần Node/Web/Mobile không đổi, không phải bằng chứng Unity import/compile.
-- [ ] Review Manager duyệt lại rework (đang **CHANGES REQUESTED** tính đến 2026-09-05); merge — **chưa xảy ra**. Không ghi toàn bộ nhóm `8.1` PASS.
+- [x] Review Manager duyệt lại rework: **APPROVED** (2026-09-05); PR #76 **squash-merge** vào `develop`, commit `9b8a692fb7284c9e84382319f527c344ca57dfd9`, đúng commit message kế hoạch — xem §9. Chỉ `8.1a` COMPLETED; `8.1b`/iOS/LiDAR/RTK vẫn **NOT RUN**, không ghi toàn bộ nhóm `8.1` PASS.
 
 Nếu Hub chưa nhận Student license: ghi lỗi cụ thể và kiểm tra/support; không tự đổi Personal, kích hoạt Pro trial hay mua license. Student subscription ACTIVE và license tại máy là hai trạng thái khác nhau.
 
@@ -93,3 +93,24 @@ Review Manager tự kiểm tra độc lập commit `3d8cfb4`/PR #76, ra verdict 
 2. **Dọn template onboarding:** xoá `Assets/Readme.asset`+`.meta`, `Assets/TutorialInfo/`+`.meta`, `Assets/Scenes/SampleScene.unity`+`.meta` theo đúng cặp asset/`.meta` — đã xác nhận qua tìm GUID rằng không asset nào khác tham chiếu tới ba mục này. TextMesh Pro và Input System giữ nguyên (đã xác nhận `ToolchainSmoke.unity` dùng TMP cho label, và `EditorBuildSettings.asset` tham chiếu đúng GUID `InputSystem_Actions.inputactions`).
 3. **Evidence tái tạo được, phạm vi rõ ràng:** manifest nguồn (141 file thay đổi giữa `6c17812` và **đúng một commit** `3e7799275632c2f1b63e243cf355e3be68ca277a` — commit mang code sửa lỗi của rework này, **không** phải PR head cuối cùng) đã thêm vào `2026-09-05_source_manifest_8.1a_rework/SOURCE_MANIFEST.md` cùng thư mục evidence ngoài Git. Mỗi file được hash từ **nội dung blob Git** (`git show 3e77992:<path>`, không phải file trên đĩa) — cách này tránh được sai số line-ending giữa `core.autocrlf`/`eol=lf` và bytes thật trên đĩa; một bản nháp trước đó hash trực tiếp từ file trên đĩa và sai 9/141 dòng vì lý do này, đã phát hiện và sửa. Checksum file manifest cuối cùng: `3a7d31fa56b4a4c110133cf8d8d7307f207c2312b8620d2defd5f53e125bd18e`. Đã verify hai lần độc lập (`sha256sum -c` và so khớp trực tiếp với `git show`): cả 141 dòng đều khớp, 0 sai lệch. Commit `802c992` (bổ sung tài liệu, gồm cả việc ghi lại đường dẫn/checksum của chính manifest này) và mọi commit tài liệu sau đó **nằm ngoài phạm vi** manifest — tránh vòng lặp tự tham chiếu (manifest phải hash một tài liệu Git đang chứa checksum của chính manifest). `RUN_RECORD.md` gốc (`2026-09-04_windows_editor_smoke_8.1a/`) đã được bổ sung addendum ghi rõ ảnh Play Mode có trước rework, không phải bằng chứng cho source cuối cùng, và ghi rõ cùng giới hạn phạm vi này.
 4. **Tách trạng thái:** Windows Play Mode thủ công = user-reported/manual-observed; batch-mode import/compile = agent-executed automated local check (agent tự chạy Unity `6000.3.23f1`, có log/exit code); GitHub checks = PASS (không kiểm Unity); Review Manager = CHANGES REQUESTED cho tới khi review lại; merged = NO; `8.1b`/iOS/LiDAR/RTK = NOT RUN.
+
+## 9. Review Manager APPROVED và squash-merge (2026-09-05)
+
+Sau vòng rework thứ hai (§23 trong `docs/REVIEW_NOTES.md` — sửa phạm vi manifest tránh vòng lặp tự tham chiếu, và đánh số lại `## 3` trùng lặp trong chính tài liệu này thành `## 8`), Review Manager tự kiểm tra độc lập lần cuối và ra quyết định **APPROVED**:
+
+- required GitHub checks trên PR #76: **PASS**;
+- `SOURCE_MANIFEST.md` bên ngoài Git: 141/141 hash blob Git khớp commit `3e77992`, 0 file thiếu/thừa, self-checksum khớp, checksum file ngoài: `3a7d31fa56b4a4c110133cf8d8d7307f207c2312b8620d2defd5f53e125bd18e`;
+- xác minh Unity độc lập, sau merge, từ một worktree sạch tạo mới từ `origin/develop`: hai lần mở batch-mode liên tiếp, cả hai thoát mã 0 kèm `Exiting batchmode successfully now!`, không còn tiến trình Unity treo lại, 0 sai lệch Git sau mỗi lần, 0 lỗi compile;
+- asset/`.meta`: 0 thiếu, 0 mồ côi; build scene duy nhất vẫn là `Assets/Scenes/ToolchainSmoke.unity`;
+- không có thay đổi `apps/*`;
+- file sửa đổi có sẵn ở local `develop` (`apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift`) không bị đụng tới.
+
+**Quyết định:** PR #76 **squash-merge** vào `develop` với đúng commit message kế hoạch:
+
+```
+chore: add ar terrain unity windows toolchain smoke test
+```
+
+Merge commit: `9b8a692fb7284c9e84382319f527c344ca57dfd9` (2026-09-05T04:21:35Z).
+
+**Trạng thái cuối:** step `8.1a` **COMPLETED**. `8.1b` (Mac/Xcode/iPhone) và mọi phần iOS/LiDAR/RTK vẫn **NOT RUN** — không được suy diễn là đã đạt chỉ vì `8.1a` đã merge. Chi tiết đầy đủ, không thể sửa lại: `docs/REVIEW_NOTES.md` §24.
