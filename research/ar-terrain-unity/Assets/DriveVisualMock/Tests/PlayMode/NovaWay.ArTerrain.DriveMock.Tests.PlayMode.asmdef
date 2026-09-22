@@ -1,0 +1,21 @@
+{
+  "name": "NovaWay.ArTerrain.DriveMock.Tests.PlayMode",
+  "rootNamespace": "NovaWay.ArTerrain.DriveMock.Tests",
+  "references": [
+    "NovaWay.ArTerrain.DriveMock"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

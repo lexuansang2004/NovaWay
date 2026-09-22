@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/DriveVisualMock.unity
+    guid: 924d109e76d7831438cd38b394ec7347
+  - enabled: 1
     path: Assets/Scenes/ToolchainSmoke.unity
     guid: 9d895e83c172df345b8e61a9117a611e
   m_configObjects:
