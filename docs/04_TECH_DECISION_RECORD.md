@@ -397,7 +397,7 @@ Thiết bị chính: iPhone 16 Pro (đính chính 08/2026 — tạm thời khôn
 Windows bootstrap (8.1a): Lenovo Ryzen 7 7435HS / RAM 24 GB / RTX 4060 8 GB; scene không-AR
 Thiết bị vật lý cho step 8.1b (iOS smoke only, sau khi có Mac): iPhone 11 Pro
 Fallback compatibility-only (step 8.6): iPhone 11 Pro (không có LiDAR Scene Reconstruction)
-Build/deploy iOS (8.1b): MacBook Air M4 (hiện chưa sẵn có, chưa có ETA) qua Xcode, Apple Account miễn phí (Personal Team)
+Build/deploy iOS (8.1b): MacBook Air M3, macOS Sequoia 15.3.1 (người dùng xác nhận đã mượn được 2026-09-22), Xcode 16.4 đang tải; Apple Account miễn phí (Personal Team); chưa build nên 8.1b NOT RUN
 Unity license: Student subscription ACTIVE theo người dùng 2026-09-03; activation trên máy kiểm chứng riêng
 Export: `mesh_ar_local.ply` (AR-local, step 8.3) → `mesh_enu.ply` georeferenced + `transform_ar_to_enu.json` (step 8.4, bắt buộc); `mesh_enu.glb` (stretch goal, step 8.7)
 Georeference: hai luồng tách biệt — RTK WGS84 → local ENU; Unity AR-local → local ENU qua pipeline hai bước (C_AXIS cho axis/handedness conversion, rồi rigid transform R_AR_TO_ENU/t_AR_TO_ENU, scale=1) — 5 control points + 3 checkpoint độc lập
@@ -427,3 +427,39 @@ Mục tiêu là chứng minh khả thi kỹ thuật trong khung thời gian cố
 - Không cam kết kết quả cho diện tích >50×50 m hoặc sai số bắt buộc ≤2 cm — ngoài khả năng của iPhone LiDAR để cam kết trong khung thời gian này.
 - **Về license Unity (cập nhật 2026-09-04):** người dùng xác nhận Student subscription ACTIVE ngày 03/09. Đăng nhập đúng Unity ID trên từng máy và kiểm tra activation; email subscription không thay bằng chứng license tại máy. Thứ tự Student → Personal eligibility nếu Student không dùng được là phương án dự phòng đã ghi ở baseline gốc, không phải lý do tiếp tục chờ SheerID trong trạng thái đã duyệt. Nếu gặp lỗi activation, kiểm tra/support trước; không tự mua Pro/Industry, dùng paid trial hoặc đổi native stack.
 - Track này không có backend/API dependency — không thêm bảng/endpoint vào `docs/DATA_MODEL.md`/`docs/API_CONTRACT.md` của sản phẩm chính.
+
+## TDR-013: Tách Survey Mode và Drive Mode cho cảnh báo địa hình (09/2026)
+
+### Decision
+
+Tách hướng AR Terrain thành hai capability độc lập:
+
+1. **Survey Mode:** chỉ thiết bị có LiDAR Scene Reconstruction mới thu thập mesh; ô 10×10 m là đơn vị thí nghiệm để export/georeference/đo sai số. Có thể mở rộng bằng nhiều ô hoặc điểm khảo sát, không ép một AR session quét liên tục toàn tuyến.
+2. **Drive Mode:** thiết bị phổ thông đọc terrain catalog đã quét trước, kết hợp vị trí/hướng/tốc độ để cảnh báo sớm. Drive Mode không phụ thuộc LiDAR runtime; iPhone 11 Pro là thiết bị compatibility/pilot phù hợp.
+
+Hiển thị:
+
+- TPP (bản đồ nhìn từ trên/góc xiên, xe + tuyến + cảnh báo) là mặc định của Drive Mode.
+- FPP (camera/AR phía trước) là chính trong Survey Mode và chỉ bổ sung trong Drive Mode; không giả vờ căn chỉnh chính xác nếu visual localization chưa được kiểm chứng.
+- Second-Person Perspective không thuộc runtime lái xe; chỉ có thể nghiên cứu dưới dạng replay/camera ngoài về sau.
+
+Chi tiết: `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`.
+
+### Context
+
+Chủ dự án làm rõ ngày 2026-09-21 rằng người lái phải được cảnh báo đủ sớm, không đợi xe tới gần mới dựa vào cảm biến. LiDAR điện thoại phù hợp thu thập cục bộ, trong khi warning horizon phải đến từ dữ liệu đã biết trước. Baseline 10×10 m vì thế là phạm vi đo khoa học, không phải phạm vi cảnh báo sản phẩm.
+
+### Options
+
+| Option | Ưu điểm | Nhược điểm | Quyết định |
+|---|---|---|---|
+| Chỉ quét LiDAR realtime khi xe chạy | Không cần dữ liệu chuẩn bị trước | Cự ly gần, phụ thuộc LiDAR, cảnh báo muộn, khó an toàn/ổn định | Loại |
+| Survey Mode + Drive Mode dùng catalog quét sẵn | Cảnh báo sớm; Drive Mode chạy trên thiết bị không LiDAR; tách acquisition khỏi consumption | Cần versioning/georeference/catalog và quy trình cập nhật dữ liệu | Chọn |
+| Dựng dense mesh liên tục cho toàn thành phố trong luận văn | Trực quan đầy đủ | Vượt thiết bị, thời gian, lưu trữ và test gate hiện có | Loại khỏi baseline; chỉ pilot có kiểm soát |
+
+### Consequence
+
+- Không thay đổi gate khoa học 10×10 m, PLY, RTK và RMSE của `8.2`–`8.6`.
+- Prototype trước bảo vệ vẫn local/offline; chưa thêm backend, API hay migration.
+- Implementation cảnh báo sớm cần micro-step riêng, adapter capability rõ ràng và test trên iPhone 11 Pro; không gộp vào `8.1b`.
+- Business logic không được phụ thuộc trực tiếp model iPhone hoặc implementation LiDAR cụ thể.

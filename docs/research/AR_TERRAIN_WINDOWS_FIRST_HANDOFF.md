@@ -13,8 +13,8 @@
 | Unity Editor exact patch | **6000.3.23f1 (6.3 LTS), đã cài** — ảnh Hub báo Install complete; đã xác nhận `C:/Program Files/Unity/Hub/Editor/6000.3.23f1/Editor/Unity.exe` tồn tại |
 | Template đã chọn | **Core → Universal 3D (URP)**; project ghi nhận URP `17.3.0`, Input System `1.20.0`, UGUI/TMP `2.0.0`; không phải Sample/HDRP/AR Mobile |
 | Unity project | Đã tạo tại `research/ar-terrain-unity/`; scene `Assets/Scenes/ToolchainSmoke.unity` có camera, light, cube và nhãn không-AR |
-| iPhone 11 Pro | Có sẵn theo người dùng; chưa có evidence smoke iOS |
-| MacBook Air M4 | Chưa sẵn có, chưa có ETA được xác nhận; chờ người dùng báo |
+| iPhone 11 Pro | Có sẵn theo người dùng; iOS 18.3.1; chưa có evidence smoke iOS |
+| MacBook Air M3 | Người dùng xác nhận mượn được ngày 22/09; macOS Sequoia 15.3.1; hơn 50 GB trống; Xcode 16.4 đang tải. Chưa có `xcodebuild`/Unity Mac/build/sign/install/launch evidence |
 | iPhone 16 Pro | Thiết bị LiDAR dự kiến; chưa xác nhận sẵn có, chưa kiểm chứng runtime |
 | Kết quả | PR #76 required GitHub checks **PASS**; sau hai vòng CHANGES REQUESTED (xem §8) và rework tương ứng, Review Manager **APPROVED** và squash-merge vào `develop` (2026-09-05, commit `9b8a692fb7284c9e84382319f527c344ca57dfd9`) — xem §9. **Step `8.1a` COMPLETED.** `8.1b`/iOS/LiDAR/RTK **NOT RUN** |
 
@@ -114,3 +114,13 @@ chore: add ar terrain unity windows toolchain smoke test
 Merge commit: `9b8a692fb7284c9e84382319f527c344ca57dfd9` (2026-09-05T04:21:35Z).
 
 **Trạng thái cuối:** step `8.1a` **COMPLETED**. `8.1b` (Mac/Xcode/iPhone) và mọi phần iOS/LiDAR/RTK vẫn **NOT RUN** — không được suy diễn là đã đạt chỉ vì `8.1a` đã merge. Chi tiết đầy đủ, không thể sửa lại: `docs/REVIEW_NOTES.md` §24.
+
+## 10. Bàn giao Mac thực tế và bước tiếp theo (2026-09-22)
+
+- Mac thực tế: MacBook Air M3, macOS Sequoia 15.3.1, hơn 50 GB trống; thay thế ghi nhận M4/chưa có ở trạng thái cũ. Không sửa lịch sử §1–§9 ngoài bảng inventory hiện hành.
+- iPhone smoke: iPhone 11 Pro, iOS 18.3.1.
+- Xcode chọn: 16.4 stable; tương thích với macOS/iOS trên. Trạng thái hiện tại chỉ là **đang tải**, chưa phải install/toolchain PASS.
+- Sau khi Xcode mở và hoàn tất first-launch components: ghi `xcodebuild -version`, `xcode-select -p`, dung lượng trống; sau đó cài Unity Hub + exact Editor `6000.3.23f1` + iOS Build Support.
+- Lấy source từ Git và để Unity tái tạo `Library`; không copy `Library`/`Temp`/`Build` từ Lenovo.
+- Khi build/ký/cài/chạy scene smoke trên iPhone 11 Pro ≥60 giây và evidence đầy đủ mới xét `8.1b` PASS.
+- iPhone 16 Pro chưa có nên tuyệt đối chưa mở/đóng `8.2`. Hướng Survey/Drive và hiển thị FPP/TPP được tài liệu hoá riêng ở `AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`; không gộp implementation đó vào branch tooling này.

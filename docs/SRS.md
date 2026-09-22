@@ -91,7 +91,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-AR-03 | Nếu thiết bị quá nóng, pin yếu, hoặc ánh sáng quá yếu, hệ thống chuyển sang chế độ fallback: chỉ hiển thị cảnh báo trên bản đồ (không camera/AR). |
 | FR-AR-04 | Ứng dụng không được crash khi camera/AR không khả dụng. |
 
-> **R&D note (08/2026):** Unity AR Terrain Mesh (nhắc tới ở FR-AR-02 như phần "không bắt buộc trong lõi MVP") nay có baseline riêng cho một prototype nghiên cứu độc lập phục vụ báo cáo hội đồng — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md`. Không có `FR-*` mới nào được thêm cho track này vì nó không phải tính năng MVP.
+> **R&D note (cập nhật 09/2026):** Unity AR Terrain Mesh (nhắc tới ở FR-AR-02 như phần "không bắt buộc trong lõi MVP") có baseline riêng cho một prototype nghiên cứu độc lập phục vụ báo cáo hội đồng — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md`. Hướng Survey Mode/Drive Mode và hiển thị TPP/FPP được ghi ở `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`; Second-Person không thuộc runtime lái xe. Không có `FR-*` mới nào được thêm cho track này vì nó chưa phải tính năng MVP.
 
 ### 1.9. Mobile Background Location (FR-BGLOC)
 

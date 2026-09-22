@@ -300,7 +300,7 @@ Response `200`:
 
 Response `200`: `{ "warnings": [ { "id", "location": {"lat", "lng"}, "severity", "description" }, ... ] }`.
 
-> **Không nhầm với AR Terrain Thesis Prototype (08/2026):** prototype Unity/ARKit ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` không gọi endpoint này hay bất kỳ endpoint nào khác của NovaWay — không có backend/API dependency, mesh và dữ liệu RTK ở lại local.
+> **Không nhầm với AR Terrain Thesis Prototype (cập nhật 09/2026):** prototype Unity/ARKit ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` hiện không gọi endpoint này hay bất kỳ endpoint nào khác của NovaWay — không có backend/API dependency, mesh và dữ liệu RTK ở lại local. Addendum Survey/Drive chỉ định nghĩa terrain catalog local/offline cho pilot; tích hợp catalog thật với endpoint này là Post-MVP và cần contract/micro-step riêng, không được suy diễn là đã có.
 
 ## 10. Routing (mock, step `5.1`)
 

@@ -228,7 +228,7 @@ CREATE TABLE terrain_warnings (
 CREATE INDEX idx_terrain_warnings_location ON terrain_warnings USING GIST(location);
 ```
 
-> **Không nhầm với AR Terrain Thesis Prototype (08/2026):** prototype Unity/ARKit LiDAR ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` không có backend/API dependency — không đọc/ghi bảng `terrain_warnings` này hay bất kỳ bảng nào khác trong schema. Mesh và toạ độ RTK của prototype ở lại hoàn toàn local (điện thoại/MacBook), không qua database của NovaWay.
+> **Không nhầm với AR Terrain Thesis Prototype (cập nhật 09/2026):** prototype Unity/ARKit LiDAR ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` hiện không có backend/API dependency — không đọc/ghi bảng `terrain_warnings` này hay bất kỳ bảng nào khác trong schema. Mesh, toạ độ RTK và terrain catalog pilot ở lại local/offline. Nếu Post-MVP đưa dữ liệu Survey Mode vào Drive Mode của NovaWay, schema/migration phải được thiết kế và duyệt ở micro-step integration riêng; addendum Survey/Drive không tự thay đổi bảng này.
 
 ## 3. Migration Order
 

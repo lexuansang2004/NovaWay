@@ -323,3 +323,18 @@ chore: add ar terrain unity windows toolchain smoke test
 **Trạng thái cuối:** step `8.1a` (Windows Unity Editor toolchain smoke test) — **COMPLETED**. `8.1b` (Mac/Xcode/iPhone), và mọi phần iOS/LiDAR/RTK — **NOT RUN**, không được coi là đã đạt chỉ vì `8.1a` đã merge. `8.2` vẫn chờ đúng tiền đề đã ghi ở baseline §4/§11 và micro-step plan (`8.1b` PASS + iPhone 16 Pro vật lý + runtime Scene Reconstruction capability check).
 
 **Bảo toàn:** không sửa lại lịch sử đã ghi ở §22/§23 (giữ nguyên, không viết đè); không force-push, không rewrite history trên `chore/ar-terrain-toolchain` trước khi merge; không sửa `apps/*`; không đụng dirty local `develop` (bao gồm `apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift`); không chạm PR #71. Bản ghi này (§24) là micro-step tài liệu riêng, độc lập, trên branch mới `docs/ar-terrain-8-1a-post-merge-status` (không tái sử dụng branch `chore/ar-terrain-toolchain` đã merge), commit message kế hoạch: `docs: record ar terrain toolchain merge verification`.
+
+## 25. Survey Mode / Drive Mode và cập nhật thiết bị Mac thực tế (2026-09-22)
+
+**Evidence từ chủ dự án:** MacBook Air mượn được thực tế là chip **Apple M3** (không phải M4 như baseline cũ), macOS Sequoia 15.3.1, hơn 50 GB trống. iPhone 11 Pro chạy iOS 18.3.1. Xcode 16.4 đang tải từ Apple Developer Downloads. Đây mới là evidence kiểm kê/user-reported; chưa có `xcodebuild -version`, Unity Mac import, Xcode build, signing, install hoặc launch, nên `8.1b` vẫn **NOT RUN**. iPhone 16 Pro vẫn chưa có; `8.2` và bằng chứng LiDAR thật còn BLOCKED.
+
+**Yêu cầu sản phẩm được làm rõ:** người dùng không muốn xe chỉ phát hiện địa hình khi đã tới rất gần; nếu địa hình đã được quét trước thì app phải dùng bản đồ đó để cảnh báo đủ sớm. Review kết luận phải tách:
+
+- **Survey Mode:** LiDAR thu thập mesh cục bộ, PLY/georeference/RTK; 10×10 m vẫn là gate đo khoa học.
+- **Drive Mode:** thiết bị phổ thông dùng GPS/heading/speed/route/corridor để tra terrain catalog đã quét trước; warning horizon không phải LiDAR sensing range.
+
+**Hiển thị được chủ dự án bổ sung:** FPP (First-Person Perspective) dùng cho camera/AR trực quan, đặc biệt ở Survey Mode; TPP (Third-Person Perspective) dạng map overview/góc xiên là mặc định của Drive Mode để thấy xe, tuyến và cảnh báo phía trước; Second-Person Perspective không đưa vào runtime lái xe vì cần camera/chủ thể ngoài và không phù hợp điều khiển an toàn, chỉ có thể là replay/nghiên cứu tương lai. Khi AR/camera/tracking không khả dụng, FPP phải fallback về TPP; cảnh báo không phụ thuộc duy nhất vào đồ hoạ mà còn có chữ ngắn/âm thanh/rung.
+
+**Quyết định phạm vi:** không biến yêu cầu này thành cam kết dense-mesh toàn thành phố hoặc một phiên LiDAR quét liên tục toàn tuyến. Trước bảo vệ, track `8.x` vẫn local/offline và không đổi `apps/*`/backend/API. Implementation cảnh báo sớm cần micro-step riêng sau docs review; fixture phải gắn nhãn fixture, không thay bằng chứng LiDAR thật. Chi tiết: `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`, TDR-013 và plan step `8.0b`.
+
+**Duyệt và bước song song:** sau khi được trình bày kết quả `8.0b`, người dùng xác nhận “OK, tiếp tục công việc” ngày 2026-09-22 và yêu cầu tận dụng thời gian Mac đang tải Xcode. `8.0b` được ghi APPROVED. Plan bổ sung `8.1c` để dựng Drive Mode trực quan bằng fixture trên Lenovo ở branch riêng sau khi docs merge: TPP mặc định, FPP map-simulation bổ sung, không Second-Person runtime, không ARKit/LiDAR và không sửa `apps/*`. Việc này không đổi ưu tiên hoàn thành `8.1b` ngay khi Xcode sẵn sàng.
