@@ -40,6 +40,7 @@
 # is Unity's own canonical serialized form, not an error to flag or strip;
 # stripping it would just have Unity re-add it on the next Editor launch.
 *.unity -whitespace
+*.meta -whitespace
 *.prefab -whitespace
 *.asset -whitespace
 *.mat -whitespace
