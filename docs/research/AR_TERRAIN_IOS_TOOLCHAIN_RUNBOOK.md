@@ -8,11 +8,11 @@
 |---|---|
 | Mac | MacBook Air, chip Apple M3 |
 | macOS | Sequoia 15.3.1 |
-| Xcode | 16.4 stable; người dùng đã mở được màn hình Welcome ngày 2026-09-22 |
+| Xcode | 16.4 stable, build `16F6`; `xcode-select` và `xcodebuild` đã xác minh ngày 2026-09-23 |
 | iPhone smoke | iPhone 11 Pro, iOS 18.3.1; không có LiDAR |
 | Unity yêu cầu | Unity 6.3 LTS `6000.3.23f1` + iOS Build Support |
 
-Việc Xcode mở được chỉ xác nhận ứng dụng đã cài. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6.
+`xcode-select -p` đã trả về `/Applications/Xcode.app/Contents/Developer`; `xcodebuild -version` đã trả về Xcode `16.4`, build `16F6`; `sw_vers -productVersion` đã trả về `15.3.1`. Tuy nhiên `df -h /` chỉ báo `16Gi` khả dụng, khác với kiểm kê ban đầu hơn 50 GB, nên phải kiểm tra thêm `df -h /System/Volumes/Data` trước khi cài Unity. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6.
 
 ## 2. Kiểm tra Xcode trước khi mở Unity
 
