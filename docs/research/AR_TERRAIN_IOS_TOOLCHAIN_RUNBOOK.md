@@ -12,7 +12,7 @@
 | iPhone smoke | iPhone 11 Pro, iOS 18.3.1; không có LiDAR |
 | Unity yêu cầu | Unity 6.3 LTS `6000.3.23f1` + iOS Build Support |
 
-`xcode-select -p` đã trả về `/Applications/Xcode.app/Contents/Developer`; `xcodebuild -version` đã trả về Xcode `16.4`, build `16F6`; `sw_vers -productVersion` đã trả về `15.3.1`. Tuy nhiên `df -h /` chỉ báo `16Gi` khả dụng, khác với kiểm kê ban đầu hơn 50 GB, nên phải kiểm tra thêm `df -h /System/Volumes/Data` trước khi cài Unity. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6.
+`xcode-select -p` đã trả về `/Applications/Xcode.app/Contents/Developer`; `xcodebuild -version` đã trả về Xcode `16.4`, build `16F6`; `sw_vers -productVersion` đã trả về `15.3.1`. `df -h /System/Volumes/Data` ngày 2026-09-23 báo chỉ còn `15Gi` khả dụng và phân vùng đã dùng 92%, khác với kiểm kê ban đầu hơn 50 GB. Vì đây là Mac mượn, không tự xoá dữ liệu của chủ máy; phải giải phóng dung lượng có sự đồng ý và kiểm tra lại trước khi cài Unity. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6.
 
 ## 2. Kiểm tra Xcode trước khi mở Unity
 

@@ -117,7 +117,7 @@ Merge commit: `9b8a692fb7284c9e84382319f527c344ca57dfd9` (2026-09-05T04:21:35Z).
 
 ## 10. Bàn giao Mac thực tế và bước tiếp theo (2026-09-22)
 
-- Mac thực tế: MacBook Air M3, macOS Sequoia 15.3.1. Kiểm kê ban đầu báo hơn 50 GB trống nhưng `df -h /` ngày 2026-09-23 chỉ báo `16Gi` khả dụng; cần kiểm tra Data volume trước khi cài Unity. Thay thế ghi nhận M4/chưa có ở trạng thái cũ; không sửa lịch sử §1–§9 ngoài bảng inventory hiện hành.
+- Mac thực tế: MacBook Air M3, macOS Sequoia 15.3.1. `df -h /System/Volumes/Data` ngày 2026-09-23 báo `15Gi` khả dụng, đã dùng 92%; cài Unity đang BLOCKED cho tới khi chủ máy đồng ý giải phóng dung lượng. Thay thế ghi nhận M4/chưa có ở trạng thái cũ; không sửa lịch sử §1–§9 ngoài bảng inventory hiện hành.
 - iPhone smoke: iPhone 11 Pro, iOS 18.3.1.
 - Xcode chọn: 16.4 stable, build `16F6`; `xcode-select -p` và `xcodebuild -version` đã PASS ngày 2026-09-23. Unity Mac import và build/ký/cài/chạy iPhone vẫn chưa kiểm tra nên chưa phải toolchain PASS.
 - Sau khi Xcode mở và hoàn tất first-launch components: ghi `xcodebuild -version`, `xcode-select -p`, dung lượng trống; sau đó cài Unity Hub + exact Editor `6000.3.23f1` + iOS Build Support.

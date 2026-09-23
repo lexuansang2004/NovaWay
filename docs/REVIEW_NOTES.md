@@ -350,3 +350,9 @@ chore: add ar terrain unity windows toolchain smoke test
 Người dùng đã chuyển Xcode từ Downloads vào `/Applications/Xcode.app`. Terminal trả về active developer directory `/Applications/Xcode.app/Contents/Developer`, Xcode `16.4`, build `16F6`, và macOS `15.3.1`; phần Xcode command-line gate của `8.1b` vì vậy được xác nhận PASS. Không lưu username hoặc ảnh chứa thông tin cá nhân vào Git.
 
 `df -h /` đồng thời chỉ báo `16Gi` khả dụng, không khớp kiểm kê ban đầu hơn 50 GB. Trước khi cài Unity `6000.3.23f1` + iOS Build Support phải kiểm tra `df -h /System/Volumes/Data`; chưa đánh dấu dung lượng PASS. Unity Mac import, Xcode project generation, signing, install/launch và chạy iPhone 11 Pro ≥60 giây vẫn PENDING. PR #80 tiếp tục ở trạng thái DRAFT và không được merge tại checkpoint này.
+
+## 28. Mac Data volume thiếu dung lượng cho Unity toolchain (2026-09-23)
+
+Kết quả `df -h /System/Volumes/Data`: tổng `228Gi`, đã dùng `171Gi`, khả dụng `15Gi`, capacity 92%. Đây là evidence trực tiếp thay thế kiểm kê ban đầu hơn 50 GB trống. Không bắt đầu tải Unity Editor/iOS Build Support hoặc import project với mức dung lượng này để tránh tải/build dở dang.
+
+Vì MacBook là thiết bị mượn, agent không yêu cầu hoặc thực hiện xoá dữ liệu của chủ máy. Human action cần thiết: chủ máy/người dùng xác định dữ liệu có thể xoá hoặc chuyển sang ổ ngoài, dọn Thùng rác, rồi chạy lại `df -h /System/Volumes/Data`. Xcode command-line gate vẫn PASS; PR #80 vẫn DRAFT; các gate Unity/iPhone/LiDAR giữ nguyên PENDING/NOT RUN.
