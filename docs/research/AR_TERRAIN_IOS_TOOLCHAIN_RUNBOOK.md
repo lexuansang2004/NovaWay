@@ -31,7 +31,7 @@ Mở Terminal trên Mac và chạy từng lệnh:
 xcodebuild -version
 xcode-select -p
 sw_vers -productVersion
-df -h /
+df -h /System/Volumes/Data
 ```
 
 Kết quả mong đợi:
@@ -39,7 +39,9 @@ Kết quả mong đợi:
 - `xcodebuild -version` báo Xcode `16.4`;
 - `xcode-select -p` trỏ tới `/Applications/Xcode.app/Contents/Developer`;
 - macOS báo `15.3.1`;
-- còn đủ dung lượng cho Unity Editor, iOS Build Support, Library import và Xcode build.
+- `df -h /System/Volumes/Data` (phân vùng thực sự chứa project, Xcode và DerivedData; không dùng `df -h /`) báo dung lượng khả dụng — ghi lại **số đo thật**. Mốc `23 GiB` ngày 2026-09-24 là số người dùng báo, chưa phải kết quả đo của agent hay kết quả build PASS.
+
+Có hai đường: đường Xcode-only (§7: ZIP khoảng 283 MiB, giải nén khoảng 1,2 GB, không bắt buộc cài Unity trên Mac trước) và đường Mac Unity (§3–§5: cần thêm Unity Editor, iOS Build Support và Library import). Có thể thử đường Xcode-only trước; kiểm tra lại `df -h /System/Volumes/Data` sau khi giải nén và sau lần build đầu tiên.
 
 Nếu Xcode yêu cầu cài first-launch components hoặc chấp nhận license thì người dùng tự hoàn tất trong Xcode. Không gửi mật khẩu, Apple ID, mã xác thực hai lớp, email hoặc Team ID vào repository/evidence.
 
@@ -118,25 +120,23 @@ Lý do: cài Unity + iOS Build Support + Library import trên Mac tốn nhiều 
   -logFile "<log ngoài Git>"
 ```
 
-- Chạy từ cây Git sạch và ghi `source_commit`; sau build, Unity tự sửa 4 file tracked (URP version, batching, whitespace) — không commit, dùng `git checkout -- <file>` từng file.
+- Chạy từ cây Git sạch và ghi `source_commit`. Sau build, `git status` có thể cho thấy Unity đã sửa một số file tracked (lần đã quan sát: `Assets/Settings/*` nâng URP `k_AssetVersion`, một entry iPhone ở `ProjectSettings/ProjectSettings.asset`, cộng whitespace). Không commit các thay đổi này một cách mặc định. Với **từng file**, trong **đúng worktree đang build**: xem `git diff` của riêng file đó, chứng minh thay đổi chỉ do lần build vừa chạy tạo ra (tree đã sạch trước build; nội dung diff khớp kiểu migration/whitespace của Unity), rồi mới quyết định xử lý đúng file đó và ghi lý do. Không dùng lệnh hàng loạt và không đụng thay đổi của người dùng hoặc agent khác.
 - Output nằm ở `research/ar-terrain-unity/Build/iOS-ToolchainSmoke-<UTC>/` (bị `.gitignore`). Đóng gói ZIP ngoài Git, loại thư mục `*_BurstDebugInformation_DoNotShip`, tính SHA-256, giải nén thử và so sánh trước khi chuyển sang Mac. Không commit ZIP hay log.
 - ZIP chứa đường dẫn thư mục tạm của Lenovo trong `Libraries/lib_burst_generated.a` (không ảnh hưởng chạy) — không chia sẻ công khai.
 
 ### 7.2 Trên Mac (bắt buộc, chưa chạy)
 
-1. Chép ZIP sang Mac; `shasum -a 256 <file.zip>` phải khớp SHA-256 trong record chuyển giao ngoài Git.
-2. Giải nén, rồi gỡ quarantine và cấp quyền thực thi cho toolchain IL2CPP đi kèm:
+Quy trình mặc định: **kiểm SHA-256 → giải nén → mở Xcode → thử Build/Run.** Không gỡ quarantine và không cấp quyền thực thi cho cả cây thư mục theo mặc định: ZIP lưu file ở mode đọc/ghi, và build phase của `Unity-iPhone.xcodeproj/project.pbxproj` đã tự chạy `chmod +x` cho `il2cpp`, `il2cpp-compile` và `bee_backend`. Chưa có lỗi thật trên Mac chứng minh cần can thiệp thêm.
 
-```bash
-xattr -dr com.apple.quarantine <thư-mục-đã-giải-nén>
-chmod -R u+x <thư-mục-đã-giải-nén>/Il2CppOutputProject/IL2CPP/build
-```
-
+1. Chạy `df -h /System/Volumes/Data` và ghi lại số đo. Chép ZIP sang Mac; `shasum -a 256 <file.zip>` phải khớp SHA-256 trong record chuyển giao ngoài Git.
+2. Giải nén ZIP (cách thông thường của macOS); chạy lại `df -h /System/Volumes/Data` sau khi giải nén và ghi lại.
 3. Mở `Unity-iPhone.xcodeproj`; target `Unity-iPhone` → **Signing & Capabilities** → Automatically manage signing → Personal Team của người dùng (nếu Xcode báo lỗi ký ở `UnityFramework`/`GameAssembly`, chọn cùng Personal Team). Giữ bundle id `com.novaway.arterrainprototype`; nếu trùng tài khoản khác, đổi giá trị duy nhất trong Xcode và ghi ngoài Git.
-4. Kết nối iPhone 11 Pro, mở khoá, Trust; bật Developer Mode khi được yêu cầu; chọn thiết bị làm Run Destination; Run.
+4. Kết nối iPhone 11 Pro, mở khoá, Trust; bật Developer Mode khi được yêu cầu; chọn thiết bị làm Run Destination; Build/Run.
 5. Lần đầu chạy bằng Personal Team có thể cần **Settings → General → VPN & Device Management → Trust** developer profile trên iPhone.
-6. Nếu Xcode fail: chép nguyên văn lỗi (không kèm Apple ID/Team ID). Nếu lỗi do project sinh từ Windows, quay về §3–§5 (Mac Unity) và ghi lại root cause; lưu ý giới hạn dung lượng Mac.
-7. Test gate và evidence giữ nguyên §6 (≥60 giây, không crash, đóng/mở lại, che thông tin nhạy cảm, ghi Unity/Xcode/macOS/iOS version và `source_commit`).
+6. Sau lần build đầu tiên, chạy lại `df -h /System/Volumes/Data` và ghi lại.
+7. Chỉ khi gặp lỗi **cụ thể** về quyền thực thi hoặc quarantine/Gatekeeper: chép nguyên văn thông báo (không kèm Apple ID/Team ID), xác định **chính xác file bị chặn**, rồi chỉ xử lý giới hạn cho đúng file đó (ví dụ một lệnh `chmod u+x` hoặc `xattr -d com.apple.quarantine` trên đường dẫn của file đó) và ghi lại file, lỗi và cách xử lý trong evidence. Lỗi quyền trên ba tool đã có `chmod +x` trong build phase là bất thường — báo nguyên văn trước khi can thiệp.
+8. Nếu Xcode fail vì lý do khác: chép nguyên văn lỗi. Nếu lỗi do project sinh từ Windows, quay về §3–§5 (Mac Unity) và ghi lại root cause; lưu ý giới hạn dung lượng Mac.
+9. Test gate và evidence giữ nguyên §6 (≥60 giây, không crash, đóng/mở lại, che thông tin nhạy cảm, ghi Unity/Xcode/macOS/iOS version và `source_commit`).
 
 ### 7.3 Chuẩn bị iPhone 11 Pro
 
