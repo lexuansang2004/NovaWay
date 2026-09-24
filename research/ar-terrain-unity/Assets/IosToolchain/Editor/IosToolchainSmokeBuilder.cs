@@ -12,13 +12,19 @@ namespace NovaWay.ArTerrain.IosToolchain.Editor
         public const string SmokeScenePath = "Assets/Scenes/ToolchainSmoke.unity";
         public const string BundleIdentifier = "com.novaway.arterrainprototype";
 
+        // Windows may only export the Xcode project; building, signing and installing still need Xcode on macOS.
+        public static bool IsSupportedEditorPlatform(RuntimePlatform platform)
+        {
+            return platform == RuntimePlatform.OSXEditor || platform == RuntimePlatform.WindowsEditor;
+        }
+
         [MenuItem("NovaWay/Build iOS Toolchain Smoke")]
         public static void Build()
         {
-            if (Application.platform != RuntimePlatform.OSXEditor)
+            if (!IsSupportedEditorPlatform(Application.platform))
             {
                 throw new PlatformNotSupportedException(
-                    "The iOS toolchain smoke build must run from Unity Editor on macOS.");
+                    "The iOS toolchain smoke build must run from Unity Editor on macOS or Windows.");
             }
 
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.iOS, BuildTarget.iOS))
@@ -72,7 +78,7 @@ namespace NovaWay.ArTerrain.IosToolchain.Editor
         [MenuItem("NovaWay/Build iOS Toolchain Smoke", true)]
         private static bool ValidateBuildMenu()
         {
-            return Application.platform == RuntimePlatform.OSXEditor;
+            return IsSupportedEditorPlatform(Application.platform);
         }
     }
 }
