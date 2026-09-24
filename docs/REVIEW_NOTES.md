@@ -356,3 +356,38 @@ Người dùng đã chuyển Xcode từ Downloads vào `/Applications/Xcode.app`
 Kết quả `df -h /System/Volumes/Data`: tổng `228Gi`, đã dùng `171Gi`, khả dụng `15Gi`, capacity 92%. Đây là evidence trực tiếp thay thế kiểm kê ban đầu hơn 50 GB trống. Không bắt đầu tải Unity Editor/iOS Build Support hoặc import project với mức dung lượng này để tránh tải/build dở dang.
 
 Vì MacBook là thiết bị mượn, agent không yêu cầu hoặc thực hiện xoá dữ liệu của chủ máy. Human action cần thiết: chủ máy/người dùng xác định dữ liệu có thể xoá hoặc chuyển sang ổ ngoài, dọn Thùng rác, rồi chạy lại `df -h /System/Volumes/Data`. Xcode command-line gate vẫn PASS; PR #80 vẫn DRAFT; các gate Unity/iPhone/LiDAR giữ nguyên PENDING/NOT RUN.
+
+## 29. Lenovo/Windows chuẩn bị `8.1b`: builder sửa lỗi guard macOS-only, Xcode project sinh được trên Windows (2026-09-24)
+
+**Dung lượng Mac — timeline (giữ nguyên lịch sử, không thay số cũ):**
+
+- 2026-09-23 — **USER-REPORTED** (kết quả `df` do người dùng cung cấp, xem §28): Data volume còn `15Gi`.
+- 2026-09-24 — **USER-REPORTED / NOT AGENT-EXECUTED**: sau khi dọn thêm dữ liệu, người dùng báo Data volume còn `23 GiB`.
+- **Storage readiness: PENDING.** Số tăng từ 15 lên 23 GiB không được coi là gate PASS; người dùng tiếp tục giải phóng dung lượng trước phiên Mac. Agent không đo lại trên Mac vì hôm nay không có Mac.
+
+**Mục tiêu hôm nay:** làm hết phần `8.1b` có thể làm trên Lenovo để phiên Mac chỉ còn các thao tác bắt buộc dùng macOS/Xcode/iPhone (ký, build cuối, cài, chạy, evidence runtime). Không thay đổi phạm vi: không AR Foundation/ARKit/LiDAR/GPS/PLY/RTK, không sửa `apps/*`.
+
+**AGENT-EXECUTED trên Lenovo (Windows 11, Unity `6000.3.23f1`):**
+
+- iOS Build Support xác minh bằng filesystem: `Editor/Data/PlaybackEngines/iOSSupport` có `il2cpp`, `Trampoline`, `Tools`, `iOSPlayerBuildProgram.exe`, `UnityEditor.iOS.Extensions*.dll`, `modules.asset` (3.435 file, khớp số đã báo) và Unity `BuildPipeline.IsBuildTargetSupported(iOS)` không bị builder từ chối.
+- **Symptom:** chạy nguyên bản `IosToolchainSmokeBuilder.Build` bằng batch mode trên Windows → `PlatformNotSupportedException: ...must run from Unity Editor on macOS`, exit code 1, không tạo output. **Root cause:** guard cứng `Application.platform != RuntimePlatform.OSXEditor` trong builder (đọc source; tái hiện bằng log). **Fix:** tách `IsSupportedEditorPlatform(RuntimePlatform)` cho phép Windows/macOS Editor, dùng ở cả entry point lẫn menu validator; thêm 7 test case EditMode (predicate, scene smoke tồn tại, bundle identifier khớp). Commit `3c12a31`.
+- Trên cây sạch tại `3c12a31`: batch compile exit 0 và 0 `error CS`; EditMode **16/16** (baseline cũ 9/9 + 7 mới); PlayMode **1/1**; sau mỗi lần chạy không còn tiến trình `Unity.exe`.
+- Sinh Xcode project mới bằng builder trên Windows: exit 0, marker `[iOS TOOLCHAIN SMOKE] Xcode project created`, chỉ scene `ToolchainSmoke` (`level0`; DriveVisualMock không có trong player). Kết quả xác định: hai lần build cho cùng kích thước output `1.242.828.555` byte.
+- Kiểm tra output thật: 4 native target (Unity-iPhone, UnityFramework, GameAssembly, Unity-iPhone Tests); bundle id `com.novaway.arterrainprototype`; `DEVELOPMENT_TEAM` rỗng, automatic signing, không provisioning profile; deployment target 15.0; không có khoá ARKit/LiDAR/camera/location; 0 byte CR trong pbxproj/plist/.sh (không có rủi ro CRLF); toolchain IL2CPP macOS `deploy_arm64` (khớp `HOST_ARCH=arm64` của Mac M3) có Mach-O arm64 kèm load command chữ ký (chỉ là **sự hiện diện**, hiệu lực chữ ký chỉ kiểm được trên Mac).
+- Quét portability: không có đường dẫn Windows trong file text; duy nhất `Libraries/lib_burst_generated.a` chứa chuỗi thư mục tạm của Burst (không ảnh hưởng link/chạy, chỉ là thông tin tên thư mục cục bộ). Thư mục `*_BurstDebugInformation_DoNotShip` (không được pbxproj tham chiếu, có đường dẫn cục bộ) bị loại khỏi ZIP.
+- Artifact chuyển Mac (ngoài Git): ZIP 296.940.050 byte, 3.046 file, SHA-256 `be66e489b96d8aa95982ec626740c98ba92e4063ed7762cbc9ee2c58ec53c3e8`, `source_commit` `3c12a31049b3986b6bd319b846aaa72fbfd41ff2`; đã kiểm tra entry không có dấu `\`, giải nén thử 0 sai lệch path/size, SHA-256 khớp trên mẫu ngẫu nhiên 80 file cùng các file then chốt. Record đầy đủ nằm trong evidence ngoài Git (`novaway-ar-terrain-evidence/2026-09-24_ios_toolchain_smoke_8.1b/device_lenovo-windows/`). Artifact không đại diện cho các commit tài liệu sau `3c12a31` (Unity source không đổi; kiểm bằng `git diff 3c12a31 HEAD -- research/`).
+
+**Quan sát cần biết (không sửa):** build iOS làm Unity tự sửa 4 file tracked (`Assets/Settings/*` nâng `k_AssetVersion` URP, thêm entry iPhone ở `m_BuildTargetBatching`, cộng khoảng trắng) — xác định, không phải thay đổi có chủ đích nên không commit; sau build dùng `git checkout -- <file>` từng file. Trang system requirements Unity 6.3 chỉ nêu Xcode 16+ và iOS 15+; **không nêu** việc xuất Xcode project từ Windows Editor — nên đây là kết quả thực nghiệm, không phải tính năng được tài liệu Unity xác nhận.
+
+**Trạng thái (không được suy diễn thêm):**
+
+```text
+WINDOWS XCODE PROJECT GENERATION: PASS
+MAC XCODE BUILD: NOT RUN
+PERSONAL TEAM SIGNING: NOT RUN
+IPHONE INSTALL: NOT RUN
+IPHONE RUNTIME: NOT RUN
+ARKIT / LIDAR / GPS / RTK: NOT RUN
+```
+
+`8.1b` **chưa** hoàn tất: chỉ hoàn tất sau khi ngày 2026-09-25 (hoặc phiên Mac kế tiếp) Xcode build PASS trên Mac, ký bằng Personal Team PASS, app cài lên iPhone 11 Pro thật, chạy ≥60 giây không crash, đóng/mở lại PASS, evidence đã che thông tin nhạy cảm, Review Manager duyệt và CI xanh. Workflow Unity-trên-Mac trong runbook được giữ làm fallback cho tới khi pipeline chuyển giao chạy end-to-end. PR #80 giữ DRAFT, chưa merge.

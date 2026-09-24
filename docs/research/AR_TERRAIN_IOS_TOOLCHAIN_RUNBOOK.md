@@ -12,7 +12,16 @@
 | iPhone smoke | iPhone 11 Pro, iOS 18.3.1; không có LiDAR |
 | Unity yêu cầu | Unity 6.3 LTS `6000.3.23f1` + iOS Build Support |
 
-`xcode-select -p` đã trả về `/Applications/Xcode.app/Contents/Developer`; `xcodebuild -version` đã trả về Xcode `16.4`, build `16F6`; `sw_vers -productVersion` đã trả về `15.3.1`. `df -h /System/Volumes/Data` ngày 2026-09-23 báo chỉ còn `15Gi` khả dụng và phân vùng đã dùng 92%, khác với kiểm kê ban đầu hơn 50 GB. Vì đây là Mac mượn, không tự xoá dữ liệu của chủ máy; phải giải phóng dung lượng có sự đồng ý và kiểm tra lại trước khi cài Unity. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6.
+`xcode-select -p` đã trả về `/Applications/Xcode.app/Contents/Developer`; `xcodebuild -version` đã trả về Xcode `16.4`, build `16F6`; `sw_vers -productVersion` đã trả về `15.3.1`. `df -h /System/Volumes/Data` ngày 2026-09-23 báo chỉ còn `15Gi` khả dụng và phân vùng đã dùng 92%, khác với kiểm kê ban đầu hơn 50 GB. Vì đây là Mac mượn, không tự xoá dữ liệu của chủ máy; phải giải phóng dung lượng có sự đồng ý và kiểm tra lại trước khi cài Unity. Step chỉ PASS sau khi hoàn thành toàn bộ §3–§6 (đường Mac Unity) hoặc §7 (đường project sinh từ Windows).
+
+Timeline dung lượng Mac (giữ nguyên lịch sử):
+
+| Ngày | Data volume khả dụng | Nguồn |
+|---|---|---|
+| 2026-09-23 | `15Gi` | USER-REPORTED (`df` do người dùng cung cấp, REVIEW_NOTES §28) |
+| 2026-09-24 | `23 GiB` (sau khi dọn thêm) | USER-REPORTED / NOT AGENT-EXECUTED |
+
+**Storage readiness: PENDING** — người dùng tiếp tục giải phóng dung lượng trước phiên Mac; mức tăng 15 → 23 GiB không phải gate PASS.
 
 ## 2. Kiểm tra Xcode trước khi mở Unity
 
@@ -93,3 +102,42 @@ Chỉ đánh dấu `8.1b` PASS khi:
 - ảnh/log đã che Apple email, Team ID, device UDID, signing certificate serial và đường dẫn chứa thông tin cá nhân.
 
 Không gọi bước này là bằng chứng LiDAR. iPhone 16 Pro vẫn là thiết bị bắt buộc riêng cho step `8.2`.
+
+## 7. Đường ưu tiên khi Mac thiếu dung lượng: project Xcode sinh trên Lenovo/Windows
+
+> Trạng thái (2026-09-24): `WINDOWS XCODE PROJECT GENERATION: PASS` (AGENT-EXECUTED, REVIEW_NOTES §29). `MAC XCODE BUILD`, `SIGNING`, `IPHONE INSTALL`, `IPHONE RUNTIME`: **NOT RUN**. §3–§5 (Unity chạy trên Mac) là fallback cho tới khi đường này chạy end-to-end.
+
+Lý do: cài Unity + iOS Build Support + Library import trên Mac tốn nhiều dung lượng hơn nhiều so với chỉ giải nén một project Xcode (ZIP khoảng 283 MiB, giải nén khoảng 1,2 GB). Trang system requirements của Unity 6.3 chỉ nêu Xcode 16+ và iOS 15+ (Xcode 16.4 / iOS 18.3.1 đáp ứng) và **không nêu** việc xuất Xcode project từ Windows Editor — đường này là thực nghiệm cho tới khi Xcode build trên Mac thành công.
+
+### 7.1 Trên Lenovo (đã làm, có thể lặp lại)
+
+```text
+"C:\Program Files\Unity\Hub\Editor\6000.3.23f1\Editor\Unity.exe" ^
+  -batchmode -nographics -quit -projectPath "<worktree>\research\ar-terrain-unity" ^
+  -executeMethod NovaWay.ArTerrain.IosToolchain.Editor.IosToolchainSmokeBuilder.Build ^
+  -logFile "<log ngoài Git>"
+```
+
+- Chạy từ cây Git sạch và ghi `source_commit`; sau build, Unity tự sửa 4 file tracked (URP version, batching, whitespace) — không commit, dùng `git checkout -- <file>` từng file.
+- Output nằm ở `research/ar-terrain-unity/Build/iOS-ToolchainSmoke-<UTC>/` (bị `.gitignore`). Đóng gói ZIP ngoài Git, loại thư mục `*_BurstDebugInformation_DoNotShip`, tính SHA-256, giải nén thử và so sánh trước khi chuyển sang Mac. Không commit ZIP hay log.
+- ZIP chứa đường dẫn thư mục tạm của Lenovo trong `Libraries/lib_burst_generated.a` (không ảnh hưởng chạy) — không chia sẻ công khai.
+
+### 7.2 Trên Mac (bắt buộc, chưa chạy)
+
+1. Chép ZIP sang Mac; `shasum -a 256 <file.zip>` phải khớp SHA-256 trong record chuyển giao ngoài Git.
+2. Giải nén, rồi gỡ quarantine và cấp quyền thực thi cho toolchain IL2CPP đi kèm:
+
+```bash
+xattr -dr com.apple.quarantine <thư-mục-đã-giải-nén>
+chmod -R u+x <thư-mục-đã-giải-nén>/Il2CppOutputProject/IL2CPP/build
+```
+
+3. Mở `Unity-iPhone.xcodeproj`; target `Unity-iPhone` → **Signing & Capabilities** → Automatically manage signing → Personal Team của người dùng (nếu Xcode báo lỗi ký ở `UnityFramework`/`GameAssembly`, chọn cùng Personal Team). Giữ bundle id `com.novaway.arterrainprototype`; nếu trùng tài khoản khác, đổi giá trị duy nhất trong Xcode và ghi ngoài Git.
+4. Kết nối iPhone 11 Pro, mở khoá, Trust; bật Developer Mode khi được yêu cầu; chọn thiết bị làm Run Destination; Run.
+5. Lần đầu chạy bằng Personal Team có thể cần **Settings → General → VPN & Device Management → Trust** developer profile trên iPhone.
+6. Nếu Xcode fail: chép nguyên văn lỗi (không kèm Apple ID/Team ID). Nếu lỗi do project sinh từ Windows, quay về §3–§5 (Mac Unity) và ghi lại root cause; lưu ý giới hạn dung lượng Mac.
+7. Test gate và evidence giữ nguyên §6 (≥60 giây, không crash, đóng/mở lại, che thông tin nhạy cảm, ghi Unity/Xcode/macOS/iOS version và `source_commit`).
+
+### 7.3 Chuẩn bị iPhone 11 Pro
+
+Pin trên 80%, còn khoảng 5 GB trống, cáp hỗ trợ truyền dữ liệu, Apple Account và 2FA sẵn sàng, giữ iOS 18.3.1 (không cập nhật ngay trước gate), mở khoá máy, Trust Mac khi được hỏi, bật Developer Mode khi được yêu cầu, khởi động lại nếu iOS yêu cầu. iPhone 11 Pro không có LiDAR Scene Reconstruction — kết quả này không phải bằng chứng LiDAR.
