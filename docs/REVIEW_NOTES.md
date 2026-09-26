@@ -471,3 +471,23 @@ Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke tr�
 **Ảnh có chữ "Build Succeeded":** chủ dự án nhắc từng gửi một ảnh Xcode có chữ này. Trong phiên hiện tại agent chỉ nhận hai ảnh (ảnh cảnh iPhone và ảnh Xcode màn Signing đang Running) — không có ảnh "Build Succeeded" nên không thể dùng hay lưu. Nếu gửi lại để tăng độ chắc: chỉ lưu bản cắt/che kỹ (che tên thiết bị, Team, Apple ID và mọi đường dẫn cá nhân), kiểm tra bằng mắt trước khi lưu, ghi SHA-256; ảnh gốc không lưu vào evidence hay Git.
 
 **Không đổi:** trạng thái các gate ở §31; `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK. PR #80 giữ DRAFT cho tới khi Review Manager review xong.
+
+## 33. Đính chính: iPhone 16 Pro là tiền đề của `8.2`, không chặn PR #80; cách xét evidence `8.1b` (2026-09-26)
+
+**Bản chất quyết định:** chủ dự án chốt cách hiểu dưới đây **để Review Manager kiểm tra**. Đây là quyết định về cách hiểu gate và độ đủ của evidence, **chưa phải phê duyệt merge**. PR #80 giữ DRAFT cho tới khi Review Manager review xong toàn bộ diff. Đây là đính chính tài liệu riêng; không viết lại §20, §31, §32.
+
+**Mâu thuẫn được đính chính (đã nêu ở §32):**
+
+- Runbook §6: gate `8.1b` chỉ trên iPhone 11 Pro; iPhone 16 Pro là thiết bị riêng cho `8.2`.
+- Dòng kế hoạch `8.1b` (cột Output: "thêm install/launch trên thiết bị LiDAR thật trước `8.2`") và §20 điểm 3 ("lặp install/launch trên iPhone 16 Pro trước `8.2`") đặt việc đó trong câu gate `8.1b`.
+- Dòng `8.2` (cột Target) đã liệt kê "install/launch trên iPhone 16 Pro" và runtime Scene Reconstruction capability check như **tiền đề của `8.2`**, và yêu cầu `8.1b` PASS trước — tức `8.1b` phải đóng được mà không cần iPhone 16 Pro, nếu không tiền đề này thành vòng tròn.
+
+**Cách hiểu chốt:** gate liên quan tới merge PR #80 = smoke trên iPhone 11 Pro theo runbook §6. Install/launch trên iPhone 16 Pro (cùng capability check) là tiền đề trước `8.2`. Trạng thái iPhone 16 Pro vẫn **NOT RUN** (thiết bị chưa có/chưa kiểm chứng vật lý); không được coi là đã đạt và không được coi là đã bị miễn — nó phải xảy ra trước khi bắt đầu `8.2`. Đã đồng bộ: dòng kế hoạch `8.1b` (đính chính có ngày trong cột Output, cột Test gate), runbook §6 và §8.2. §20 giữ nguyên làm lịch sử; §33 này thay thế cách đọc điểm 3 của §20.
+
+**Cách xét evidence (không yêu cầu mọi thông tin trong một ảnh):** exact Unity/Xcode/macOS/iOS version và source commit được xét từ (a) `MAC_IPHONE_RESULT_RECORD.md` ngoài Git, ghi từng mục kèm provenance; (b) checksum ZIP khớp artifact Lenovo build từ `3c12a31` (`be66e489…c3e8`); (c) lệnh người dùng đã chạy (§27: Xcode `16.4`, build `16F6`, macOS `15.3.1`); (d) các ảnh đã che. Nhãn "PARTIAL" ở §31 chỉ nghĩa "không phải mọi thứ tự kiểm chứng được từ ảnh"; độ đủ do Review Manager quyết định.
+
+**Ảnh "Build Succeeded":** chủ dự án chỉ ra ảnh gốc trên Lenovo. Agent xem, thấy ảnh chứa tên thiết bị nhiều chỗ, tên tài khoản người dùng Mac lặp trên nhiều dòng log và đường dẫn Windows của Lenovo trong chuỗi Burst, nên **chỉ giữ hai dải cắt** (thanh công cụ với tên thiết bị bị che, và dòng "Link UnityFramework"), che thêm phần thanh bên, kiểm tra bằng mắt rồi lưu ngoài Git (`xcode-build-succeeded-CROPPED-REDACTED.png`, SHA-256 `7b81f8c1611dfe54d945aa1cc0f48b25cbfa17433a0854d6ccdef2e2589f784d`). Bản cắt cho thấy "Build Succeeded | Today at 15:21", 105 cảnh báo và Link UnityFramework 90 cảnh báo; ngày của "Today" không hiện. Ảnh gốc không được lưu vào evidence, Git hay PR.
+
+**Điều agent đọc được trên ảnh gốc (không lưu):** configuration `ReleaseForRunning`, Xcode SDK `iOS 18.5` (SDK của Xcode, khác iOS 18.3.1 của máy, vốn vẫn là user-reported); thư mục build tên `iOS-ToolchainSmoke-20260924-044748` (trùng tên output Lenovo — hỗ trợ, không tự nó chứng minh ZIP đã SHA-verify là bản được build); linker ghi "no platform load command found … assuming: iOS" cho các object của `lib_burst_generated.a`, bước Link báo 90 cảnh báo — trùng số 90 object của phân tích tĩnh §31 (khớp, chưa chứng minh là cùng các mục). Cảnh báo vẫn là mục theo dõi, chưa chẩn đoán/chưa sửa.
+
+**Không đổi:** `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode chưa được đánh giá là vô hại; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK; PR #80 DRAFT, chưa merge.

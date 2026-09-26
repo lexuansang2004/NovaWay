@@ -106,6 +106,8 @@ Chỉ đánh dấu `8.1b` PASS khi:
 
 Không gọi bước này là bằng chứng LiDAR. iPhone 16 Pro vẫn là thiết bị bắt buộc riêng cho step `8.2`.
 
+**Làm rõ phạm vi gate (2026-09-26; cách hiểu chủ dự án chốt, chờ Review Manager kiểm tra — chưa phải phê duyệt merge):** bảy điều kiện trên, trên iPhone 11 Pro, là gate của `8.1b` và là gate liên quan tới việc merge PR #80. Lần install/launch trên iPhone 16 Pro (cùng runtime Scene Reconstruction capability check) là **tiền đề trước `8.2`** như cột Target của dòng `8.2` đã ghi, không chặn PR #80; trạng thái vẫn là **NOT RUN**. Mâu thuẫn trước đó giữa runbook này với dòng kế hoạch `8.1b` và REVIEW_NOTES §20 điểm 3 được đính chính ở REVIEW_NOTES §33 (không viết lại §20). "Evidence ghi exact version và source commit" được xét từ record ngoài Git, checksum, lệnh đã báo và ảnh đã che, không yêu cầu mọi thông tin nằm trong một ảnh; độ đủ do Review Manager quyết định.
+
 ## 7. Đường ưu tiên khi Mac thiếu dung lượng: project Xcode sinh trên Lenovo/Windows
 
 > Trạng thái (2026-09-24): `WINDOWS XCODE PROJECT GENERATION: PASS` (AGENT-EXECUTED, REVIEW_NOTES §29). `MAC XCODE BUILD`, `SIGNING`, `IPHONE INSTALL`, `IPHONE RUNTIME`: **NOT RUN**. §3–§5 (Unity chạy trên Mac) là fallback cho tới khi đường này chạy end-to-end. *(Trạng thái trên là ghi nhận ngày 2026-09-24, giữ làm lịch sử. Kết quả Mac/iPhone do người dùng báo ngày 2026-09-26: xem §8.)*
@@ -160,15 +162,15 @@ Xác minh SHA-256 ZIP (`be66e489…c3e8`) → Xcode 16.4 mở project sinh từ 
 | Cảnh camera/light/cube + nhãn không-AR | PASS (ảnh) |
 | Chạy ≥60 giây không crash | PASS (USER-REPORTED; không suy ra từ ảnh) |
 | Đóng/mở lại ≥1 lần | PASS (USER-REPORTED) |
-| Evidence ghi exact version + source commit | PARTIAL (Xcode/macOS từ lệnh đã báo, iOS user-reported, Unity/`3c12a31` qua SHA artifact) |
-| Ảnh/log đã che thông tin cá nhân | Ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị); chỉ bản agent che lưu ngoài Git |
-| Install/launch trên iPhone 16 Pro "trước `8.2`" | NOT RUN |
+| Evidence ghi exact version + source commit | Có, theo từng nguồn có provenance (Xcode/macOS từ lệnh đã báo, iOS user-reported, Unity/`3c12a31` qua SHA artifact và tên thư mục build); độ đủ do Review Manager quyết định |
+| Ảnh/log đã che thông tin cá nhân | Hai ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị, tên tài khoản Mac, đường dẫn Windows). Chỉ lưu ngoài Git: bản che của ảnh Signing/Running và bản cắt-che của ảnh "Build Succeeded" (chữ "Build Succeeded | Today at 15:21", 105 cảnh báo, Link UnityFramework 90 cảnh báo); ảnh gốc không lưu |
+| Install/launch trên iPhone 16 Pro | NOT RUN — tiền đề trước `8.2`, không chặn PR #80 theo cách hiểu chủ dự án chốt 2026-09-26 (§6, REVIEW_NOTES §33; chờ Review Manager kiểm tra) |
 | Review Manager review + CI + merge | CI xanh; review/merge chưa |
 
 `8.1b` **chưa** được đánh dấu COMPLETED: còn chờ Review Manager review, merge PR #80 (đang DRAFT) và quyết định về điều kiện thiết bị LiDAR thật.
 
 ### 8.3 Cần theo dõi
 
-- ~105 cảnh báo Xcode, gồm cảnh báo linker `lib_burst_generated.a` ("no platform load command found"). Phân tích tĩnh (AGENT-EXECUTED): 90/90 object Mach-O arm64 trong thư viện này không có platform load command, trong khi `baselib.a` (3/3) và `libiPhone-lib.a` (1.809/1.809) đều có. Khớp với cảnh báo và chỉ vào thư viện Burst sinh trên Windows; **chưa** biết nguyên nhân gốc, chưa biết project sinh trên Mac có tránh được không, chưa chứng minh các cảnh báo còn lại vô hại. Chưa sửa gì.
+- ~105 cảnh báo Xcode, gồm cảnh báo linker `lib_burst_generated.a` ("no platform load command found"). Phân tích tĩnh (AGENT-EXECUTED): 90/90 object Mach-O arm64 trong thư viện này không có platform load command, trong khi `baselib.a` (3/3) và `libiPhone-lib.a` (1.809/1.809) đều có. Khớp với cảnh báo và chỉ vào thư viện Burst sinh trên Windows; **chưa** biết nguyên nhân gốc, chưa biết project sinh trên Mac có tránh được không, chưa chứng minh các cảnh báo còn lại vô hại. Chưa sửa gì. Trên ảnh Xcode gốc (agent đọc, không lưu) linker ghi "assuming: iOS" và bước Link UnityFramework báo 90 cảnh báo — trùng con số 90 object của phân tích tĩnh (khớp, chưa chứng minh là cùng 90 mục); app vẫn build và chạy.
 - Dung lượng Mac sau build/chạy (USER-REPORTED): `14Gi`, 93% — không biến storage gate cài Unity trên Mac thành PASS. Không xoá dữ liệu của chủ máy.
 - Kết quả này không chứng minh ARKit, Scene Reconstruction, LiDAR, quét địa hình thật, GPS hay RTK; iPhone 11 Pro không phải thiết bị kiểm thử LiDAR.
