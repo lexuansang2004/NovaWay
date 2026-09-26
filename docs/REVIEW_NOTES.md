@@ -491,3 +491,12 @@ Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke tr�
 **Điều agent đọc được trên ảnh gốc (không lưu):** configuration `ReleaseForRunning`, Xcode SDK `iOS 18.5` (SDK của Xcode, khác iOS 18.3.1 của máy, vốn vẫn là user-reported); thư mục build tên `iOS-ToolchainSmoke-20260924-044748` (trùng tên output Lenovo — hỗ trợ, không tự nó chứng minh ZIP đã SHA-verify là bản được build); linker ghi "no platform load command found … assuming: iOS" cho các object của `lib_burst_generated.a`, bước Link báo 90 cảnh báo — trùng số 90 object của phân tích tĩnh §31 (khớp, chưa chứng minh là cùng các mục). Cảnh báo vẫn là mục theo dõi, chưa chẩn đoán/chưa sửa.
 
 **Không đổi:** `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode chưa được đánh giá là vô hại; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK; PR #80 DRAFT, chưa merge.
+
+
+## 34. Review Manager xác nhận cách hiểu gate `8.1b` và độ đủ evidence; đồng bộ câu hiện trạng (2026-09-26)
+
+**Xác nhận (chủ dự án chuyển lại kết quả kiểm tra của Review Manager, agent không tự kiểm chứng):** (1) iPhone 16 Pro không chặn PR #80; đúng như §33, đó là tiền đề trước `8.2`. (2) Evidence nhiều nguồn có provenance (record ngoài Git, checksum, lệnh đã báo, ảnh đã che) là đủ cho smoke test `8.1b`.
+
+**Đồng bộ tài liệu:** runbook §8.2 còn một câu hiện trạng nói vẫn chờ "quyết định về điều kiện thiết bị LiDAR thật"; câu đó mâu thuẫn với §6 và §33 nên đã sửa, cùng các cụm "chờ Review Manager kiểm tra" ở runbook §6/§8.2 và dòng kế hoạch `8.1b`. §20, §31, §32, §33 giữ nguyên làm lịch sử; §34 này bổ sung, không thay đổi nội dung các mục trước.
+
+**Không đổi:** iPhone 16 Pro install/launch vẫn **NOT RUN** và phải xảy ra trước `8.2`; `8.1b` **chưa COMPLETED** (chờ Review Manager review cuối + merge PR #80); PR #80 giữ DRAFT, không tự merge; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa, chưa coi là vô hại; đây là smoke không-AR; storage gate cài Unity trên Mac vẫn chưa PASS.

@@ -106,7 +106,7 @@ Chỉ đánh dấu `8.1b` PASS khi:
 
 Không gọi bước này là bằng chứng LiDAR. iPhone 16 Pro vẫn là thiết bị bắt buộc riêng cho step `8.2`.
 
-**Làm rõ phạm vi gate (2026-09-26; cách hiểu chủ dự án chốt, chờ Review Manager kiểm tra — chưa phải phê duyệt merge):** bảy điều kiện trên, trên iPhone 11 Pro, là gate của `8.1b` và là gate liên quan tới việc merge PR #80. Lần install/launch trên iPhone 16 Pro (cùng runtime Scene Reconstruction capability check) là **tiền đề trước `8.2`** như cột Target của dòng `8.2` đã ghi, không chặn PR #80; trạng thái vẫn là **NOT RUN**. Mâu thuẫn trước đó giữa runbook này với dòng kế hoạch `8.1b` và REVIEW_NOTES §20 điểm 3 được đính chính ở REVIEW_NOTES §33 (không viết lại §20). "Evidence ghi exact version và source commit" được xét từ record ngoài Git, checksum, lệnh đã báo và ảnh đã che, không yêu cầu mọi thông tin nằm trong một ảnh; độ đủ do Review Manager quyết định.
+**Làm rõ phạm vi gate (2026-09-26; cách hiểu chủ dự án chốt, Review Manager đã kiểm tra và xác nhận cùng ngày — REVIEW_NOTES §34; chưa phải phê duyệt merge):** bảy điều kiện trên, trên iPhone 11 Pro, là gate của `8.1b` và là gate liên quan tới việc merge PR #80. Lần install/launch trên iPhone 16 Pro (cùng runtime Scene Reconstruction capability check) là **tiền đề trước `8.2`** như cột Target của dòng `8.2` đã ghi, không chặn PR #80; trạng thái vẫn là **NOT RUN**. Mâu thuẫn trước đó giữa runbook này với dòng kế hoạch `8.1b` và REVIEW_NOTES §20 điểm 3 được đính chính ở REVIEW_NOTES §33 (không viết lại §20). "Evidence ghi exact version và source commit" được xét từ record ngoài Git, checksum, lệnh đã báo và ảnh đã che, không yêu cầu mọi thông tin nằm trong một ảnh; độ đủ do Review Manager quyết định.
 
 ## 7. Đường ưu tiên khi Mac thiếu dung lượng: project Xcode sinh trên Lenovo/Windows
 
@@ -164,10 +164,10 @@ Xác minh SHA-256 ZIP (`be66e489…c3e8`) → Xcode 16.4 mở project sinh từ 
 | Đóng/mở lại ≥1 lần | PASS (USER-REPORTED) |
 | Evidence ghi exact version + source commit | Có, theo từng nguồn có provenance (Xcode/macOS từ lệnh đã báo, iOS user-reported, Unity/`3c12a31` qua SHA artifact và tên thư mục build); độ đủ do Review Manager quyết định |
 | Ảnh/log đã che thông tin cá nhân | Hai ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị, tên tài khoản Mac, đường dẫn Windows). Chỉ lưu ngoài Git: bản che của ảnh Signing/Running và bản cắt-che của ảnh "Build Succeeded" (chữ "Build Succeeded | Today at 15:21", 105 cảnh báo, Link UnityFramework 90 cảnh báo); ảnh gốc không lưu |
-| Install/launch trên iPhone 16 Pro | NOT RUN — tiền đề trước `8.2`, không chặn PR #80 theo cách hiểu chủ dự án chốt 2026-09-26 (§6, REVIEW_NOTES §33; chờ Review Manager kiểm tra) |
+| Install/launch trên iPhone 16 Pro | NOT RUN — tiền đề trước `8.2`, không chặn PR #80 theo cách hiểu chủ dự án chốt 2026-09-26 và Review Manager đã xác nhận (§6, REVIEW_NOTES §33, §34) |
 | Review Manager review + CI + merge | CI xanh; review/merge chưa |
 
-`8.1b` **chưa** được đánh dấu COMPLETED: còn chờ Review Manager review, merge PR #80 (đang DRAFT) và quyết định về điều kiện thiết bị LiDAR thật.
+`8.1b` **chưa** được đánh dấu COMPLETED: còn chờ Review Manager review cuối và merge PR #80 (đang DRAFT). Không còn quyết định nào chờ về thiết bị LiDAR đối với PR #80: Review Manager đã xác nhận iPhone 16 Pro không chặn PR #80 (tiền đề trước `8.2`, vẫn **NOT RUN**, §6, REVIEW_NOTES §33) và evidence nhiều nguồn có provenance là đủ cho smoke test `8.1b` (REVIEW_NOTES §34).
 
 ### 8.3 Cần theo dõi
 
