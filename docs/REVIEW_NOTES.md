@@ -454,3 +454,20 @@ STEP 8.1b COMPLETED:                    NO — chờ Review Manager review, merg
 ```
 
 Plan ghi điều kiện LiDAR-device là "trước `8.2`"; agent không tự đóng `8.1b` mà để Review Manager quyết định điều kiện này thuộc gate `8.1b` hay là tiền đề riêng của `8.2`. PR #80 giữ DRAFT, chưa merge.
+
+## 32. Hai điểm chờ Review Manager quyết định để đóng `8.1b`: phạm vi iPhone 16 Pro và độ đủ của evidence (2026-09-26)
+
+Chủ dự án đề nghị rà lại cách đóng `8.1b`. Mục này ghi lại hai điểm và cách hiểu được đề xuất; **chưa có quyết định nào của Review Manager**, agent không tự đóng bước và không tự merge PR #80 (giữ DRAFT).
+
+**Điểm 1 — iPhone 16 Pro có chặn merge PR #80 không.** Tài liệu hiện không nhất quán:
+
+- Runbook §6 định nghĩa gate `8.1b` chỉ trên iPhone 11 Pro (bảy gạch đầu dòng); iPhone 16 Pro chỉ xuất hiện ở câu kết như thiết bị bắt buộc riêng cho `8.2`.
+- Dòng kế hoạch `8.1b` (cột Output) và §20 điểm 3 ghi "lặp install/launch trên iPhone 16 Pro **trước `8.2`**" ngay trong câu mô tả gate `8.1b`.
+
+Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke trên iPhone 11 Pro (runbook §6); install/launch trên iPhone 16 Pro là tiền đề của `8.2` (cùng runtime Scene Reconstruction capability check), **không** chặn merge PR #80. Agent ghi nhận đây là đề xuất; nếu Review Manager xác nhận, plan §20 và dòng `8.1b` cần được sửa cho khớp trong một commit tài liệu riêng (sửa cột gate của step đã duyệt cần quyết định của Review Manager). Cho tới lúc đó, tài liệu giữ nguyên trạng thái "chờ quyết định" và **không** coi iPhone 16 Pro là điều kiện chặn hay là điều kiện đã được miễn.
+
+**Điểm 2 — evidence đã đủ chưa.** Gate §6 yêu cầu "evidence ghi exact Unity/Xcode/macOS/iOS version và source commit", không yêu cầu mọi thông tin nằm trong cùng một ảnh. Record ngoài Git (`MAC_IPHONE_RESULT_RECORD.md`) ghi từng thông tin kèm provenance: Unity `6000.3.23f1` và source `3c12a31` qua khớp SHA-256 artifact Lenovo (AGENT-EXECUTED build, SHA khớp do người dùng báo), Xcode `16.4`/macOS `15.3.1` từ lệnh người dùng đã chạy ở §27, iOS `18.3.1` và model iPhone 11 Pro do người dùng báo. Nhãn "PARTIAL" ở §31 chỉ có nghĩa "không phải mọi thông tin tự kiểm chứng được từ ảnh", không phải kết luận evidence thiếu. Việc evidence đã đủ hay chưa do Review Manager quyết định sau khi xem record và bản ảnh đã che.
+
+**Ảnh có chữ "Build Succeeded":** chủ dự án nhắc từng gửi một ảnh Xcode có chữ này. Trong phiên hiện tại agent chỉ nhận hai ảnh (ảnh cảnh iPhone và ảnh Xcode màn Signing đang Running) — không có ảnh "Build Succeeded" nên không thể dùng hay lưu. Nếu gửi lại để tăng độ chắc: chỉ lưu bản cắt/che kỹ (che tên thiết bị, Team, Apple ID và mọi đường dẫn cá nhân), kiểm tra bằng mắt trước khi lưu, ghi SHA-256; ảnh gốc không lưu vào evidence hay Git.
+
+**Không đổi:** trạng thái các gate ở §31; `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK. PR #80 giữ DRAFT cho tới khi Review Manager review xong.
