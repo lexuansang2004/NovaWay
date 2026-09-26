@@ -20,6 +20,7 @@ Timeline dung lượng Mac (giữ nguyên lịch sử):
 |---|---|---|
 | 2026-09-23 | `15Gi` | USER-REPORTED (`df` do người dùng cung cấp, REVIEW_NOTES §28) |
 | 2026-09-24 | `23 GiB` (sau khi dọn thêm) | USER-REPORTED / NOT AGENT-EXECUTED |
+| Sau build/chạy trên Mac (báo 2026-09-26) | `14Gi`, capacity `93%` | USER-REPORTED (REVIEW_NOTES §31) |
 
 **Storage readiness: PENDING** — người dùng tiếp tục giải phóng dung lượng trước phiên Mac; mức tăng 15 → 23 GiB không phải gate PASS.
 
@@ -107,7 +108,7 @@ Không gọi bước này là bằng chứng LiDAR. iPhone 16 Pro vẫn là thi�
 
 ## 7. Đường ưu tiên khi Mac thiếu dung lượng: project Xcode sinh trên Lenovo/Windows
 
-> Trạng thái (2026-09-24): `WINDOWS XCODE PROJECT GENERATION: PASS` (AGENT-EXECUTED, REVIEW_NOTES §29). `MAC XCODE BUILD`, `SIGNING`, `IPHONE INSTALL`, `IPHONE RUNTIME`: **NOT RUN**. §3–§5 (Unity chạy trên Mac) là fallback cho tới khi đường này chạy end-to-end.
+> Trạng thái (2026-09-24): `WINDOWS XCODE PROJECT GENERATION: PASS` (AGENT-EXECUTED, REVIEW_NOTES §29). `MAC XCODE BUILD`, `SIGNING`, `IPHONE INSTALL`, `IPHONE RUNTIME`: **NOT RUN**. §3–§5 (Unity chạy trên Mac) là fallback cho tới khi đường này chạy end-to-end. *(Trạng thái trên là ghi nhận ngày 2026-09-24, giữ làm lịch sử. Kết quả Mac/iPhone do người dùng báo ngày 2026-09-26: xem §8.)*
 
 Lý do: cài Unity + iOS Build Support + Library import trên Mac tốn nhiều dung lượng hơn nhiều so với chỉ giải nén một project Xcode (ZIP khoảng 283 MiB, giải nén khoảng 1,2 GB). Trang system requirements của Unity 6.3 chỉ nêu Xcode 16+ và iOS 15+ (Xcode 16.4 / iOS 18.3.1 đáp ứng) và **không nêu** việc xuất Xcode project từ Windows Editor — đường này là thực nghiệm cho tới khi Xcode build trên Mac thành công.
 
@@ -141,3 +142,33 @@ Quy trình mặc định: **kiểm SHA-256 → giải nén → mở Xcode → th
 ### 7.3 Chuẩn bị iPhone 11 Pro
 
 Pin trên 80%, còn khoảng 5 GB trống, cáp hỗ trợ truyền dữ liệu, Apple Account và 2FA sẵn sàng, giữ iOS 18.3.1 (không cập nhật ngay trước gate), mở khoá máy, Trust Mac khi được hỏi, bật Developer Mode khi được yêu cầu, khởi động lại nếu iOS yêu cầu. iPhone 11 Pro không có LiDAR Scene Reconstruction — kết quả này không phải bằng chứng LiDAR.
+
+## 8. Kết quả phiên Mac + iPhone 11 Pro (ghi nhận 2026-09-26)
+
+> Đây là **Non-AR toolchain smoke**. Provenance: các bước Windows do agent chạy (AGENT-EXECUTED); mọi bước Mac/iPhone là **USER-EXECUTED / USER-REPORTED**, có ảnh iPhone và ảnh Xcode đã che (bản đã che lưu ngoài Git). Agent không chạy gì trên Mac hay iPhone. Chi tiết và đối chiếu gate: `docs/REVIEW_NOTES.md` §31.
+
+### 8.1 Đã xảy ra (theo người dùng báo)
+
+Xác minh SHA-256 ZIP (`be66e489…c3e8`) → Xcode 16.4 mở project sinh từ Windows → **Build Succeeded** cho iPhone thật → ký bằng Personal Team, bật Developer Mode, tin cậy chứng chỉ ứng dụng → app chạy trên iPhone 11 Pro (iOS 18.3.1) với cảnh "NovaWay - Toolchain Smoke / Non-AR test" và khối lập phương → mở liên tục hơn 60 giây, không tự thoát → Stop trong Xcode, thoát app, **mở lại trực tiếp từ biểu tượng trên iPhone** (không Run lại) → cảnh hiện lại, không tự thoát. Đúng quy trình §7.2 (không cần `xattr`/`chmod` toàn cây; người dùng không báo lỗi quyền/quarantine).
+
+### 8.2 Đối chiếu test gate §6
+
+| Gate | Kết quả |
+|---|---|
+| Xcode build thành công | PASS (USER-REPORTED) |
+| App cài/mở trên iPhone 11 Pro thật, ký Personal Team | PASS (USER-REPORTED; ảnh cảnh) |
+| Cảnh camera/light/cube + nhãn không-AR | PASS (ảnh) |
+| Chạy ≥60 giây không crash | PASS (USER-REPORTED; không suy ra từ ảnh) |
+| Đóng/mở lại ≥1 lần | PASS (USER-REPORTED) |
+| Evidence ghi exact version + source commit | PARTIAL (Xcode/macOS từ lệnh đã báo, iOS user-reported, Unity/`3c12a31` qua SHA artifact) |
+| Ảnh/log đã che thông tin cá nhân | Ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị); chỉ bản agent che lưu ngoài Git |
+| Install/launch trên iPhone 16 Pro "trước `8.2`" | NOT RUN |
+| Review Manager review + CI + merge | CI xanh; review/merge chưa |
+
+`8.1b` **chưa** được đánh dấu COMPLETED: còn chờ Review Manager review, merge PR #80 (đang DRAFT) và quyết định về điều kiện thiết bị LiDAR thật.
+
+### 8.3 Cần theo dõi
+
+- ~105 cảnh báo Xcode, gồm cảnh báo linker `lib_burst_generated.a` ("no platform load command found"). Phân tích tĩnh (AGENT-EXECUTED): 90/90 object Mach-O arm64 trong thư viện này không có platform load command, trong khi `baselib.a` (3/3) và `libiPhone-lib.a` (1.809/1.809) đều có. Khớp với cảnh báo và chỉ vào thư viện Burst sinh trên Windows; **chưa** biết nguyên nhân gốc, chưa biết project sinh trên Mac có tránh được không, chưa chứng minh các cảnh báo còn lại vô hại. Chưa sửa gì.
+- Dung lượng Mac sau build/chạy (USER-REPORTED): `14Gi`, 93% — không biến storage gate cài Unity trên Mac thành PASS. Không xoá dữ liệu của chủ máy.
+- Kết quả này không chứng minh ARKit, Scene Reconstruction, LiDAR, quét địa hình thật, GPS hay RTK; iPhone 11 Pro không phải thiết bị kiểm thử LiDAR.
