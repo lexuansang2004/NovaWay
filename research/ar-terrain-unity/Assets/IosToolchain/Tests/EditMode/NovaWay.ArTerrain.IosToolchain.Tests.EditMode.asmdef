@@ -1,0 +1,23 @@
+{
+  "name": "NovaWay.ArTerrain.IosToolchain.Tests.EditMode",
+  "rootNamespace": "NovaWay.ArTerrain.IosToolchain.Tests",
+  "references": [
+    "NovaWay.ArTerrain.IosToolchain.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

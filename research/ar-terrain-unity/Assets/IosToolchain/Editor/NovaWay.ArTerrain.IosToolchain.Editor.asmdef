@@ -1,0 +1,16 @@
+{
+  "name": "NovaWay.ArTerrain.IosToolchain.Editor",
+  "rootNamespace": "NovaWay.ArTerrain.IosToolchain.Editor",
+  "references": [],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -338,3 +338,165 @@ chore: add ar terrain unity windows toolchain smoke test
 **Quyết định phạm vi:** không biến yêu cầu này thành cam kết dense-mesh toàn thành phố hoặc một phiên LiDAR quét liên tục toàn tuyến. Trước bảo vệ, track `8.x` vẫn local/offline và không đổi `apps/*`/backend/API. Implementation cảnh báo sớm cần micro-step riêng sau docs review; fixture phải gắn nhãn fixture, không thay bằng chứng LiDAR thật. Chi tiết: `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`, TDR-013 và plan step `8.0b`.
 
 **Duyệt và bước song song:** sau khi được trình bày kết quả `8.0b`, người dùng xác nhận “OK, tiếp tục công việc” ngày 2026-09-22 và yêu cầu tận dụng thời gian Mac đang tải Xcode. `8.0b` được ghi APPROVED. Plan bổ sung `8.1c` để dựng Drive Mode trực quan bằng fixture trên Lenovo ở branch riêng sau khi docs merge: TPP mặc định, FPP map-simulation bổ sung, không Second-Person runtime, không ARKit/LiDAR và không sửa `apps/*`. Việc này không đổi ưu tiên hoàn thành `8.1b` ngay khi Xcode sẵn sàng.
+
+## 26. Drive Visual Mock merge và Xcode 16.4 đã mở — chuyển sang `8.1b` (2026-09-22)
+
+**Kết quả `8.1c`:** branch `feat/ar-terrain-drive-visual-mock` bổ sung scene fixture có xe/tuyến/ba vùng cảnh báo, parser catalog có version, warning horizon theo tốc độ/thời gian báo trước, cooldown, TPP mặc định và FPP map-simulation. Toàn bộ runtime/evidence ghi `SYNTHETIC/FIXTURE`; không có AR Foundation/ARKit/LiDAR package, không sửa `apps/*`. EditMode 9/9, PlayMode 1/1 và Unity batch compile đều PASS. Người dùng chạy Play Mode Windows ít nhất 60 giây, xác nhận các nút hoạt động và Console không lỗi đỏ; ảnh review phát hiện UI cố định chồng chữ khi Game View hẹp, agent đã sửa layout responsive, chạy lại test và người dùng replay trước khi đóng Unity. Required PR checks xanh; PR #79 được squash-merge vào `develop` bằng commit `29db6b8f3b27a7194f8c65e10846db70e780abce`, subject đúng `feat: add ar terrain drive visual mock`.
+
+**Chuyển sang `8.1b`:** người dùng cung cấp ảnh Xcode Welcome xác nhận Xcode 16.4 stable đã cài và mở trên MacBook Air M3. Đây chỉ là install evidence; chưa có `xcodebuild -version`, `xcode-select -p`, Unity `6000.3.23f1` + iOS Build Support trên Mac, Xcode build/signing, app install/launch hoặc 60-second run trên iPhone 11 Pro. Vì vậy `8.1b` vẫn NOT RUN/PENDING và `8.2` vẫn BLOCKED do chưa có iPhone 16 Pro. Branch mới `chore/ar-terrain-ios-toolchain` chỉ chuẩn bị cấu hình/build automation/runbook; tuyệt đối không commit Apple ID, Team ID, UDID, signing certificate hoặc provisioning profile.
+
+## 27. Xcode command-line gate PASS; dung lượng Mac cần xác minh lại (2026-09-23)
+
+Người dùng đã chuyển Xcode từ Downloads vào `/Applications/Xcode.app`. Terminal trả về active developer directory `/Applications/Xcode.app/Contents/Developer`, Xcode `16.4`, build `16F6`, và macOS `15.3.1`; phần Xcode command-line gate của `8.1b` vì vậy được xác nhận PASS. Không lưu username hoặc ảnh chứa thông tin cá nhân vào Git.
+
+`df -h /` đồng thời chỉ báo `16Gi` khả dụng, không khớp kiểm kê ban đầu hơn 50 GB. Trước khi cài Unity `6000.3.23f1` + iOS Build Support phải kiểm tra `df -h /System/Volumes/Data`; chưa đánh dấu dung lượng PASS. Unity Mac import, Xcode project generation, signing, install/launch và chạy iPhone 11 Pro ≥60 giây vẫn PENDING. PR #80 tiếp tục ở trạng thái DRAFT và không được merge tại checkpoint này.
+
+## 28. Mac Data volume thiếu dung lượng cho Unity toolchain (2026-09-23)
+
+Kết quả `df -h /System/Volumes/Data`: tổng `228Gi`, đã dùng `171Gi`, khả dụng `15Gi`, capacity 92%. Đây là evidence trực tiếp thay thế kiểm kê ban đầu hơn 50 GB trống. Không bắt đầu tải Unity Editor/iOS Build Support hoặc import project với mức dung lượng này để tránh tải/build dở dang.
+
+Vì MacBook là thiết bị mượn, agent không yêu cầu hoặc thực hiện xoá dữ liệu của chủ máy. Human action cần thiết: chủ máy/người dùng xác định dữ liệu có thể xoá hoặc chuyển sang ổ ngoài, dọn Thùng rác, rồi chạy lại `df -h /System/Volumes/Data`. Xcode command-line gate vẫn PASS; PR #80 vẫn DRAFT; các gate Unity/iPhone/LiDAR giữ nguyên PENDING/NOT RUN.
+
+## 29. Lenovo/Windows chuẩn bị `8.1b`: builder sửa lỗi guard macOS-only, Xcode project sinh được trên Windows (2026-09-24)
+
+**Dung lượng Mac — timeline (giữ nguyên lịch sử, không thay số cũ):**
+
+- 2026-09-23 — **USER-REPORTED** (kết quả `df` do người dùng cung cấp, xem §28): Data volume còn `15Gi`.
+- 2026-09-24 — **USER-REPORTED / NOT AGENT-EXECUTED**: sau khi dọn thêm dữ liệu, người dùng báo Data volume còn `23 GiB`.
+- **Storage readiness: PENDING.** Số tăng từ 15 lên 23 GiB không được coi là gate PASS; người dùng tiếp tục giải phóng dung lượng trước phiên Mac. Agent không đo lại trên Mac vì hôm nay không có Mac.
+
+**Mục tiêu hôm nay:** làm hết phần `8.1b` có thể làm trên Lenovo để phiên Mac chỉ còn các thao tác bắt buộc dùng macOS/Xcode/iPhone (ký, build cuối, cài, chạy, evidence runtime). Không thay đổi phạm vi: không AR Foundation/ARKit/LiDAR/GPS/PLY/RTK, không sửa `apps/*`.
+
+**AGENT-EXECUTED trên Lenovo (Windows 11, Unity `6000.3.23f1`):**
+
+- iOS Build Support xác minh bằng filesystem: `Editor/Data/PlaybackEngines/iOSSupport` có `il2cpp`, `Trampoline`, `Tools`, `iOSPlayerBuildProgram.exe`, `UnityEditor.iOS.Extensions*.dll`, `modules.asset` (3.435 file, khớp số đã báo) và Unity `BuildPipeline.IsBuildTargetSupported(iOS)` không bị builder từ chối.
+- **Symptom:** chạy nguyên bản `IosToolchainSmokeBuilder.Build` bằng batch mode trên Windows → `PlatformNotSupportedException: ...must run from Unity Editor on macOS`, exit code 1, không tạo output. **Root cause:** guard cứng `Application.platform != RuntimePlatform.OSXEditor` trong builder (đọc source; tái hiện bằng log). **Fix:** tách `IsSupportedEditorPlatform(RuntimePlatform)` cho phép Windows/macOS Editor, dùng ở cả entry point lẫn menu validator; thêm 7 test case EditMode (predicate, scene smoke tồn tại, bundle identifier khớp). Commit `3c12a31`.
+- Trên cây sạch tại `3c12a31`: batch compile exit 0 và 0 `error CS`; EditMode **16/16** (baseline cũ 9/9 + 7 mới); PlayMode **1/1**; sau mỗi lần chạy không còn tiến trình `Unity.exe`.
+- Sinh Xcode project mới bằng builder trên Windows: exit 0, marker `[iOS TOOLCHAIN SMOKE] Xcode project created`, chỉ scene `ToolchainSmoke` (`level0`; DriveVisualMock không có trong player). Kết quả xác định: hai lần build cho cùng kích thước output `1.242.828.555` byte.
+- Kiểm tra output thật: 4 native target (Unity-iPhone, UnityFramework, GameAssembly, Unity-iPhone Tests); bundle id `com.novaway.arterrainprototype`; `DEVELOPMENT_TEAM` rỗng, automatic signing, không provisioning profile; deployment target 15.0; không có khoá ARKit/LiDAR/camera/location; 0 byte CR trong pbxproj/plist/.sh (không có rủi ro CRLF); toolchain IL2CPP macOS `deploy_arm64` (khớp `HOST_ARCH=arm64` của Mac M3) có Mach-O arm64 kèm load command chữ ký (chỉ là **sự hiện diện**, hiệu lực chữ ký chỉ kiểm được trên Mac).
+- Quét portability: không có đường dẫn Windows trong file text; duy nhất `Libraries/lib_burst_generated.a` chứa chuỗi thư mục tạm của Burst (không ảnh hưởng link/chạy, chỉ là thông tin tên thư mục cục bộ). Thư mục `*_BurstDebugInformation_DoNotShip` (không được pbxproj tham chiếu, có đường dẫn cục bộ) bị loại khỏi ZIP.
+- Artifact chuyển Mac (ngoài Git): ZIP 296.940.050 byte, 3.046 file, SHA-256 `be66e489b96d8aa95982ec626740c98ba92e4063ed7762cbc9ee2c58ec53c3e8`, `source_commit` `3c12a31049b3986b6bd319b846aaa72fbfd41ff2`; đã kiểm tra entry không có dấu `\`, giải nén thử 0 sai lệch path/size, SHA-256 khớp trên mẫu ngẫu nhiên 80 file cùng các file then chốt. Record đầy đủ nằm trong evidence ngoài Git (`novaway-ar-terrain-evidence/2026-09-24_ios_toolchain_smoke_8.1b/device_lenovo-windows/`). Artifact không đại diện cho các commit tài liệu sau `3c12a31` (Unity source không đổi; kiểm bằng `git diff 3c12a31 HEAD -- research/`).
+
+**Quan sát cần biết (không sửa):** build iOS làm Unity tự sửa 4 file tracked (`Assets/Settings/*` nâng `k_AssetVersion` URP, thêm entry iPhone ở `m_BuildTargetBatching`, cộng khoảng trắng) — xác định, không phải thay đổi có chủ đích nên không commit; sau build dùng `git checkout -- <file>` từng file. Trang system requirements Unity 6.3 chỉ nêu Xcode 16+ và iOS 15+; **không nêu** việc xuất Xcode project từ Windows Editor — nên đây là kết quả thực nghiệm, không phải tính năng được tài liệu Unity xác nhận.
+
+**Trạng thái (không được suy diễn thêm):**
+
+```text
+WINDOWS XCODE PROJECT GENERATION: PASS
+MAC XCODE BUILD: NOT RUN
+PERSONAL TEAM SIGNING: NOT RUN
+IPHONE INSTALL: NOT RUN
+IPHONE RUNTIME: NOT RUN
+ARKIT / LIDAR / GPS / RTK: NOT RUN
+```
+
+`8.1b` **chưa** hoàn tất: chỉ hoàn tất sau khi ngày 2026-09-25 (hoặc phiên Mac kế tiếp) Xcode build PASS trên Mac, ký bằng Personal Team PASS, app cài lên iPhone 11 Pro thật, chạy ≥60 giây không crash, đóng/mở lại PASS, evidence đã che thông tin nhạy cảm, Review Manager duyệt và CI xanh. Workflow Unity-trên-Mac trong runbook được giữ làm fallback cho tới khi pipeline chuyển giao chạy end-to-end. PR #80 giữ DRAFT, chưa merge.
+
+## 30. Review Manager CHANGES REQUESTED trên PR #80 (head `4931492`): sửa hướng dẫn Mac, không đổi code (2026-09-24)
+
+Review Manager kiểm tra độc lập PR head `4931492` và ZIP chuyển Mac: Windows export, checksum và CI khớp báo cáo §29. Ba điểm hướng dẫn được sửa trước phiên Mac ngày 2026-09-25; §29 giữ nguyên làm lịch sử, mục này thay thế các hướng dẫn tương ứng.
+
+1. **Bỏ bước mặc định `xattr -dr com.apple.quarantine` và `chmod -R u+x` cho cả cây.** Evidence: ZIP lưu file ở mode đọc/ghi, nhưng build phase shell của `Unity-iPhone.xcodeproj/project.pbxproj` đã chứa `chmod +x` cho `il2cpp`, `il2cpp-compile` và `bee_backend` (agent kiểm lại trên output thật: 3 lệnh `chmod +x`). Chưa có lỗi thật trên Mac chứng minh cần can thiệp thêm. Quy trình đúng: kiểm SHA-256 → giải nén → mở Xcode → Build/Run. Chỉ khi gặp lỗi quyền chạy hoặc quarantine cụ thể mới xác định chính xác file bị chặn và xử lý giới hạn cho đúng file đó; lỗi quyền trên ba tool đã có `chmod +x` là bất thường và phải báo nguyên văn trước khi can thiệp. Chỉ dẫn `xattr`/`chmod` toàn cây từng xuất hiện trong runbook §7.2, record chuyển giao ngoài Git và báo cáo bàn giao ngày 2026-09-24 nay bị rút lại.
+2. **Dung lượng:** kiểm bằng `df -h /System/Volumes/Data` (phân vùng thực sự chứa project, Xcode và DerivedData) thay cho `df -h /`, và kiểm lại sau giải nén cùng sau lần build đầu. Mốc `23 GiB` (2026-09-24) vẫn chỉ là số người dùng báo (USER-REPORTED), không phải kết quả đo của agent hay build PASS. Có thể thử đường Xcode-only mà không bắt buộc cài Unity trên Mac trước.
+3. **Unity drift sau build:** bỏ chỉ dẫn chung "`git checkout -- <file>` từng file" ở §29. Thay bằng: với từng file tracked bị đổi, xem `git diff` của riêng file đó trong đúng worktree, chứng minh thay đổi chỉ do lần build vừa chạy tạo ra, rồi mới xử lý đúng file đó và ghi lý do; không đụng thay đổi của người dùng. (Việc đã làm hôm nay — bốn file drift trong worktree `ar-terrain-ios-toolchain` mới sạch trước build, diff chỉ gồm migration URP/batching/whitespace do chính lần build tạo ra — không thay đổi kết luận; chỉ hướng dẫn tổng quát được sửa.)
+
+**Phạm vi:** chỉ sửa tài liệu (`AR_TERRAIN_IOS_TOOLCHAIN_RUNBOOK.md`, mục này) và record ngoài Git; không phát hiện lỗi code mới, không sinh lại artifact (ZIP và SHA-256 `be66e489…c3e8` không đổi, agent tính lại và khớp). Trong lúc rà soát agent tự phát hiện file sidecar `.sha256` ngoài Git đã bị ghi với CRLF (sẽ làm `shasum -c` trên Mac báo sai tên file) và đã ghi lại thành LF-only; `sha256sum -c` trên sidecar mới cho `OK`. Trạng thái các gate không đổi: `WINDOWS XCODE PROJECT GENERATION: PASS`; Mac Xcode build, ký Personal Team, cài/chạy iPhone, ARKit/LiDAR/GPS/RTK: **NOT RUN**. `8.1b` chưa hoàn tất; PR #80 giữ DRAFT, chưa merge.
+
+## 31. Kết quả Mac + iPhone 11 Pro cho `8.1b` — smoke không-AR đạt theo USER-REPORTED (ghi nhận 2026-09-26)
+
+**Provenance — không diễn đạt như agent chạy trên Mac:** các bước Windows (sinh Xcode project, ZIP, checksum, test) là **AGENT-EXECUTED** (§29, §30). Mọi bước trên MacBook Air M3 và iPhone 11 Pro dưới đây là **USER-EXECUTED / USER-REPORTED**; agent chỉ nhận báo cáo của người dùng và hai ảnh, không chạy lệnh nào trên Mac hay iPhone. Ngày chạy thực tế không được người dùng nêu (kế hoạch là 2026-09-25); ghi nhận vào 2026-09-26.
+
+**Người dùng báo:**
+
+- ZIP Xcode project được xác minh SHA-256 `be66e489b96d8aa95982ec626740c98ba92e4063ed7762cbc9ee2c58ec53c3e8` (trùng artifact Lenovo build từ source `3c12a31`).
+- Xcode 16.4 mở project sinh từ Windows và báo **Build Succeeded** cho iPhone thật.
+- Ký bằng Apple Account miễn phí / Personal Team; đã bật Developer Mode và tin cậy chứng chỉ ứng dụng trên iPhone.
+- Ứng dụng chạy trên iPhone 11 Pro (iOS 18.3.1), hiện cảnh "NovaWay - Toolchain Smoke / Non-AR test" và khối lập phương.
+- Ứng dụng mở liên tục hơn 60 giây, không tự thoát.
+- Sau khi bấm Stop trong Xcode và thoát app trên iPhone, người dùng mở lại **trực tiếp từ biểu tượng trên iPhone** (không bấm Run lần nữa); cảnh hiện lại, app không tự thoát.
+- `df -h /System/Volumes/Data` sau build/chạy: Avail `14Gi`, Capacity `93%`.
+
+**Ảnh chỉ chứng minh những gì nhìn thấy:** ảnh iPhone cho thấy cảnh có nhãn, khối lập phương và watermark "Development Build"; ảnh Xcode cho thấy Automatically manage signing, bundle id `com.novaway.arterrainprototype`, profile do Xcode quản lý, trạng thái "Running", 105 cảnh báo và log runtime. Thời lượng >60 giây, việc mở lại độc lập, model/iOS version và chữ "Build Succeeded" là xác nhận trực tiếp của người dùng, **không** suy ra từ ảnh.
+
+**Vấn đề bằng chứng:** ảnh Xcode người dùng gửi **chưa được che**: còn hiện tên Team cá nhân, Apple ID email (một phần) ở ô Signing Certificate và tên thiết bị iPhone. Agent tạo bản đã che (hộp đen pixel, PNG mới) và chỉ lưu bản đó cùng ảnh iPhone (không chứa thông tin cá nhân) ở evidence **ngoài Git** (`novaway-ar-terrain-evidence/2026-09-26_ios_toolchain_smoke_8.1b_mac_iphone/device_iphone-11-pro/`, kèm `MAC_IPHONE_RESULT_RECORD.md`). Ảnh gốc chưa che không được lưu vào evidence hay Git. Không có ảnh, Apple ID, Team ID, UDID, chứng chỉ, provisioning profile hay đường dẫn cá nhân nào trong Git.
+
+**Đối chiếu test gate `8.1b` (runbook §6):**
+
+| Gate | Kết quả |
+|---|---|
+| Xcode build thành công | PASS (USER-REPORTED) |
+| App cài và mở trên iPhone 11 Pro thật, ký bằng Personal Team | PASS (USER-REPORTED; ảnh cảnh) |
+| Cảnh hiện camera/light/cube và nhãn không-AR | PASS (ảnh: nhãn + cube) |
+| Chạy ≥60 giây không crash | PASS (USER-REPORTED) |
+| Đóng và mở lại ≥1 lần | PASS (USER-REPORTED, mở lại độc lập từ icon) |
+| Evidence ghi exact Unity/Xcode/macOS/iOS version + source commit | PARTIAL: Xcode 16.4 và macOS 15.3.1 (lệnh đã báo trước đó), iOS 18.3.1 (user-reported), Unity `6000.3.23f1` + `3c12a31` qua khớp SHA artifact; chưa thấy hết trong ảnh |
+| Ảnh/log đã che thông tin cá nhân | CHƯA ĐẠT với ảnh Xcode gốc; bản đã che đã lưu ngoài Git |
+| Install/launch trên thiết bị LiDAR thật (iPhone 16 Pro) "trước `8.2`" (dòng plan) | NOT RUN — thiết bị chưa có/chưa kiểm chứng vật lý |
+| Review Manager review, CI xanh, PR được phép merge | CI xanh tại `2b093b3`; review/merge CHƯA |
+
+**Cảnh báo cần theo dõi (không sửa, không khẳng định vô hại):** Xcode báo khoảng 105 cảnh báo vàng, gồm cảnh báo linker về `lib_burst_generated.a` ("no platform load command found"). Agent phân tích tĩnh artifact Windows: `lib_burst_generated.a` có 90 object Mach-O arm64, **0** có platform load command; `baselib.a` 3/3 và `libiPhone-lib.a` 1.809/1.809 object có (`LC_BUILD_VERSION`/`LC_VERSION_MIN_IPHONEOS`). Điều này khớp với cảnh báo và chỉ vào thư viện Burst sinh trên Windows, nhưng **chưa** xác lập nguyên nhân trong Burst, chưa biết project sinh trên Mac có tránh được không, và chưa chứng minh ~104 cảnh báo còn lại vô hại. Build vẫn thành công và app vẫn chạy.
+
+**Timeline dung lượng Mac (giữ nguyên lịch sử, đều USER-REPORTED):** `15Gi` (2026-09-23) → `23 GiB` (2026-09-24) → `14Gi`, capacity 93% (sau build/chạy). Đường Xcode-only đã được dùng (project sinh trên Windows); người dùng không báo cài Unity trên Mac. Số đo này **không** biến storage gate cho việc cài Unity trên Mac thành PASS. Agent không xoá dữ liệu nào trên Mac của người cho mượn.
+
+**Phạm vi/không được suy diễn:** đây là **Non-AR toolchain smoke**. ARKit Scene Reconstruction, LiDAR, quét địa hình thật, GPS và RTK **chưa** kiểm thử; iPhone 11 Pro không có LiDAR Scene Reconstruction và không phải thiết bị kiểm thử LiDAR.
+
+**Trạng thái `8.1b` (chính xác):**
+
+```text
+XCODE BUILD (Mac):                      PASS  (USER-REPORTED)
+PERSONAL TEAM SIGNING + INSTALL:        PASS  (USER-REPORTED)
+RUN >60 s WITHOUT EXIT:                 PASS  (USER-REPORTED)
+INDEPENDENT RELAUNCH FROM ICON:         PASS  (USER-REPORTED)
+REDACTED EVIDENCE:                      stored outside Git (agent-redacted copy)
+LIDAR-DEVICE (iPhone 16 Pro) LAUNCH:    NOT RUN
+ARKIT / LIDAR / TERRAIN SCAN / GPS / RTK: NOT RUN
+STEP 8.1b COMPLETED:                    NO — chờ Review Manager review, merge, và quyết định về dòng "install/launch trên thiết bị LiDAR thật trước 8.2"
+```
+
+Plan ghi điều kiện LiDAR-device là "trước `8.2`"; agent không tự đóng `8.1b` mà để Review Manager quyết định điều kiện này thuộc gate `8.1b` hay là tiền đề riêng của `8.2`. PR #80 giữ DRAFT, chưa merge.
+
+## 32. Hai điểm chờ Review Manager quyết định để đóng `8.1b`: phạm vi iPhone 16 Pro và độ đủ của evidence (2026-09-26)
+
+Chủ dự án đề nghị rà lại cách đóng `8.1b`. Mục này ghi lại hai điểm và cách hiểu được đề xuất; **chưa có quyết định nào của Review Manager**, agent không tự đóng bước và không tự merge PR #80 (giữ DRAFT).
+
+**Điểm 1 — iPhone 16 Pro có chặn merge PR #80 không.** Tài liệu hiện không nhất quán:
+
+- Runbook §6 định nghĩa gate `8.1b` chỉ trên iPhone 11 Pro (bảy gạch đầu dòng); iPhone 16 Pro chỉ xuất hiện ở câu kết như thiết bị bắt buộc riêng cho `8.2`.
+- Dòng kế hoạch `8.1b` (cột Output) và §20 điểm 3 ghi "lặp install/launch trên iPhone 16 Pro **trước `8.2`**" ngay trong câu mô tả gate `8.1b`.
+
+Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke trên iPhone 11 Pro (runbook §6); install/launch trên iPhone 16 Pro là tiền đề của `8.2` (cùng runtime Scene Reconstruction capability check), **không** chặn merge PR #80. Agent ghi nhận đây là đề xuất; nếu Review Manager xác nhận, plan §20 và dòng `8.1b` cần được sửa cho khớp trong một commit tài liệu riêng (sửa cột gate của step đã duyệt cần quyết định của Review Manager). Cho tới lúc đó, tài liệu giữ nguyên trạng thái "chờ quyết định" và **không** coi iPhone 16 Pro là điều kiện chặn hay là điều kiện đã được miễn.
+
+**Điểm 2 — evidence đã đủ chưa.** Gate §6 yêu cầu "evidence ghi exact Unity/Xcode/macOS/iOS version và source commit", không yêu cầu mọi thông tin nằm trong cùng một ảnh. Record ngoài Git (`MAC_IPHONE_RESULT_RECORD.md`) ghi từng thông tin kèm provenance: Unity `6000.3.23f1` và source `3c12a31` qua khớp SHA-256 artifact Lenovo (AGENT-EXECUTED build, SHA khớp do người dùng báo), Xcode `16.4`/macOS `15.3.1` từ lệnh người dùng đã chạy ở §27, iOS `18.3.1` và model iPhone 11 Pro do người dùng báo. Nhãn "PARTIAL" ở §31 chỉ có nghĩa "không phải mọi thông tin tự kiểm chứng được từ ảnh", không phải kết luận evidence thiếu. Việc evidence đã đủ hay chưa do Review Manager quyết định sau khi xem record và bản ảnh đã che.
+
+**Ảnh có chữ "Build Succeeded":** chủ dự án nhắc từng gửi một ảnh Xcode có chữ này. Trong phiên hiện tại agent chỉ nhận hai ảnh (ảnh cảnh iPhone và ảnh Xcode màn Signing đang Running) — không có ảnh "Build Succeeded" nên không thể dùng hay lưu. Nếu gửi lại để tăng độ chắc: chỉ lưu bản cắt/che kỹ (che tên thiết bị, Team, Apple ID và mọi đường dẫn cá nhân), kiểm tra bằng mắt trước khi lưu, ghi SHA-256; ảnh gốc không lưu vào evidence hay Git.
+
+**Không đổi:** trạng thái các gate ở §31; `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK. PR #80 giữ DRAFT cho tới khi Review Manager review xong.
+
+## 33. Đính chính: iPhone 16 Pro là tiền đề của `8.2`, không chặn PR #80; cách xét evidence `8.1b` (2026-09-26)
+
+**Bản chất quyết định:** chủ dự án chốt cách hiểu dưới đây **để Review Manager kiểm tra**. Đây là quyết định về cách hiểu gate và độ đủ của evidence, **chưa phải phê duyệt merge**. PR #80 giữ DRAFT cho tới khi Review Manager review xong toàn bộ diff. Đây là đính chính tài liệu riêng; không viết lại §20, §31, §32.
+
+**Mâu thuẫn được đính chính (đã nêu ở §32):**
+
+- Runbook §6: gate `8.1b` chỉ trên iPhone 11 Pro; iPhone 16 Pro là thiết bị riêng cho `8.2`.
+- Dòng kế hoạch `8.1b` (cột Output: "thêm install/launch trên thiết bị LiDAR thật trước `8.2`") và §20 điểm 3 ("lặp install/launch trên iPhone 16 Pro trước `8.2`") đặt việc đó trong câu gate `8.1b`.
+- Dòng `8.2` (cột Target) đã liệt kê "install/launch trên iPhone 16 Pro" và runtime Scene Reconstruction capability check như **tiền đề của `8.2`**, và yêu cầu `8.1b` PASS trước — tức `8.1b` phải đóng được mà không cần iPhone 16 Pro, nếu không tiền đề này thành vòng tròn.
+
+**Cách hiểu chốt:** gate liên quan tới merge PR #80 = smoke trên iPhone 11 Pro theo runbook §6. Install/launch trên iPhone 16 Pro (cùng capability check) là tiền đề trước `8.2`. Trạng thái iPhone 16 Pro vẫn **NOT RUN** (thiết bị chưa có/chưa kiểm chứng vật lý); không được coi là đã đạt và không được coi là đã bị miễn — nó phải xảy ra trước khi bắt đầu `8.2`. Đã đồng bộ: dòng kế hoạch `8.1b` (đính chính có ngày trong cột Output, cột Test gate), runbook §6 và §8.2. §20 giữ nguyên làm lịch sử; §33 này thay thế cách đọc điểm 3 của §20.
+
+**Cách xét evidence (không yêu cầu mọi thông tin trong một ảnh):** exact Unity/Xcode/macOS/iOS version và source commit được xét từ (a) `MAC_IPHONE_RESULT_RECORD.md` ngoài Git, ghi từng mục kèm provenance; (b) checksum ZIP khớp artifact Lenovo build từ `3c12a31` (`be66e489…c3e8`); (c) lệnh người dùng đã chạy (§27: Xcode `16.4`, build `16F6`, macOS `15.3.1`); (d) các ảnh đã che. Nhãn "PARTIAL" ở §31 chỉ nghĩa "không phải mọi thứ tự kiểm chứng được từ ảnh"; độ đủ do Review Manager quyết định.
+
+**Ảnh "Build Succeeded":** chủ dự án chỉ ra ảnh gốc trên Lenovo. Agent xem, thấy ảnh chứa tên thiết bị nhiều chỗ, tên tài khoản người dùng Mac lặp trên nhiều dòng log và đường dẫn Windows của Lenovo trong chuỗi Burst, nên **chỉ giữ hai dải cắt** (thanh công cụ với tên thiết bị bị che, và dòng "Link UnityFramework"), che thêm phần thanh bên, kiểm tra bằng mắt rồi lưu ngoài Git (`xcode-build-succeeded-CROPPED-REDACTED.png`, SHA-256 `7b81f8c1611dfe54d945aa1cc0f48b25cbfa17433a0854d6ccdef2e2589f784d`). Bản cắt cho thấy "Build Succeeded | Today at 15:21", 105 cảnh báo và Link UnityFramework 90 cảnh báo; ngày của "Today" không hiện. Ảnh gốc không được lưu vào evidence, Git hay PR.
+
+**Điều agent đọc được trên ảnh gốc (không lưu):** configuration `ReleaseForRunning`, Xcode SDK `iOS 18.5` (SDK của Xcode, khác iOS 18.3.1 của máy, vốn vẫn là user-reported); thư mục build tên `iOS-ToolchainSmoke-20260924-044748` (trùng tên output Lenovo — hỗ trợ, không tự nó chứng minh ZIP đã SHA-verify là bản được build); linker ghi "no platform load command found … assuming: iOS" cho các object của `lib_burst_generated.a`, bước Link báo 90 cảnh báo — trùng số 90 object của phân tích tĩnh §31 (khớp, chưa chứng minh là cùng các mục). Cảnh báo vẫn là mục theo dõi, chưa chẩn đoán/chưa sửa.
+
+**Không đổi:** `8.1b` chưa COMPLETED; ~105 cảnh báo Xcode chưa được đánh giá là vô hại; đây là smoke không-AR, không chứng minh ARKit/LiDAR/GPS/RTK; PR #80 DRAFT, chưa merge.
+
+
+## 34. Review Manager xác nhận cách hiểu gate `8.1b` và độ đủ evidence; đồng bộ câu hiện trạng (2026-09-26)
+
+**Xác nhận (chủ dự án chuyển lại kết quả kiểm tra của Review Manager, agent không tự kiểm chứng):** (1) iPhone 16 Pro không chặn PR #80; đúng như §33, đó là tiền đề trước `8.2`. (2) Evidence nhiều nguồn có provenance (record ngoài Git, checksum, lệnh đã báo, ảnh đã che) là đủ cho smoke test `8.1b`.
+
+**Đồng bộ tài liệu:** runbook §8.2 còn một câu hiện trạng nói vẫn chờ "quyết định về điều kiện thiết bị LiDAR thật"; câu đó mâu thuẫn với §6 và §33 nên đã sửa, cùng các cụm "chờ Review Manager kiểm tra" ở runbook §6/§8.2 và dòng kế hoạch `8.1b`. §20, §31, §32, §33 giữ nguyên làm lịch sử; §34 này bổ sung, không thay đổi nội dung các mục trước.
+
+**Không đổi:** iPhone 16 Pro install/launch vẫn **NOT RUN** và phải xảy ra trước `8.2`; `8.1b` **chưa COMPLETED** (chờ Review Manager review cuối + merge PR #80); PR #80 giữ DRAFT, không tự merge; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa, chưa coi là vô hại; đây là smoke không-AR; storage gate cài Unity trên Mac vẫn chưa PASS.
