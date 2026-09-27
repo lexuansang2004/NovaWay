@@ -41,6 +41,8 @@ Khoá nốt các endpoint mutating còn thiếu rate limiting (đo được th�
 
 **Đo coverage R8-2 (27/09/2026, branch `test/r8-2-mobile-api-error-paths`, trước merge):** `flutter test --coverage` trên `develop` cho `VehicleListScreen` 54/72 dòng và `RegisterScreen` 64/74 dòng. Widget test mới dùng `http.testing.MockClient` qua `http.runWithClient` để kiểm tra thông báo `ApiException`, lỗi mạng chung, retry và `EMAIL_ALREADY_EXISTS`; không sửa source sản phẩm. Sau test, coverage đạt 72/72 và 74/74 dòng tương ứng (100% cả hai màn hình), `flutter test` 52/52 pass, `flutter analyze` không có issue và `flutter run -d chrome` khởi chạy được. Chỉ đánh dấu DoD R8-2 hoàn tất sau required PR checks và merge.
 
+**Đo coverage R8-3 (27/09/2026, branch `test/r8-3-realtime-rejected-state`, trước merge):** trên `develop`, các dòng 125–127 (`RealtimeConnectionState.rejected`) của `TripCockpitScreen` là 0 hit. Fake realtime mới phát được trạng thái `rejected`; widget test xác nhận khi đang kết nối, UI trở về idle, hiện lời nhắc đăng nhập lại và không hiển thị nút Dừng. Sau test, cả ba dòng có hit; `flutter test` 53/53 pass, `flutter analyze` không có issue và `flutter run -d chrome` khởi chạy được. Không đổi source sản phẩm hoặc MapLibre controller; chỉ đánh dấu hoàn tất sau required PR checks và merge.
+
 ## 5. Definition of Done cho Sprint R8
 
 - [x] R8-1 hoàn tất — verify lại đúng phép đo ở mục 4 (15 request liên tiếp), xác nhận `429` xuất hiện sau khi thêm guard; PR #81 merge và post-merge tests pass (27/09/2026).
