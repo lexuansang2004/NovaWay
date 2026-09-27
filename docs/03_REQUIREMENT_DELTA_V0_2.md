@@ -330,6 +330,14 @@ Yêu cầu R&D:
 - Có fallback khi thiết bị nóng hoặc camera không đủ ánh sáng.
 - Không nhúng vào mobile app chính khi chưa đạt test gate.
 
+> **Cập nhật (08/2026 — step `8.0` APPROVED 2026-08-24):** phạm vi/thiết bị/lịch trình cụ thể cho R&D track này (không phải mở rộng yêu cầu MVP) đã được tài liệu hoá thành một **baseline chính thức riêng cho prototype nghiên cứu phục vụ báo cáo hội đồng** — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md`. Tóm tắt: Unity + ARKit Scene Reconstruction (LiDAR) trên iPhone 15 Pro Max, khu vực 10×10 m, georeference bằng 5 control point + 3 checkpoint RTK độc lập, export `mesh_ar_local.ply` (AR-local) rồi `mesh_enu.ply` georeferenced (bắt buộc), `mesh_enu.glb` là stretch goal, Accuracy KPI mục tiêu RMSE 3D ≤10cm (tách biệt khỏi Measurement Gate — xem baseline §8). Đứng ngoài `apps/mobile`, tại `research/ar-terrain-unity/`. Micro-step tương ứng: `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` nhóm `8.0`–`8.7` (thay cho `8.1` gộp cũ).
+>
+> **Đính chính kiểm kê thiết bị (08/2026, lịch sử ở §19):** iPhone 15 Pro Max ở ghi nhận ban đầu là lỗi kiểm kê; thiết bị LiDAR dự kiến đúng là **iPhone 16 Pro**, chưa kiểm chứng vật lý. iPhone 11 Pro không có LiDAR, chỉ dùng smoke iOS/compatibility.
+
+> **Cập nhật vận hành được chủ dự án đồng ý (2026-09-04):** Lenovo + iPhone 11 Pro hiện sẵn có, Mac chưa sẵn có; `8.1a` được tạo/chạy project Unity không-AR trên Windows, `8.1b` build/ký/cài/chạy iOS sau khi người dùng báo có Mac. Student subscription ACTIVE theo người dùng ngày 03/09; activation tại máy kiểm tra riêng. Không đổi FR/NFR của MVP, không thay LiDAR/RTK thật bằng fixture; xem baseline §4/§11, `docs/REVIEW_NOTES.md` §20.
+>
+> **Cập nhật 2026-09-22:** MacBook Air M3/macOS 15.3.1 đã có, Xcode 16.4 đang tải; iPhone 11 Pro/iOS 18.3.1 có sẵn; `8.1b` chưa chạy và iPhone 16 Pro vẫn chưa có. Hướng sản phẩm tách Survey Mode (LiDAR thu thập cục bộ) và Drive Mode (bản đồ quét sẵn để cảnh báo sớm trên thiết bị phổ thông); TPP là hiển thị mặc định khi lái, FPP bổ sung, Second-Person không thuộc runtime. Đây không phải FR/NFR mới của MVP và không tự cho phép sửa `apps/*`; xem `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`.
+
 ## 6. Các thay đổi thuật ngữ
 
 Không dùng:

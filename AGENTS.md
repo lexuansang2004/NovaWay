@@ -1,10 +1,10 @@
 # AGENTS.md — NovaWay AI Agent Rules
 
-> Step D0.4. Áp dụng cho mọi AI agent (Codex, Claude Code, hoặc agent khác) làm việc trên repo này từ sau khi Requirement Baseline v1.0 được chốt (D0.7). Đây là quy tắc bắt buộc, không phải gợi ý.
+> Áp dụng cho mọi AI agent (Codex, Claude Code, hoặc agent khác) làm việc trên repo này. Đây là quy tắc bắt buộc, không phải gợi ý.
 
 ## Golden rule
 
-**Không code trước khi Requirement Baseline v1.0 được duyệt.** Trạng thái hiện tại: đang ở D0.4 (Architecture) trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` — chưa tới D0.7.
+**Không code trước khi Requirement Baseline v1.0 được duyệt.** Trạng thái hiện tại: `docs/REQUIREMENT_BASELINE_V1.md` đã tuyên bố **Baseline v1.0 ĐẠT** (D0.7) — repo đã ở giai đoạn code theo `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`, với các sprint hardening R1–R7 đã đóng. Nguyên tắc này vẫn áp dụng nguyên vẹn cho mọi requirement **mới** phát sinh sau baseline (kể cả các track R&D riêng như AR Terrain — xem `docs/research/AR_TERRAIN_THESIS_BASELINE.md`): không code trước khi tài liệu tương ứng được cập nhật/duyệt, đúng "Scope rules" bên dưới.
 
 ## Tài liệu bắt buộc đọc trước khi code bất kỳ step nào
 

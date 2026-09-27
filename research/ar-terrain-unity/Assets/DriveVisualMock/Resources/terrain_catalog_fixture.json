@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "catalog_version": "fixture-route-v1",
+  "coordinate_reference": "LOCAL_ROUTE_METERS",
+  "source_label": "SYNTHETIC/FIXTURE",
+  "hazards": [
+    {
+      "hazard_id": "fixture-speed-bump-01",
+      "type": "speed_bump",
+      "severity": "warning",
+      "description": "Gờ giảm tốc mô phỏng phía trước",
+      "route_distance_m": 38.0,
+      "recommended_lead_time_s": 6.0,
+      "source_scan_id": "fixture-only"
+    },
+    {
+      "hazard_id": "fixture-pothole-zone-02",
+      "type": "pothole_zone",
+      "severity": "danger",
+      "description": "Vùng mặt đường xấu mô phỏng",
+      "route_distance_m": 78.0,
+      "recommended_lead_time_s": 7.0,
+      "source_scan_id": "fixture-only"
+    },
+    {
+      "hazard_id": "fixture-steep-slope-03",
+      "type": "steep_slope",
+      "severity": "warning",
+      "description": "Đoạn dốc lớn mô phỏng",
+      "route_distance_m": 125.0,
+      "recommended_lead_time_s": 8.0,
+      "source_scan_id": "fixture-only"
+    }
+  ]
+}

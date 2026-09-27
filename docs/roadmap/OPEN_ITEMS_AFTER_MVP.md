@@ -2,13 +2,15 @@
 
 > Tổng hợp mọi việc còn mở sau khi đóng mốc `v0.1.0-mvp-baseline`. Nguồn: `docs/ARCHITECTURE.md` §9, `docs/API_CONTRACT.md` §11, `docs/TEST_STRATEGY.md` §3, `docs/REVIEW_NOTES.md`. Không có mục nào ở đây được code trong lúc viết tài liệu này — đây là **ghi nhận**, không phải triển khai.
 
-## 1. Step 8.1 — AR Terrain Mesh Prototype ⏸️ DEFERRED
+## 1. Step 8.1 (gốc) — AR Terrain Mesh Prototype — ✅ Baseline tài liệu hoá, step `8.0` APPROVED (2026-08-24), chia lại thành `8.0`–`8.7`
 
-- **Trạng thái:** Hoãn, chưa bắt đầu.
-- **Lý do:** Cần Unity + AR Foundation và thiết bị AR thật để đo test gate bắt buộc (FPS, nhiệt độ, pin, điều kiện ánh sáng yếu — `docs/03_REQUIREMENT_DELTA_V0_2.md` §5.1). Môi trường phát triển hiện tại không có cả hai.
-- **Không chặn gì:** R&D tách biệt hoàn toàn khỏi `apps/mobile` theo thiết kế gốc (TDR-003, `docs/ARCHITECTURE.md` §5.3/§7) — không merge vào app chính cho tới khi đạt test gate.
-- **Điều kiện để tiếp tục:** có máy cài Unity Hub + Unity Editor (LTS phù hợp với AR Foundation), và ít nhất một thiết bị Android/iOS hỗ trợ ARCore/ARKit để đo thật.
-- Chi tiết: `docs/REVIEW_NOTES.md` §15, `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` dòng `8.1`.
+- **Trạng thái cũ:** Hoãn, chưa bắt đầu — thiếu Unity/Unity Hub và thiết bị AR thật để đo test gate bắt buộc (FPS, nhiệt độ, pin, điều kiện ánh sáng yếu — `docs/03_REQUIREMENT_DELTA_V0_2.md` §5.1).
+- **Lịch sử chốt baseline (08/2026):** step `8.0` APPROVED ngày 2026-08-24, xác định prototype độc lập cho báo cáo hội đồng. Ghi nhận thiết bị ban đầu có lỗi kiểm kê và tình trạng sẵn có sau đó thay đổi; không dùng ghi nhận tháng 8 để kết luận máy đang sẵn có. Lịch sử ở `docs/REVIEW_NOTES.md` §16/§19; trạng thái hiện tại ở dòng kế tiếp và baseline §4.
+- **Trạng thái hiện tại (2026-09-22):** `8.1a` Windows đã hoàn tất/merge. MacBook Air M3 (macOS 15.3.1, hơn 50 GB trống) đã mượn được, Xcode 16.4 đang tải; iPhone 11 Pro/iOS 18.3.1 có sẵn. Việc tải/cài chưa làm `8.1b` PASS. iPhone 16 Pro vẫn chưa có/chưa kiểm chứng nên LiDAR `8.2` còn BLOCKED và lịch AT RISK. Hướng Survey Mode/Drive Mode, bản đồ quét sẵn và FPP/TPP được ghi ở addendum step `8.0b`; không thay LiDAR/RTK thật bằng fixture. Xem `docs/REVIEW_NOTES.md` §25.
+- Step `8.1` gộp cũ (`feat/ar-terrain-prototype`) đã được chia lại thành `8.0` (baseline tài liệu — **APPROVED**) → `8.0b` (Survey/Drive + cảnh báo sớm + FPP/TPP, docs-only) → `8.1a` (Windows Editor bootstrap, completed) → `8.1b` (Mac/iOS smoke, đang chuẩn bị) → `8.2` (LiDAR mesh capture, blocked thiếu thiết bị) → `8.3` (`mesh_ar_local.ply`, AR-local) → `8.4` (georeference logic hai giai đoạn) → `8.5` (independent accuracy validation) → `8.6` (performance & compatibility validation, mandatory) → `8.7` (GLB export, stretch). Implementation Drive Mode cần micro-step riêng sau docs review; không gộp vào tooling.
+- **Deadline:** code freeze `2026-11-15`; báo cáo/slide/rehearsal tới `2026-11-30`.
+- **Không chặn gì:** R&D tách biệt hoàn toàn khỏi `apps/mobile` theo thiết kế gốc (TDR-003, `docs/ARCHITECTURE.md` §7), đặt tại `research/ar-terrain-unity/` (ngoài `apps/`, tạo từ step `8.1`) — không merge vào app chính cho tới khi đạt test gate, không thuộc Sprint R8.
+- Chi tiết đầy đủ: `docs/research/AR_TERRAIN_THESIS_BASELINE.md`, `docs/REVIEW_NOTES.md` §15 (hoãn), §16 (baseline tài liệu hoá, APPROVED 2026-08-24), `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` nhóm `8.0`–`8.7`.
 
 ## 2. ✅ E2E-on-staging test gate — tự động hoá xong (R2-5, 07/2026; trigger sửa lại ở R2-7)
 

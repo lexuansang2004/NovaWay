@@ -228,6 +228,8 @@ CREATE TABLE terrain_warnings (
 CREATE INDEX idx_terrain_warnings_location ON terrain_warnings USING GIST(location);
 ```
 
+> **Không nhầm với AR Terrain Thesis Prototype (cập nhật 09/2026):** prototype Unity/ARKit LiDAR ở `docs/research/AR_TERRAIN_THESIS_BASELINE.md` hiện không có backend/API dependency — không đọc/ghi bảng `terrain_warnings` này hay bất kỳ bảng nào khác trong schema. Mesh, toạ độ RTK và terrain catalog pilot ở lại local/offline. Nếu Post-MVP đưa dữ liệu Survey Mode vào Drive Mode của NovaWay, schema/migration phải được thiết kế và duyệt ở micro-step integration riêng; addendum Survey/Drive không tự thay đổi bảng này.
+
 ## 3. Migration Order
 
 Thứ tự phụ thuộc FK giữa các bảng (dưới đây) không migrate hết trong 1 step — mỗi step trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` chỉ migrate bảng nó thực sự cần, đúng nguyên tắc "một branch = một nghiệp vụ nhỏ" (`AGENTS.md`). Ánh xạ đã chốt:
@@ -260,6 +262,8 @@ Job "raw_gps_cleanup" (chạy daily):
 ```
 
 Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `DATA_REQUIREMENTS.md` để tránh khoá bảng lớn. `gps_event_dedup` không partition được (khoá chính là `(user_id, client_event_id)`, không phải theo thời gian), nên dọn dẹp nó là `DELETE` thường — chấp nhận được vì đã giới hạn qua `raw_gps_event_id` range, không phải toàn bảng.
+
+> **⚠️ Đính chính trạng thái thật (08/2026, step `9.3 fix/raw-gps-partition-availability`):** job "raw_gps_cleanup" mô tả ở trên **chưa từng được implement** trong `apps/backend` — đây luôn chỉ là mô tả thiết kế/tài liệu, không phải code đang chạy. Migration gốc (`1721260000006-CreateRawGpsEventsTable.ts`, step `3.1`) chỉ tạo **đúng một** partition tĩnh, `raw_gps_events_2026_07` (`2026-07-01` → `2026-08-01`). Hậu quả thật đã xác nhận: mọi insert GPS có `received_at` từ `2026-08-01` trở đi (bao gồm CI thật, PR #73, 24/08/2026) đều lỗi `no partition of relation "raw_gps_events" found for row` — xem `docs/REVIEW_NOTES.md` §17 cho log/bằng chứng đầy đủ. Step `9.3` bổ sung migration mới + `PartitionMaintenanceService` để **chỉ đảm bảo partition tháng hiện tại + kế tiếp luôn tồn tại** (phần "tạo partition" của job mô tả ở trên) — **không** implement phần "DROP partition cũ >30 ngày" / dọn `gps_event_dedup` ở step này; hai việc đó vẫn hoàn toàn chưa có code, tiếp tục được theo dõi riêng (không được coi là đã xong). Do đó: **chưa thể tuyên bố TTL 30 ngày/retention policy (FR-RETENTION-02, TDR-006) đã "implemented"** cho tới khi phần dọn dẹp/DROP partition thật sự được xây và verify — step `9.3` chỉ đóng phần "partition availability", không đóng toàn bộ mục 4 này.
 
 ## 5. Open Items for D0.7
 

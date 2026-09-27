@@ -19,6 +19,7 @@ import { SyncModule } from './sync/sync.module';
 import { TerrainWarningsModule } from './terrain-warnings/terrain-warnings.module';
 import { ObservabilityModule } from './observability/metrics.module';
 import { LoggingInterceptor } from './observability/logging.interceptor';
+import { PartitionMaintenanceModule } from './database/partition-maintenance/partition-maintenance.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { LoggingInterceptor } from './observability/logging.interceptor';
     RoutingModule,
     SyncModule,
     TerrainWarningsModule,
+    PartitionMaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor }],
