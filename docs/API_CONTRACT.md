@@ -291,7 +291,7 @@ Response `200`:
 | `403` | Có token hợp lệ, resource tồn tại nhưng không thuộc sở hữu của user (vd. `NOT_VEHICLE_OWNER`) — quy ước thống nhất toàn backend, xem §11 |
 | `404` | Resource không tồn tại thật sự (không tồn tại ID đó ở bất kỳ user nào) |
 | `409` | Xung đột trạng thái (trip đã active, uỷ quyền chồng thời gian, email đã tồn tại) |
-| `429` | Vượt rate limit (GPS event, login attempts) |
+| `429` | Vượt rate limit (GPS event, login, batch sync hoặc endpoint ghi dữ liệu Vehicles/Trips/VehicleAuthorization) |
 | `500` | Lỗi hệ thống không lường trước |
 
 ## 9. Terrain Warnings (read-only ở MVP)
@@ -329,4 +329,4 @@ Ghi chú: MVP sinh route mock bằng nội suy tuyến tính giữa `origin`/`de
 - ~~`403` vs `404` cho resource không thuộc sở hữu~~ — **Đã chốt (07/2026, trước step `1.4`)**: dùng `403` kèm error_code cụ thể theo resource (vd. `NOT_VEHICLE_OWNER`), áp dụng cho toàn backend — khớp đúng ví dụ đã có sẵn ở §2. Lý do: vehicle ID (và các resource tương tự sau này) không phải thông tin nhạy cảm cần giấu tồn tại; 403 + error_code rõ ràng giúp FE hiển thị thông báo chính xác hơn "not found" chung chung, và tránh phải query 2 lần (exists-but-not-mine vs not-exists) ở mọi endpoint. `404` chỉ dùng khi resource thật sự không tồn tại (ID sai/đã xoá) — xem §8.
 - ~~Payload cụ thể cho `POST /api/vehicles/:id/verify` phụ thuộc nhà cung cấp biometric đã chọn~~ — **Đã chốt (R2-6, 07/2026)**: `provider_payload` (opaque string) → `session_id` thật theo flow session của AWS Rekognition Face Liveness (`POST /verify/session` tạo session trước) — xem §4.
 - ~~Ngưỡng thời gian hợp lệ của `verification_id` trước khi bị coi là hết hạn để dùng cho `trips/start`~~ — **Đã chốt (07/2026, step `7.1`)**: 5 phút (`VERIFICATION_VALIDITY_MINUTES`, xem `apps/backend/.env.example`).
-- ~~Rate limit cụ thể theo endpoint~~ — **Đã triển khai (R1-4 + R2-2, 07/2026)**: login (`POST /api/auth/login`, `@nestjs/throttler`, 5 lần/60s/IP), GPS event (`location:update` qua WebSocket, in-memory counter, 10 event/giây/user), và batch sync (`POST /api/trips/sync`, §7, `@nestjs/throttler`, 20 request/60s/IP) — cả ba là giá trị ban đầu thận trọng, chưa qua benchmark tải thật. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5.
+- ~~Rate limit cụ thể theo endpoint~~ — **Đã triển khai (R1-4 + R2-2, 07/2026; R8-1, 09/2026)**: login (`POST /api/auth/login`, `@nestjs/throttler`, 5 lần/60s/IP), GPS event (`location:update` qua WebSocket, in-memory counter, 10 event/giây/user), batch sync (`POST /api/trips/sync`, §7, `@nestjs/throttler`, 20 request/60s/IP), và các `POST/PATCH/DELETE` của Vehicles, Trips, VehicleAuthorization (`ThrottlerGuard`, mặc định 5 lần/60s/IP cho từng route). Các ngưỡng là giá trị ban đầu, chưa qua benchmark tải thật; các `GET` trong ba controller sau không bị guard này giới hạn. Xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5 và `docs/roadmap/SPRINT_R8_ABUSE_AND_RELIABILITY_GAPS.md` §4.

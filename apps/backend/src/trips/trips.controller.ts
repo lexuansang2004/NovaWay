@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TripsService } from './trips.service';
 import { StartTripDto } from './dto/start-trip.dto';
@@ -16,6 +17,7 @@ export class TripsController {
   constructor(private readonly tripsService: TripsService) {}
 
   @Post('start')
+  @UseGuards(ThrottlerGuard)
   async start(@Req() req: AuthenticatedRequest, @Body() dto: StartTripDto) {
     const trip = await this.tripsService.start(req.user.id, dto);
     return { id: trip.id, vehicle_id: trip.vehicleId, status: trip.status, started_at: trip.startedAt };
@@ -23,6 +25,7 @@ export class TripsController {
 
   @Post(':id/end')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
   async end(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     const { trip, tripLog } = await this.tripsService.end(id, req.user.id);
     return toTripWithLogResponse(trip, tripLog);

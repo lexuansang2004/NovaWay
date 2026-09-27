@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -35,12 +36,14 @@ export class VehiclesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
   async create(@Req() req: AuthenticatedRequest, @Body() dto: CreateVehicleDto) {
     const vehicle = await this.vehiclesService.create(req.user.id, dto);
     return toVehicleResponse(vehicle);
   }
 
   @Patch(':id')
+  @UseGuards(ThrottlerGuard)
   async update(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -52,12 +55,14 @@ export class VehiclesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(ThrottlerGuard)
   async remove(@Req() req: AuthenticatedRequest, @Param('id') id: string): Promise<void> {
     await this.vehiclesService.remove(id, req.user.id);
   }
 
   @Post(':id/activate')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
   async activate(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     const vehicle = await this.vehiclesService.activate(id, req.user.id);
     return { id: vehicle.id, is_active: vehicle.isActive };
