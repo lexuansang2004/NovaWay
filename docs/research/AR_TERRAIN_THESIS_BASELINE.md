@@ -10,6 +10,8 @@
 
 > **Cập nhật trạng thái và hướng sản phẩm ngày 2026-09-23:** người dùng đã mượn được **MacBook Air M3**; macOS Sequoia 15.3.1, Xcode 16.4 build `16F6` và active developer directory đã được xác minh bằng Terminal. Data volume chỉ còn `15Gi` khả dụng và đã dùng 92%; vì đây là Mac mượn, cài Unity đang BLOCKED cho tới khi chủ máy đồng ý giải phóng dung lượng. `8.1b` vẫn **PENDING** cho tới khi Unity Mac import, build/ký/cài/chạy thật PASS. iPhone 11 Pro chạy iOS 18.3.1 có sẵn; iPhone 16 Pro chưa có. Drive Visual Mock fixture trên Lenovo đã hoàn tất qua PR #79/commit `29db6b8f3b27a7194f8c65e10846db70e780abce`, không thay bằng chứng iOS/LiDAR thật. Chủ dự án đồng thời làm rõ mục tiêu dài hạn: tách **Survey Mode** (thiết bị LiDAR thu thập/georeference địa hình cục bộ) và **Drive Mode** (thiết bị phổ thông đọc bản đồ đã quét sẵn để cảnh báo sớm). Ô 10×10 m vẫn là đơn vị đo khoa học bắt buộc, không phải giới hạn khoảng cách cảnh báo. Thiết kế/giới hạn hiển thị FPP/TPP và loại Second-Person runtime được ghi ở `docs/research/AR_TERRAIN_SURVEY_DRIVE_MODE_ADDENDUM.md`.
 
+> **Cập nhật 2026-09-27, thay thế trạng thái 23/09 (không xoá lịch sử):** `8.1b` đã COMPLETED sau đường Xcode-only trên Mac và iPhone 11 Pro; PR #80 merge 2026-09-26 (`3f6e5e6`), evidence nhiều nguồn đã được Review Manager xác nhận đủ cho smoke không-AR (REVIEW_NOTES §34–§35). Mac Unity Editor/iOS Build Support không được xác nhận cài; Data volume còn `14Gi` sau build (USER-REPORTED), nên storage readiness cho Unity Mac vẫn PENDING. `8.2` LiDAR vẫn BLOCKED tới khi có iPhone 16 Pro vật lý, smoke cài/khởi chạy trên chính máy đó và runtime Scene Reconstruction capability check.
+
 ## 1. Objective
 
 Xây dựng một prototype AR quét mesh địa hình thật (LiDAR) trên iPhone, gắn toạ độ thật (RTK/WGS84) vào mesh, và đo được sai số định vị của mesh so với thực địa — để chứng minh tính khả thi kỹ thuật của hướng "AR Terrain Mesh" đã đặt ra từ D0.2 (`docs/03_REQUIREMENT_DELTA_V0_2.md` §5.1) như một R&D track, phục vụ báo cáo hội đồng (không phải để phát hành sản phẩm). Kết quả khảo sát là tiền đề dữ liệu cho hướng **Drive Mode cảnh báo sớm từ bản đồ đã quét trước**; LiDAR không được mô tả sai thành cảm biến nhìn xa khi xe đang chạy.
@@ -281,7 +283,7 @@ Quy trình tạo `mesh_enu.ply`: sau khi `C_AXIS` đã khoá và transform `R_AR
 - `8.1a` PASS không làm `8.1b` PASS và không đủ mở `8.2`. Nhóm toolchain `8.1` chỉ hoàn tất khi cả hai gate đạt. Review/required CI vẫn bắt buộc trước merge; không bypass.
 - PLY bằng mesh mẫu và unit test WGS84→ENU/rigid/RMSE có thể được chuẩn bị trên Windows **sau khi tách và duyệt micro-step độc lập trong plan**, không triển khai trong `8.1a`, không tự mở `8.3`/`8.4` khi gate cũ chưa đạt. Decision gate marker-center picking ở §6 vẫn giữ nguyên; không khoá `C_AXIS` runtime bằng giả định từ fixture.
 - Backend/Web/MVP không phụ thuộc track AR; có thể tiếp tục các micro-step riêng đã được duyệt, không sửa `apps/*` trên branch AR này, không tự merge PR #71.
-- MacBook Air M3 đã có từ 2026-09-22 nhưng `8.1b` chưa chạy; ưu tiên hoàn thành toolchain smoke. iPhone 16 Pro vẫn chưa có nên `8.2` còn blocked. Không lùi ngầm code freeze `2026-11-15` hoặc thay mốc thực địa bằng test Editor/iPhone 11 Pro.
+- MacBook Air M3 đã có từ 2026-09-22; tại thời điểm ghi chú này `8.1b` chưa chạy. **Cập nhật 2026-09-27:** `8.1b` đã COMPLETED qua Xcode-only/iPhone 11 Pro và PR #80 merge; iPhone 16 Pro vẫn chưa có nên `8.2` còn blocked. Không lùi ngầm code freeze `2026-11-15` hoặc thay mốc thực địa bằng test Editor/iPhone 11 Pro.
 
 **Quy tắc branch-scope: không trộn bug fix vào `test/ar-terrain-performance-validation` (`8.6`):**
 
@@ -384,7 +386,7 @@ Track `8.x` được coi là hoàn tất (tới mức phục vụ báo cáo hộ
 
 **Mục bắt buộc (không phụ thuộc trị số RMSE):**
 
-- [ ] `8.1a` Windows Editor smoke và `8.1b` Mac/Xcode/iPhone smoke đều PASS theo gate riêng ở §11; việc cài Hub hoặc có Student subscription không tự làm gate nào PASS.
+- [x] `8.1a` Windows Editor smoke và `8.1b` Mac/Xcode/iPhone 11 Pro smoke đều PASS theo gate riêng ở §11 (PR #76 và #80 đã merge; Mac/iPhone là USER-EXECUTED/USER-REPORTED, evidence đã che ngoài Git). Đây chỉ là toolchain không-AR; việc cài Hub hoặc có Student subscription tự nó không làm gate nào PASS.
 
 - [ ] App Unity chạy độc lập trên iPhone 16 Pro, tạo mesh LiDAR thật (ARKit Scene Reconstruction) trên khu vực **10×10 m**.
 - [ ] iPhone 11 Pro: app phát hiện đúng thiết bị không hỗ trợ LiDAR Scene Reconstruction, hiển thị thông báo rõ ràng, không giả vờ tạo mesh thật — validation chính thức ở step `8.6` (mandatory).
