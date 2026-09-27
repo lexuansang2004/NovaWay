@@ -168,6 +168,33 @@ void main() {
     expect(find.text('Bắt đầu'), findsOneWidget);
   });
 
+  testWidgets('rejected realtime connection returns to idle with a login message',
+      (WidgetTester tester) async {
+    final client = FakeRealtimeClient(autoConnectSucceeds: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TripCockpitScreen(
+          vehicle: _testVehicle,
+          tripId: _testTripId,
+          locationSource: FakeLocationSource(),
+          realtimeClient: client,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Bắt đầu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Đang kết nối...'), findsOneWidget);
+
+    client.simulateConnectionRejected();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sẵn sàng bắt đầu'), findsOneWidget);
+    expect(find.text('Kết nối bị từ chối. Vui lòng đăng nhập lại.'), findsOneWidget);
+    expect(find.text('Bắt đầu'), findsOneWidget);
+    expect(find.text('Dừng'), findsNothing);
+  });
+
   testWidgets('reconnect does not duplicate location sends for a single position fix',
       (WidgetTester tester) async {
     final client = FakeRealtimeClient();
