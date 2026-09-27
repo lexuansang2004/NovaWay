@@ -46,9 +46,15 @@ Khoá nốt các endpoint mutating còn thiếu rate limiting (đo được th�
 ## 5. Definition of Done cho Sprint R8
 
 - [x] R8-1 hoàn tất — verify lại đúng phép đo ở mục 4 (15 request liên tiếp), xác nhận `429` xuất hiện sau khi thêm guard; PR #81 merge và post-merge tests pass (27/09/2026).
-- [ ] R8-2 hoàn tất — coverage `vehicle_list_screen.dart` và `register_screen.dart` lên 100% (hoặc gần, nếu còn dòng không thể test hợp lý — ghi rõ lý do).
-- [ ] `pnpm -r --if-present test` + `flutter test` + E2E golden path pass sau **mỗi** mục, không dồn cuối sprint.
-- [ ] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` được cập nhật nếu phát hiện thêm gap tài liệu-thực tế trong lúc làm.
-- [ ] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 4.
+- [x] R8-2 hoàn tất — coverage `vehicle_list_screen.dart` 72/72 và `register_screen.dart` 74/74 dòng (100%); PR #83 merge 27/09/2026.
+- [x] `pnpm -r --if-present test` + `flutter test` + E2E golden path pass sau **mỗi** mục: required CI trên PR #81/#83/#84 đều xanh; sau merge #84 chạy lại trên `develop` được backend 174/174, web 31/31, Flutter 53/53. E2E sau merge #84 dựa trên CI của PR, không ghi là đã chạy local.
+- [x] `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` đã ghi R8-1; R8-2/R8-3 không phát hiện gap tài liệu–thực tế mới cần thêm vào đó.
+- [x] Không có tính năng sản phẩm mới nào được thêm ngoài danh sách ở mục 4: R8-1 chỉ thêm rate limit, R8-2/R8-3 chỉ thêm test/fake test.
 
-**Ghi chú:** R8-3 (P3) không bắt buộc cho DoD tối thiểu, có thể kéo sang R9 nếu hết thời gian.
+**Ghi chú:** R8-3 (P3) không bắt buộc cho DoD tối thiểu nhưng đã hoàn tất qua PR #84 (merge 27/09/2026): ba dòng xử lý `rejected` từ 0 hit thành có hit; không đổi source sản phẩm.
+
+## 6. Kết quả đóng Sprint R8 (27/09/2026)
+
+R8-1, R8-2 và R8-3 đều đã merge vào `develop` qua PR #81, #83 và #84. Ba PR đều có các job Backend + Web + shared-types, E2E golden path và Mobile xanh. Phép đo HTTP R8-1, coverage R8-2 và R8-3 nằm ở mục 4; kết quả test trên `develop` sau PR #84 merge là backend 174/174, web 31/31 và Flutter 53/53. Đây là kết quả sprint hardening/test, **không** chứng minh GPS thực địa, xác thực khuôn mặt trên thiết bị thật, ARKit hay LiDAR.
+
+Track AR Terrain tách biệt khỏi Sprint R8. Step `8.2` vẫn chưa được phép bắt đầu nếu chưa có iPhone 16 Pro vật lý, smoke cài/khởi chạy trên chính máy đó và runtime Scene Reconstruction capability check theo micro-step plan. Không đổi trạng thái `8.2` khi đóng Sprint R8.
