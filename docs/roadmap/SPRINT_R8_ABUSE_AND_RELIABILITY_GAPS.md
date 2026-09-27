@@ -37,6 +37,8 @@ Khoá nốt các endpoint mutating còn thiếu rate limiting (đo được th�
 
 **Đề xuất thứ tự làm:** R8-1 trước (P1, cùng lớp rủi ro đã xử lý ở R6-1, không đổi logic nghiệp vụ) → R8-2 (P2, kiểm thử nhánh lỗi UI bằng seam có sẵn) → R8-3 (P3, kiểm thử trạng thái kết nối bị từ chối). Mỗi mục dùng branch và PR riêng theo `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`; không gộp R8-2/R8-3 chỉ vì đều là test mobile.
 
+**Đo lại R8-1 (27/09/2026, branch `fix/r8-1-mutating-rate-limit`, trước merge):** baseline đã ghi ở bảng trên là 15/15 `201` (10/08/2026). Sau khi gắn guard cho tám route ghi dữ liệu, phép đo trên backend thật với PostgreSQL/PostGIS tạm và cùng một JWT cho 15 `POST /api/vehicles` liên tiếp cho kết quả 5 × `201`, 10 × `429` (`error_code: RATE_LIMITED`). Sáu `GET /api/vehicles` tiếp theo vẫn `200`; request ghi không có JWT vẫn `401`. Test tự động kiểm tra metadata của cả tám route ghi và các route đọc tương ứng. Mục DoD R8-1 chỉ đánh dấu hoàn tất sau khi toàn bộ test gate và PR merge.
+
 ## 5. Definition of Done cho Sprint R8
 
 - [ ] R8-1 hoàn tất — verify lại đúng phép đo ở mục 4 (15 request liên tiếp), xác nhận `429` xuất hiện sau khi thêm guard.

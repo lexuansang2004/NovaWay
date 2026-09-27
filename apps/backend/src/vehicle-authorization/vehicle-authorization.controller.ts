@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { VehicleAuthorizationService } from './vehicle-authorization.service';
 import { CreateAuthorizationDto } from './dto/create-authorization.dto';
@@ -16,6 +17,7 @@ export class VehicleAuthorizationController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
   async grant(
     @Req() req: AuthenticatedRequest,
     @Param('vehicleId') vehicleId: string,
@@ -32,6 +34,7 @@ export class VehicleAuthorizationController {
   }
 
   @Delete(':authId')
+  @UseGuards(ThrottlerGuard)
   async revoke(
     @Req() req: AuthenticatedRequest,
     @Param('vehicleId') vehicleId: string,
