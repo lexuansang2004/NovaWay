@@ -39,6 +39,8 @@ Khoá nốt các endpoint mutating còn thiếu rate limiting (đo được th�
 
 **Đo lại R8-1 (27/09/2026, branch `fix/r8-1-mutating-rate-limit`, trước merge):** baseline đã ghi ở bảng trên là 15/15 `201` (10/08/2026). Sau khi gắn guard cho tám route ghi dữ liệu, phép đo trên backend thật với PostgreSQL/PostGIS tạm và cùng một JWT cho 15 `POST /api/vehicles` liên tiếp cho kết quả 5 × `201`, 10 × `429` (`error_code: RATE_LIMITED`). Sáu `GET /api/vehicles` tiếp theo vẫn `200`; request ghi không có JWT vẫn `401`. Test tự động kiểm tra metadata của cả tám route ghi và các route đọc tương ứng. PR #81 đã merge vào `develop` (commit `2687541`); required checks backend/web, E2E golden path và mobile đều pass. Sau merge, `pnpm -r --if-present test` trên `develop` pass (backend 174/174, web 31/31).
 
+**Đo coverage R8-2 (27/09/2026, branch `test/r8-2-mobile-api-error-paths`, trước merge):** `flutter test --coverage` trên `develop` cho `VehicleListScreen` 54/72 dòng và `RegisterScreen` 64/74 dòng. Widget test mới dùng `http.testing.MockClient` qua `http.runWithClient` để kiểm tra thông báo `ApiException`, lỗi mạng chung, retry và `EMAIL_ALREADY_EXISTS`; không sửa source sản phẩm. Sau test, coverage đạt 72/72 và 74/74 dòng tương ứng (100% cả hai màn hình), `flutter test` 52/52 pass, `flutter analyze` không có issue và `flutter run -d chrome` khởi chạy được. Chỉ đánh dấu DoD R8-2 hoàn tất sau required PR checks và merge.
+
 ## 5. Definition of Done cho Sprint R8
 
 - [x] R8-1 hoàn tất — verify lại đúng phép đo ở mục 4 (15 request liên tiếp), xác nhận `429` xuất hiện sau khi thêm guard; PR #81 merge và post-merge tests pass (27/09/2026).
