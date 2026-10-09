@@ -52,3 +52,16 @@
 |---|---|---|
 | US-X-01 | Là bất kỳ người dùng nào, tôi muốn dữ liệu vị trí của mình không bị lưu trữ vô thời hạn, để giảm rủi ro về quyền riêng tư. | FR-RETENTION-02 |
 | US-X-02 | Là dev/QA, tôi muốn giả lập được các tình huống khó tái hiện (mất mạng, thiết bị nóng, thiếu sáng) mà không cần điều kiện thật, để kiểm thử nhanh và lặp lại được. | FR-DEVMODE-01 → FR-DEVMODE-04 |
+
+## 5. Web account & responsive (bổ sung `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu)
+
+> Bổ sung 10/2026 sau Baseline v1.0; chưa triển khai. Actor: người dùng đã đăng nhập web (Dashboard User / Fleet Operator, hoặc chủ xe dùng web). Đặc tả: `docs/web/WEB_ACCOUNT_RWD_SPEC.md`.
+
+| ID | Story | Liên quan |
+|---|---|---|
+| US-W-01 | Là người dùng web, tôi muốn xem email của tài khoản đang đăng nhập, để chắc mình đang dùng đúng tài khoản. | FR-WEBPROFILE-01 → FR-WEBPROFILE-03 |
+| US-W-02 | Là người dùng web, tôi muốn đọc NovaWay xử lý dữ liệu của tôi thế nào và cách dừng theo dõi vị trí, để hiểu quyền riêng tư mà không bị hứa điều hệ thống chưa làm. | FR-WEBPRIVACY-01 → FR-WEBPRIVACY-04 |
+| US-W-03 | Là người dùng web nhạy cảm với chuyển động, tôi muốn giảm hiệu ứng giao diện trên trình duyệt của mình, để dùng dashboard dễ chịu hơn mà không ảnh hưởng dữ liệu hay cảnh báo. | FR-WEBSETTINGS-01 → FR-WEBSETTINGS-05 |
+| US-W-04 | Là người dùng web, tôi muốn có hướng dẫn ngắn theo các chức năng thật, để biết làm gì trên web và việc gì phải làm trên mobile. | FR-WEBHELP-01 → FR-WEBHELP-03 |
+| US-W-05 | Là người dùng web, tôi muốn khi mạng hoặc máy chủ lỗi lúc kiểm tra phiên thì thấy thông báo và nút thử lại thay vì kẹt màn hình chờ hoặc bị đăng xuất, để tiếp tục làm việc khi kết nối trở lại. | FR-WEBSESSION-01 → FR-WEBSESSION-04 |
+| US-W-06 | Là người dùng web trên điện thoại, tablet hoặc khi phóng to chữ, tôi muốn điều hướng và đọc được mọi trang, để không phải dùng máy tính bàn mới làm được việc. | NFR-RWD-01 → NFR-RWD-07 |
