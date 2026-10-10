@@ -219,3 +219,252 @@
 - Given một build production thông thường
 - When người dùng cuối sử dụng app
 - Then Developer Mode không hiển thị và không thể kích hoạt qua UI thường
+
+## 12. Web Account & Responsive (bổ sung `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu)
+
+> Bổ sung 10/2026 sau Baseline v1.0, trace tới `SRS.md` §1.15/§2.1; sửa sau review độc lập vòng 1 (`docs/REVIEW_NOTES.md` §36). Đây là tiêu chí cho các micro-step `WEB-01`…`WEB-13` sắp tới, **không** phải biên bản nghiệm thu: mọi kết quả thực tế hiện là **NOT_RUN**. Với AC-RWD, phạm vi nghiệm thu chia hai: gate merge Windows và gate công bố hỗ trợ thiết bị thật (spec §4.7). Ma trận viewport/trạng thái (`WEB-V*`, `WEB-T*`) và traceability AC → test → micro-step: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§8.
+
+### 12.1. Kiểm tra phiên web (FR-WEBSESSION) — micro-step `WEB-01`
+
+**AC-WEBSESSION-01** — Không token hoặc 401
+- Given không có token, hoặc `GET /api/auth/me` trả `401`
+- When mở bất kỳ route bảo vệ nào (gồm bốn route tài khoản)
+- Then không hiển thị nội dung tài khoản, phiên cục bộ bị xoá theo contract hiện có và người dùng về `/login`
+
+**AC-WEBSESSION-02** — Lỗi khác 401 không đăng xuất
+- Given `/me` lỗi mạng, `500`, `403` hoặc `429`
+- When kiểm tra phiên
+- Then màn hình thoát trạng thái chờ sang thông báo phù hợp với từng loại lỗi, token vẫn còn, có nút "Thử lại" và "Đăng nhập lại"; `403`/`429` không bị hiển thị như "sai mật khẩu"; hệ thống không tự xoá token
+
+**AC-WEBSESSION-03** — Timeout và request muộn
+- Given `/me` chưa kết thúc sau 15 giây
+- When hết thời gian
+- Then request bị huỷ, giao diện sang trạng thái lỗi có thử lại, không treo vô hạn; response muộn của request cũ hoặc request về sau khi component unmount không thay đổi state và không ghi đè kết quả của lần thử lại mới
+
+**AC-WEBSESSION-04** — Thử lại
+- Given đang ở trạng thái lỗi
+- When bấm "Thử lại" (kể cả bấm nhiều lần liên tiếp)
+- Then có trạng thái đang thử, chỉ một lần thử còn hiệu lực; nếu thành công thì vào đúng route đã yêu cầu
+
+**AC-WEBSESSION-05** — Trang đăng nhập không lỗi ngầm
+- Given kiểm tra phiên ở `/login` gặp lỗi khác `401`
+- When trang mount
+- Then không có unhandled rejection, form đăng nhập vẫn dùng được và có thông báo phù hợp
+
+**AC-WEBSESSION-06** — Regression logout/login
+- Given chuỗi đăng nhập → điều hướng tài khoản → đăng xuất → đăng nhập tài khoản khác, và Browser Back
+- When chuyển route
+- Then auth guard vẫn áp dụng, token nằm đúng storage hiện hành, contract `/me` không đổi, và không có nội dung nào tuyên bố đăng xuất web đã thu hồi phiên trên mọi thiết bị
+
+**AC-WEBSESSION-07** — "Đăng nhập lại" chủ động (thêm sau review vòng 1, R01)
+- Given đang ở trạng thái lỗi kiểm tra phiên, xét từng trường hợp: token thực ra còn hợp lệ, token không hợp lệ, hoặc mạng phục hồi ngay sau khi bấm
+- When người dùng bấm "Đăng nhập lại"
+- Then token trong `sessionStorage` và user trong AuthContext bị xoá; lần kiểm tra phiên đang chờ (nếu có) bị vô hiệu hoá và kết quả của nó không có tác dụng; người dùng tới `/login` với form dùng được ngay; trang không tự chuyển về `/dashboard` kể cả khi token cũ còn hợp lệ hoặc mạng đã phục hồi
+- And không có request revoke tới server, không ảnh hưởng chuyến đang chạy trên mobile, preference giảm chuyển động vẫn còn
+- When sau đó bấm Browser Back về route bảo vệ
+- Then không hiển thị nội dung tài khoản trước; auth guard đưa về `/login` vì không còn token
+
+**AC-WEBSESSION-08** — Kết quả kiểm tra của phiên cũ sau khi đăng nhập tài khoản khác (thêm sau review vòng 1, R02)
+- Given trên `/login` còn token cũ của A và `GET /api/auth/me` cho token A đang chờ
+- When người dùng đăng nhập B thành công, rồi request của A trả `401`
+- Then token B trong `sessionStorage`, user B trong AuthContext và route hiện tại giữ nguyên; không bị đưa về `/login`
+- When thay vào đó request của A trả `200`
+- Then user trong AuthContext vẫn là B, không có điều hướng do kết quả của A, không có email/dữ liệu A trên UI
+- And kiểm tra bằng assertion trên service/storage/context, không chỉ trên DOM
+
+**AC-WEBSESSION-09** — Vô hiệu hoá khi logout/unmount/timeout/retry (thêm sau review vòng 1, R02)
+- Given một lần kiểm tra phiên đang chờ
+- When xảy ra một trong các sự kiện: logout, rời trang (unmount), timeout 15 giây, hoặc bắt đầu retry mới; và sau đó response cũ mới về (`200`, `401` hoặc lỗi)
+- Then response cũ không ghi/xoá token, không đặt/xoá user, không điều hướng, không đổi UI; chỉ kết quả của lần kiểm tra còn hiệu lực mới có tác dụng
+- And kiểm tra bằng assertion trên service/storage/context, không chỉ trên DOM
+
+### 12.2. Hồ sơ cá nhân (FR-WEBPROFILE) — micro-step `WEB-09`
+
+**AC-WEBPROFILE-01** — Đúng email
+- Given `/me` trả `200` cho tài khoản A
+- When mở `/account/profile`
+- Then hiển thị đúng email của A, không có dữ liệu của tài khoản khác hay dữ liệu fixture
+
+**AC-WEBPROFILE-02** — Email dài
+- Given email rất dài
+- When xem ở 320 CSS px và text 200%
+- Then đọc được toàn bộ email nhờ reflow (không chỉ qua tooltip), không đẩy action khỏi màn hình
+
+**AC-WEBPROFILE-03** — Chỉ đọc, không dữ liệu bịa
+- Given dữ liệu `/me` chỉ có `id`/`email`
+- When kiểm tra UI và network
+- Then không render `password_hash`, không tạo tên/ngày tham gia/avatar/số điện thoại, không có request ghi hồ sơ
+
+**AC-WEBPROFILE-04** — Không lộ dữ liệu khi đổi tài khoản
+- Given đã xem hồ sơ A rồi đăng xuất và đăng nhập B
+- When mở lại hồ sơ hoặc dùng Browser Back
+- Then không hiển thị email A; route vẫn qua auth guard
+
+### 12.3. Quyền riêng tư (FR-WEBPRIVACY) — micro-step `WEB-11` + Privacy Content Gate
+
+**AC-WEBPRIVACY-01** — Cam kết có nguồn
+- Given nội dung đã qua Privacy Content Gate cho bản phát hành
+- When người dùng đọc trang
+- Then mỗi cam kết dữ liệu có bảng trace nội bộ tới requirement + implementation có bằng chứng, hoặc quyết định vận hành đã xác nhận
+
+**AC-WEBPRIVACY-02** — Không khẳng định TTL chưa có bằng chứng
+- Given cleanup TTL raw GPS chưa có bằng chứng vận hành
+- When duyệt nội dung trước phát hành
+- Then câu "dữ liệu tự xoá sau 30 ngày" bị chặn; phải viết đúng thực tế hoặc hoàn thành dependency retention trước
+
+**AC-WEBPRIVACY-03** — Không tác dụng phụ
+- Given người dùng mở trang quyền riêng tư trên web
+- When tải trang, bấm link trợ giúp hoặc đổi layout
+- Then không xin quyền camera/geolocation, không bắt đầu/kết thúc chuyến, không ghi consent, không gửi ảnh
+
+**AC-WEBPRIVACY-04** — Đúng ngữ nghĩa dừng tracking
+- Given phần hướng dẫn dừng theo dõi vị trí
+- When đọc
+- Then nói rõ thao tác là kết thúc chuyến trên mobile đang có chuyến; đăng xuất web không được coi là dừng chuyến; không có công tắc giả thu hồi quyền OS của thiết bị khác
+
+**AC-WEBPRIVACY-05** — Tách chính sách nhà cung cấp
+- Given phần xác thực khuôn mặt
+- When duyệt nội dung
+- Then giới hạn xử lý tại NovaWay được tách khỏi chính sách nhà cung cấp; không hứa "không có bên thứ ba xử lý"
+
+**AC-WEBPRIVACY-06** — Đọc được trang dài
+- Given trang dài
+- When dùng 320 CSS px, text 200% hoặc chỉ bàn phím
+- Then heading, nội dung và link theo đúng thứ tự đọc, đọc hết và quay về được
+
+### 12.4. Cài đặt ứng dụng (FR-WEBSETTINGS) — micro-step `WEB-12`
+
+**AC-WEBSETTINGS-01** — Mặc định
+- Given chưa có preference
+- When mở `/settings`
+- Then chọn sẵn "Theo hệ thống" và mô tả rõ phạm vi: tài khoản này trên trình duyệt này
+
+**AC-WEBSETTINGS-02** — Tôn trọng hệ điều hành
+- Given OS bật giảm chuyển động
+- When chọn bất kỳ lựa chọn nào
+- Then chuyển động không thiết yếu vẫn được giảm
+- Given OS không bật giảm chuyển động
+- When chọn "Giảm chuyển động"
+- Then hiệu ứng trang trí giảm ngay trên các route thuộc phạm vi
+
+**AC-WEBSETTINGS-03** — Lưu và cô lập
+- Given tài khoản A đổi lựa chọn
+- When reload hoặc A đăng nhập lại trên cùng trình duyệt
+- Then giữ lựa chọn của A
+- When B đăng nhập trên cùng trình duyệt, hoặc A mở trình duyệt khác
+- Then B không nhận lựa chọn riêng của A; trình duyệt khác không được giả định đã đồng bộ
+
+**AC-WEBSETTINGS-04** — Đọc storage lỗi khi khởi tạo (thu hẹp sau review vòng 1, R03)
+- Given storage bị chặn hoặc ném lỗi khi đọc, nên không có giá trị đọc hợp lệ
+- When mở app sau khi phiên đã xác thực
+- Then áp dụng "Theo hệ thống" (vẫn tôn trọng OS), thông báo không đọc/lưu được lựa chọn trên trình duyệt này, không crash, không đụng token
+
+**AC-WEBSETTINGS-05** — Không ảnh hưởng nghiệp vụ
+- Given đã chọn "Giảm chuyển động"
+- When kiểm tra request và state nghiệp vụ
+- Then không đổi tần suất GPS, consent, vòng đời chuyến, âm thanh/cảnh báo an toàn hay API payload; dữ liệu bản đồ vẫn cập nhật (có thể cập nhật tức thì thay vì animate)
+
+**AC-WEBSETTINGS-06** — Truy cập được
+- Given dùng bàn phím hoặc trình đọc màn hình
+- When đổi lựa chọn
+- Then control có nhãn, trạng thái được đọc ra, focus nhìn thấy và không nhảy
+
+**AC-WEBSETTINGS-07** — Ghi storage lỗi sau khi người dùng đã chọn (thêm sau review vòng 1, R03)
+- Given người dùng chọn "Giảm chuyển động" và việc ghi thất bại (hết quota hoặc storage bị chặn khi ghi)
+- When lỗi ghi xảy ra
+- Then lựa chọn "Giảm chuyển động" vẫn được giữ và áp dụng trong phiên trang đang mở, animation không bật lại, có thông báo không lưu được (sẽ mất khi reload), không crash, không đụng token
+
+**AC-WEBSETTINGS-08** — Giá trị đã lưu hỏng (thêm sau review vòng 1, R03)
+- Given giá trị đã lưu sai định dạng, enum lạ hoặc `version` không hỗ trợ
+- When đọc preference
+- Then áp dụng "Theo hệ thống" (vẫn tôn trọng OS), thông báo lựa chọn đã lưu không đọc được, lần lưu hợp lệ kế tiếp ghi đè, không crash, không đụng token
+
+### 12.5. Trợ giúp (FR-WEBHELP) — micro-step `WEB-10`
+
+**AC-WEBHELP-01** — Đúng vai trò web/mobile
+- Given người đọc muốn bắt đầu chuyến
+- When đọc trợ giúp
+- Then nội dung phân biệt web xem vị trí với mobile bắt đầu/kết thúc chuyến; không hướng dẫn bấm "Bắt đầu" trên web
+
+**AC-WEBHELP-02** — Link quản lý xe
+- Given chưa có xe hoặc muốn sửa xe
+- When bấm hướng dẫn quản lý xe
+- Then tới `/vehicles`; nội dung khớp thêm/sửa/xoá/chọn xe hoạt động hiện có
+
+**AC-WEBHELP-03** — Xử lý lỗi an toàn
+- Given mất mạng, phiên hết hạn hoặc bản đồ chưa có vị trí
+- When đọc hướng dẫn
+- Then các bước không yêu cầu gửi mật khẩu/JWT/ảnh khuôn mặt, không hứa cấp quyền hay khôi phục dữ liệu khi không có cơ chế
+
+**AC-WEBHELP-04** — Không kênh hỗ trợ giả
+- Given người dùng cần hỗ trợ
+- When duyệt trang
+- Then chỉ có kênh liên hệ đã được chủ dự án xác nhận; nếu chưa có, chỉ có hướng dẫn tự xử lý và điều hướng, không có form "gửi thành công" giả
+
+**AC-WEBHELP-05** — Điều hướng bằng bàn phím
+- Given điều hướng bằng bàn phím
+- When đi qua mục lục/link
+- Then nhãn rõ, thứ tự hợp lý, link tới đúng route/section
+
+### 12.6. Responsive/adaptive (NFR-RWD) — micro-step `WEB-02`…`WEB-08`, tổng hợp `WEB-13`
+
+**AC-RWD-01** — Không cắt/che nội dung
+- Given các viewport chính trong ma trận
+- When mở các route trong ma trận
+- Then text, form, navigation không bị cắt/che, không cần cuộn ngang để đọc nội dung thông thường; kiểm cả phần bị `overflow-hidden` giấu; bản đồ được pan riêng nhưng nhãn/control vẫn đọc được
+
+**AC-RWD-02** — Drawer dưới 1024
+- Given bề rộng dưới 1024 CSS px
+- When mở menu
+- Then drawer có tên truy cập được, quản lý focus, đóng được bằng Escape/nút/bấm ngoài, trả focus đúng; chọn route thì drawer đóng; menu ẩn không nhận Tab
+
+**AC-RWD-03** — Resize/xoay màn hình
+- Given bề rộng thay đổi qua 1024 hoặc xoay màn hình
+- When resize
+- Then không mất route/form đang nhập, không kẹt scroll lock/backdrop, không nhân đôi tab stop
+
+**AC-RWD-04** — Text 200% và reflow 320
+- Given text 200% và reflow tương đương 320 CSS px
+- When đọc, nhập, chọn action
+- Then giữ đủ nội dung và chức năng; browser zoom được kiểm riêng với viewport nhỏ và với tăng riêng text
+
+**AC-RWD-05** — Danh sách xe
+- Given danh sách có tên dài, xe active và hộp xác nhận xoá
+- When xem hoặc đổi orientation
+- Then tên và thao tác đều tiếp cận được, không tràn/cắt; nút icon có accessible name gồm hành động và xe liên quan
+
+**AC-RWD-06** — Form với bàn phím ảo *(gate merge Windows: emulation + text zoom; phần bàn phím ảo thật thuộc gate công bố hỗ trợ thiết bị)*
+- Given form tạo/sửa xe
+- When bàn phím ảo bật và có lỗi dài
+- Then label/input/lỗi/Lưu/Huỷ vẫn tiếp cận được, form không mất dữ liệu do layout, lỗi gắn với field hoặc summary phù hợp
+
+**AC-RWD-07** — Bản đồ trực tiếp
+- Given bản đồ đang có chuyến ở trạng thái connected và disconnected
+- When bề rộng hẹp, chiều cao thấp hoặc resize
+- Then nhãn tốc độ và kết nối không đè nhau, attribution không bị che, canvas vừa container, menu không chặn thao tác sau khi đóng
+
+**AC-RWD-08** — Analytics
+- Given analytics có dữ liệu
+- When xem nhỏ, zoom hoặc cảm ứng
+- Then filter wrap, tổng số đọc được, chart/legend không bị cắt, có cách đọc số liệu không chỉ dựa vào hover; không biến summary thành số liệu fixture trên production
+
+**AC-RWD-09** — Vùng chạm
+- Given thao tác cảm ứng
+- When dùng nút/icon/menu
+- Then control chính đạt mục tiêu 44×44 CSS px; WCAG 2.5.8 được đánh giá riêng với ngưỡng và ngoại lệ của nó
+
+**AC-RWD-10** — Bàn phím
+- Given chỉ dùng bàn phím
+- When đi qua trang
+- Then thứ tự focus hợp lý, focus nhìn thấy và không bị che, hành động không chỉ phân biệt bằng màu; tên control được spot-check bằng trình đọc màn hình
+
+**AC-RWD-11** — Thiết bị thật *(chỉ thuộc gate công bố hỗ trợ thiết bị, spec §4.7)*
+- Given safe area, thanh trình duyệt co giãn hoặc đổi orientation
+- When dùng trên thiết bị thật
+- Then header/footer/action không bị notch/home indicator che; kết quả emulator không đủ để đánh PASS cho thiết bị
+- And khi chưa có thiết bị: ghi NOT_RUN riêng cho từng thiết bị (`WEB-VH1`, `WEB-VH2`), không tính PASS, không chặn gate merge Windows của step, nhưng chặn việc công bố hỗ trợ thiết bị đó
+
+**AC-RWD-12** — Regression nghiệp vụ
+- Given thay đổi layout
+- When chạy regression nghiệp vụ
+- Then auth, CRUD xe, quan sát chuyến và analytics dùng contract/cách tính hiện hành; không wire metric mới, không thêm start/end trip trên web

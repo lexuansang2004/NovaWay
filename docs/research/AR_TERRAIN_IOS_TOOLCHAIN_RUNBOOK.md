@@ -2,7 +2,7 @@
 
 > Micro-step `8.1b`, branch `chore/ar-terrain-ios-toolchain`. Mục tiêu duy nhất là chứng minh project Unity không-AR có thể xuất project Xcode, ký, cài và chạy trên iPhone 11 Pro. Kết quả này không chứng minh LiDAR, ARKit Scene Reconstruction, GPS hay RTK.
 
-> **Trạng thái sau merge (2026-09-27):** `8.1b` COMPLETED — PR #80 đã merge vào `develop` ngày 2026-09-26 (`3f6e5e6`). Gate dùng đường Xcode-only §7 trên iPhone 11 Pro, dựa vào USER-EXECUTED/USER-REPORTED và evidence đã che ngoài Git (§8; REVIEW_NOTES §35). Các câu “chưa chạy/chờ merge” ở quy trình và bản ghi có ngày phía dưới là lịch sử trước khi merge; không dùng chúng làm trạng thái hiện hành. iPhone 16 Pro vẫn NOT RUN và là tiền đề riêng của `8.2`.
+> **Trạng thái sau merge (2026-09-27):** `8.1b` COMPLETED — PR #80 đã merge vào `develop` ngày 2026-09-26 (`3f6e5e6`). Gate dùng đường Xcode-only §7 trên iPhone 11 Pro, dựa vào USER-EXECUTED/USER-REPORTED và evidence đã che ngoài Git (§8; REVIEW_NOTES §39). Các câu “chưa chạy/chờ merge” ở quy trình và bản ghi có ngày phía dưới là lịch sử trước khi merge; không dùng chúng làm trạng thái hiện hành. iPhone 16 Pro vẫn NOT RUN và là tiền đề riêng của `8.2`.
 
 ## 1. Thiết bị và phiên bản đã xác nhận
 
@@ -165,11 +165,11 @@ Xác minh SHA-256 ZIP (`be66e489…c3e8`) → Xcode 16.4 mở project sinh từ 
 | Chạy ≥60 giây không crash | PASS (USER-REPORTED; không suy ra từ ảnh) |
 | Đóng/mở lại ≥1 lần | PASS (USER-REPORTED) |
 | Evidence ghi exact version + source commit | Có, theo từng nguồn có provenance (Xcode/macOS từ lệnh đã báo, iOS user-reported, Unity/`3c12a31` qua SHA artifact và tên thư mục build); Review Manager đã xác nhận đủ cho smoke `8.1b` (§34) |
-| Ảnh/log đã che thông tin cá nhân | Hai ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị, tên tài khoản Mac, đường dẫn Windows). Chỉ lưu ngoài Git: bản che của ảnh Signing/Running và bản cắt-che của ảnh "Build Succeeded" (chữ "Build Succeeded | Today at 15:21", 105 cảnh báo, Link UnityFramework 90 cảnh báo); ảnh gốc không chép vào evidence/Git, người dùng vẫn có bản gốc riêng |
+| Ảnh/log đã che thông tin cá nhân | Hai ảnh Xcode gốc CHƯA che (lộ tên Team, một phần Apple ID email, tên thiết bị, tên tài khoản Mac, đường dẫn Windows). Chỉ lưu ngoài Git: bản che của ảnh Signing/Running và bản cắt-che của ảnh "Build Succeeded" (chữ "Build Succeeded \| Today at 15:21", 105 cảnh báo, Link UnityFramework 90 cảnh báo); ảnh gốc không chép vào evidence/Git, người dùng vẫn có bản gốc riêng |
 | Install/launch trên iPhone 16 Pro | NOT RUN — tiền đề trước `8.2`, không chặn PR #80 theo cách hiểu chủ dự án chốt 2026-09-26 và Review Manager đã xác nhận (§6, REVIEW_NOTES §33, §34) |
 | Review Manager review + CI + merge | CI xanh; PR #80 đã merge vào `develop` ngày 2026-09-26 (`3f6e5e6`) — cập nhật sau bảng kết quả gốc |
 
-`8.1b` **COMPLETED sau merge PR #80** (2026-09-26). Review Manager đã xác nhận iPhone 16 Pro không chặn PR #80 (tiền đề trước `8.2`, vẫn **NOT RUN**, §6, REVIEW_NOTES §33–§35) và evidence nhiều nguồn có provenance là đủ cho smoke test `8.1b` (§34). Kết quả không-AR này không chứng minh ARKit/LiDAR/GPS/RTK.
+`8.1b` **COMPLETED sau merge PR #80** (2026-09-26). Review Manager đã xác nhận iPhone 16 Pro không chặn PR #80 (tiền đề trước `8.2`, vẫn **NOT RUN**, §6, REVIEW_NOTES §33–§34, §39) và evidence nhiều nguồn có provenance là đủ cho smoke test `8.1b` (§34). Kết quả không-AR này không chứng minh ARKit/LiDAR/GPS/RTK.
 
 ### 8.3 Cần theo dõi
 

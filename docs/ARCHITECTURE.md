@@ -33,7 +33,7 @@ novaway/
 | Module | Trách nhiệm | Phụ thuộc |
 |---|---|---|
 | `AuthModule` | Register/login/me, JWT guard | `UsersModule` |
-| `UsersModule` | CRUD user cơ bản | — |
+| `UsersModule` | CRUD user cơ bản. *Đính chính 10/2026 (`WEB-00`):* hiện chỉ là service nội bộ cho `AuthModule` (tìm theo email/id, tạo user), không có controller; "CRUD" ở đây **không** có nghĩa đã có API đọc/sửa hồ sơ — endpoint duy nhất trả thông tin user là `GET /api/auth/me` (`API_CONTRACT.md` §1). | — |
 | `VehiclesModule` | CRUD vehicle, active vehicle, ownership guard | `UsersModule` |
 | `VehicleAuthorizationModule` | Cấp/thu hồi/kiểm tra uỷ quyền borrower (FR-AUTHZ) | `VehiclesModule`, `UsersModule` |
 | `BiometricModule` | Gọi biometric provider adapter, ghi `biometric_verifications`, kiểm quyền trước khi verify (FR-BIOMETRIC) | `VehicleAuthorizationModule` |
@@ -88,6 +88,8 @@ Tái sử dụng có chọn lọc từ `feature/quick-demo` theo `docs/demo/DEMO
 - Demo dùng Leaflet + OSM public tile — sản phẩm thật chuyển MapLibre GL JS + Protomaps/Mapbox Free Tier (Open Question OQ-005, xem §8).
 - Demo không có backend thật — web thật gọi `API_CONTRACT.md` + kết nối WebSocket gateway thật, không còn mock service trong `src/services/`.
 - Cockpit lái xe trên web (`DrivingCockpit`) là **proof-of-concept UX cho mobile**, không phải màn hình chính thức của web dashboard sản phẩm thật (web dashboard là công cụ giám sát cho Fleet Operator, không phải nơi tài xế lái xe — xem `USER_STORIES.md` §3).
+
+**Tài khoản web và responsive (bổ sung `WEB-00` 10/2026, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu — chưa triển khai):** bốn màn tài khoản (`/account/profile`, `/account/privacy`, `/settings`, `/help`) và app shell responsive nằm hoàn toàn trong `apps/web`, không thêm module backend, API hay bảng. Hồ sơ đọc từ user đã xác thực qua `GET /api/auth/me`; preference "giảm chuyển động" lưu cục bộ trên trình duyệt theo `user.id`, tách khỏi token (`sessionStorage`) và không đồng bộ qua backend. Kiểm tra phiên dùng timeout riêng 15 giây, không phải timeout chung của `apiClient`. Chi tiết: `docs/web/WEB_ACCOUNT_RWD_SPEC.md`.
 
 ## 5. Mobile (Flutter)
 
@@ -144,6 +146,6 @@ Mobile --location:update--> WebSocket Gateway (NestJS) --location:broadcast--> W
 
 - ~~**Mobile stack (OQ-001)**~~ — **Đã chốt**: Flutter, dùng xuyên suốt `apps/mobile` từ step `0.2` đến `4.3`.
 - **Tile provider (OQ-005):** Protomaps vs Mapbox Free Tier — cần technical spike (kiểm tra quota/pricing hiện hành) trước khi `apps/web` phụ thuộc vào một trong hai. **Vẫn mở** sau MVP — xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md`.
-- **Biometric provider (FR-BIOMETRIC-05, R-17):** chưa chọn SDK/dịch vụ cụ thể — ảnh hưởng trực tiếp `BiometricModule` và việc "không lưu ảnh thô" có thực sự đúng theo chính sách nhà cung cấp hay không. **Vẫn mở** sau MVP — `MockBiometricProvider` vẫn là adapter đang dùng.
+- **Biometric provider (FR-BIOMETRIC-05, R-17):** chưa chọn SDK/dịch vụ cụ thể — ảnh hưởng trực tiếp `BiometricModule` và việc "không lưu ảnh thô" có thực sự đúng theo chính sách nhà cung cấp hay không. **Vẫn mở** sau MVP — `MockBiometricProvider` vẫn là adapter đang dùng. *Đính chính hiện trạng (10/2026, `WEB-00` review vòng 1, R04):* từ R2-6 đã có thêm `AwsRekognitionBiometricProvider`. Mock là mặc định theo cấu hình; AWS chỉ được chọn khi `BIOMETRIC_PROVIDER=aws-rekognition`. Provider thực tế của bản phát hành cần xác nhận riêng.
 - ~~**Hosting/CI-CD provider**~~ — **Đã chốt**: CI (lint/test/build gate cho PR) là GitHub Actions (`.github/workflows/ci.yml`, step `9.2`). Hosting/CD: Railway (backend) + Vercel (web), chốt và triển khai thật từ R1, CD tự động từ R2-7, và chính thức dùng luôn cho production từ R3-6 (không dựng hạ tầng riêng — xem `docs/architecture/TDR-production-hosting.md`, `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §6).
 - ~~**`packages/shared-types` build tooling`**~~ — **Đã chốt**: pnpm workspaces (`pnpm-workspace.yaml`), dùng từ step `0.2`.

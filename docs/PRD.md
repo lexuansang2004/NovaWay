@@ -78,6 +78,21 @@ MVP đưa mục 9–10 (Biometric Vehicle Binding, Vehicle Authorization) vào p
 
 Chi tiết vị trí trong micro-step plan: xem `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` các step mới `1.5`–`1.6` (chèn sau `1.4 feat/vehicle-management-api`, trước khi sang `2.1 feat/web-foundation`).
 
+## 5.2. Tài khoản web và responsive (bổ sung sau Baseline — `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu)
+
+> Bổ sung 10/2026 theo micro-step `WEB-00`. Chủ dự án đã đồng ý **hướng** triển khai; nội dung: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu (`docs/REVIEW_NOTES.md` §35–§37). Chưa có phần nào được triển khai — các màn `/account/profile`, `/account/privacy`, `/settings`, `/help` hiện vẫn là placeholder. Đặc tả đầy đủ: `docs/web/WEB_ACCOUNT_RWD_SPEC.md`; yêu cầu: `SRS.md` §1.15/§2.1.
+
+Mở rộng mục 1 "Đăng nhập & tài khoản" ở phía web, giữ web là công cụ quản lý/giám sát (bắt đầu/kết thúc chuyến vẫn chỉ trên mobile):
+
+- **Phiên đăng nhập web** phục hồi được khi kiểm tra phiên lỗi mạng/máy chủ: có trạng thái lỗi, thử lại, timeout 15 giây chỉ cho bước kiểm tra phiên; lỗi khác `401` không tự đăng xuất.
+- **Hồ sơ cá nhân** chỉ đọc email của tài khoản đang đăng nhập.
+- **Quyền riêng tư** là trang thông tin có nguồn, phát hành sau gate nội dung riêng về thời hạn lưu dữ liệu và chính sách nhà cung cấp.
+- **Cài đặt ứng dụng** chỉ có lựa chọn hiệu ứng "Theo hệ thống" / "Giảm chuyển động", lưu trên trình duyệt theo tài khoản.
+- **Trợ giúp** theo các flow và route có thật.
+- **Responsive**: drawer dưới 1024 CSS px, sidebar từ 1024; dùng được trong ma trận viewport/zoom đã xác định. Không hứa hỗ trợ mọi thiết bị.
+
+Không thuộc đợt này (cần vòng đặc tả riêng nếu muốn làm): sửa hồ sơ/avatar/số điện thoại, đổi email/mật khẩu, quên mật khẩu, xoá/export tài khoản, quản lý phiên toàn thiết bị, điều khiển consent/GPS từ web, theme sáng/tối, ngôn ngữ, đồng bộ cài đặt đa thiết bị, kênh hỗ trợ/ticket, dashboard metric mới, start/stop trip trên web, backend retention job. Không thêm API hay bảng dữ liệu.
+
 ## 6. Out of Scope (MVP)
 
 - Full Unity AR Mesh Grid nhúng vào app chính (xem R&D, §8).
