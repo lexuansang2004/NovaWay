@@ -1,0 +1,376 @@
+# NovaWay — Đặc tả tài khoản web và responsive (WEB-00)
+
+> **Trạng thái: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu.** Review độc lập vòng 1 kết luận CHANGES_REQUESTED (R01–R05, N01, xem `docs/REVIEW_NOTES.md` §36). Vòng 2 kết luận PASS phần review kỹ thuật tài liệu (`docs/REVIEW_NOTES.md` §37). Review Manager phê duyệt ngày 2026-10-10 (`docs/REVIEW_NOTES.md` §38). Bản đặc tả **chưa merge**, nên **chưa** là một phần Baseline đã duyệt cho tới khi PR tài liệu qua checks và được merge. Chủ dự án đã đồng ý **hướng triển khai** (xem `docs/REVIEW_NOTES.md` §35); đồng ý hướng không có nghĩa phần mềm đã được xây, test đã pass, hay cam kết quyền riêng tư đã được xác minh. Toàn bộ `WEB-01`…`WEB-13` là **NOT STARTED**; mọi actual test trong tài liệu này là **NOT_RUN**.
+
+## 0. Mốc nguồn, đầu vào và cách đọc
+
+- **Mốc source:** `origin/develop` tại `430e325417f7b73d2e6946b813bb0168bbbf8026` (kiểm bằng `git ls-remote` ngày 09/10/2026). Mọi trích dẫn hiện trạng dạng `path:dòng` là số dòng tại commit này; có thể đối chiếu bằng `git show 430e325:<path>`.
+- **Đầu vào:** gói khảo sát `novaway-account-rwd-audit` (09/10/2026, nằm ngoài Git). Gói này chỉ là đầu vào tham khảo, **không** phải dependency của tài liệu: mọi nội dung cần dùng đã được chuyển vào đây và các tài liệu baseline liên quan. Mã `E01`–`E38` của gói được thay bằng trích dẫn trực tiếp `path:dòng`; mã `P-*`, `D*`, `G*`, `U*`, `V*`, `T*` được ánh xạ ở §9.
+- **Nhãn trạng thái dùng trong tài liệu:**
+  - **HIỆN CÓ** — thấy trực tiếp trong source tại mốc trên; không đồng nghĩa đã chạy test.
+  - **YÊU CẦU ĐÃ CHỐT** — đã nằm trong baseline/contract trước `WEB-00`.
+  - **SUY LUẬN TĨNH** — hệ quả rút ra từ đọc mã, **chưa tái hiện runtime**; không được gọi là lỗi đã xác nhận bằng test.
+  - **ĐẶC TẢ MỚI (WEB-00)** — quyết định sản phẩm/UX do `WEB-00` đưa vào; review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu.
+
+## 1. Phạm vi
+
+**Actor:** người dùng đã đăng nhập web (Dashboard User / Fleet Operator, hoặc chủ xe dùng web — `docs/PRD.md` §3). Quyền dữ liệu giữ nguyên theo tài khoản hiện hành; không thêm role admin/role hệ thống. Web vẫn là công cụ **quản lý/giám sát**; bắt đầu/kết thúc chuyến đi chỉ có trên mobile (`docs/ARCHITECTURE.md:90`; `docs/TEST_STRATEGY.md:112`).
+
+**Trong phạm vi WEB-00 (chỉ đặc tả):**
+
+1. Kiểm tra phiên đăng nhập web có trạng thái lỗi, retry và timeout 15 giây chỉ cho session verification.
+2. Hồ sơ chỉ đọc email từ `GET /api/auth/me` hiện có.
+3. Trang thông tin quyền riêng tư, nội dung có nguồn, qua gate nội dung riêng.
+4. Cài đặt duy nhất: hiệu ứng giao diện "Theo hệ thống" / "Giảm chuyển động", lưu cục bộ.
+5. Trợ giúp theo flow và route có thật.
+6. Responsive/adaptive web cho app shell, bốn màn tài khoản và các trang web hiện có.
+
+**Ngoài phạm vi (không làm trong `WEB-00`…`WEB-13`; ghi backlog riêng ở §10):** sửa hồ sơ, avatar, số điện thoại, ngày tham gia, đổi email/mật khẩu, quên mật khẩu, xoá/export tài khoản, quản lý phiên toàn thiết bị/global logout; consent center hoặc điều khiển GPS của thiết bị khác từ web; theme sáng/tối, ngôn ngữ, đồng bộ setting đa thiết bị; kênh hỗ trợ/ticket/chat; start/stop trip trên web; dashboard metric mới; backend retention job; quyền quản trị; Flutter, Unity, triển khai biometric. **Không thêm API, bảng hay cột** (`docs/API_CONTRACT.md`, `docs/DATA_MODEL.md` không đổi — xem §3 D02).
+
+## 2. Hiện trạng tại mốc `430e325`
+
+### 2.1. Bốn màn tài khoản và luồng phiên
+
+| ID | Nhãn | Hiện trạng / nguồn | Hệ quả cho đặc tả |
+|---|---|---|---|
+| WEB-G01 | HIỆN CÓ | `/settings`, `/account/profile`, `/account/privacy`, `/help` và `/offline-sync` đều render `ComingSoonPage` (`apps/web/src/App.tsx:25–29`); trang chỉ có heading và câu "Tính năng này sẽ có ở bước triển khai tiếp theo" (`apps/web/src/pages/ComingSoonPage.tsx:7–13`). Menu tài khoản dẫn tới bốn route (`apps/web/src/components/layout/Sidebar.tsx:103–114`). PRD chỉ cam kết "đăng ký/đăng nhập, JWT session" (`docs/PRD.md:59`). | Cần đặc tả hành vi tối thiểu từng trang trước implementation. |
+| WEB-G02 | HIỆN CÓ | `/me` trả `{id, email}` (`docs/API_CONTRACT.md:44–48`); `users` có `id, email, password_hash, created_at` (`docs/DATA_MODEL.md:14–22`); `UsersService` chỉ `findByEmail/findById/create` (`apps/backend/src/users/users.service.ts:13–24`); `UsersModule` không khai báo controller (`apps/backend/src/users/users.module.ts:6–11`). Route backend hiện có: auth `register/login/me` (`apps/backend/src/auth/auth.controller.ts:22,32,39`) — không có route sửa hồ sơ/đổi mật khẩu/xoá-export/preference/support/consent-management/global logout trong `apps/backend/src/*/*.controller.ts`. `docs/ARCHITECTURE.md:36` ghi "CRUD user cơ bản". | Hồ sơ đợt này chỉ đọc. Chữ "CRUD" ở ARCHITECTURE đã được đính chính (không có API sửa hồ sơ). "Không có endpoint" giới hạn trong backend của repo này. |
+| WEB-G03 | YÊU CẦU ĐÃ CHỐT + HIỆN CÓ | FR-RETENTION-02 yêu cầu raw GPS tối đa 30 ngày (`docs/SRS.md:121`); `docs/DATA_MODEL.md:266` đính chính job cleanup/DROP partition **chưa từng implement**; migration `apps/backend/src/database/migrations/1721260000010-EnsureRawGpsPartitions.ts` chỉ tạo partition tháng hiện tại/kế tiếp. | Không được công bố "GPS tự xoá sau 30 ngày". Requirement FR-RETENTION-02 **giữ nguyên**, không hạ thấp; thiếu sót implementation là backlog riêng (§10). |
+| WEB-G04 | YÊU CẦU ĐÃ CHỐT | Thu hồi quyền vị trí giữa chuyến còn **[OPEN]** (`docs/EDGE_CASES.md:12`); web là giám sát (`docs/ARCHITECTURE.md:90`). | Trang privacy chỉ giải thích; không có toggle thu hồi từ xa. |
+| WEB-G05 | HIỆN CÓ + SUY LUẬN TĨNH | `fetchCurrentUser()` chỉ xoá token khi 401, lỗi khác ném tiếp (`apps/web/src/services/authService.ts:24–37`). `AppLayout` gọi `.then(...)` không có `catch`, state chỉ đổi khi resolve (`apps/web/src/layouts/AppLayout.tsx:17–27`); `LoginPage` cùng pattern (`apps/web/src/pages/LoginPage.tsx:17–24`). `apiClient` dùng `fetch` không có timeout (`apps/web/src/lib/apiClient.ts:21–41`). Có test service bảo toàn token khi lỗi mạng/500 (`apps/web/src/services/authService.spec.ts:88–114`), không có test UI retry. **Suy luận tĩnh:** khi `/me` lỗi mạng/500, AppLayout có thể kẹt ở "Đang kiểm tra phiên đăng nhập..." (`AppLayout.tsx:29–35`) và `/login` có unhandled rejection. Chưa tái hiện trên trình duyệt. | Đặc tả trạng thái `error` + retry + timeout (§4.1). `WEB-01` phải tái hiện bằng test UI trước khi sửa. |
+| WEB-G06 | HIỆN CÓ | Card Dashboard hiển thị "—" và badge "Online" tĩnh (`apps/web/src/pages/DashboardPage.tsx:11–15,38`). | RWD chỉ đổi layout; metric thật là backlog riêng. |
+| WEB-G07 | HIỆN CÓ + SUY LUẬN TĨNH | `LiveMapPage` gộp "không có trip" và "chưa có vị trí" vào cùng empty state (`apps/web/src/pages/LiveMapPage.tsx:15`); hook bỏ qua lỗi poll tới tick sau (`apps/web/src/services/useLiveTrip.ts:62–66`) và chỉ có position sau `location:broadcast` (`useLiveTrip.ts:101–110`). | Trợ giúp không được khẳng định empty state luôn có nghĩa "không có chuyến". Trạng thái map chính xác là backlog riêng. |
+| WEB-G08 | HIỆN CÓ | Không có settings API/schema; không có `prefers-reduced-motion`/`MotionConfig` trong `apps/web/src`; radar lặp vô hạn (`apps/web/src/index.css:114–127`); motion ở login/dashboard (`framer-motion`, `apps/web/src/pages/LoginPage.tsx:3`). Token web nằm ở `sessionStorage` (`authService.ts:17,40`); "Ghi nhớ đăng nhập" đã bị gỡ vì lý do bảo mật lưu token (`apps/web/src/components/auth/LoginForm.tsx:6–16`). | Chỉ đặc tả một setting có hành vi và cách lưu rõ (§4.4). Preference không được chạm token/session. |
+| WEB-G09 | HIỆN CÓ | Playwright chỉ có project `Desktop Chrome` (`apps/web/playwright.config.ts:26`); có test 404 (`apps/web/e2e/not-found.spec.ts`); không có test viewport/route tài khoản. | Mở rộng test theo ma trận (§5–§7); không dùng golden path làm bằng chứng RWD. |
+| WEB-G10 | HIỆN CÓ (bổ sung sau review vòng 1, R04) | Backend đã có cả `MockBiometricProvider` và `AwsRekognitionBiometricProvider` (R2-6, `apps/backend/src/biometric/providers/aws-rekognition-biometric.provider.ts:33–46`). Mặc định là mock; AWS chỉ được chọn khi `BIOMETRIC_PROVIDER=aws-rekognition` (`apps/backend/src/biometric/biometric.module.ts:27–40`; `docs/architecture/TDR-biometric-provider-spike.md:76`). Câu "chưa implement, MVP vẫn dùng `MockBiometricProvider`" ở `docs/SRS.md:147` đã lỗi thời so với nguồn này. Provider thật của bản phát hành chưa được kiểm trong `WEB-00`. | Privacy Content Gate phải đối chiếu đúng provider của bản phát hành (§4.3); không suy ra từ SRS cũ hay từ cấu hình mặc định. |
+
+### 2.2. Responsive và accessibility — phân tích tĩnh (chưa đo DOM)
+
+| ID | Bề mặt | Hiện trạng / nguồn | Rủi ro cần đo (SUY LUẬN TĨNH) |
+|---|---|---|---|
+| WEB-U01 | App shell | Sidebar luôn render, `h-screen w-64 shrink-0` (`Sidebar.tsx:50`); shell `flex h-screen overflow-hidden`, `main` không có `min-w-0` (`AppLayout.tsx:42–44`). | Ở font gốc 16px, sidebar ≈256px; viewport 320px chỉ còn ≈64px cho nội dung. Đây là tính toán, không phải số đo. `overflow-hidden` có thể giấu tràn. |
+| WEB-U02 | Navigation thấp/ngang | Nav flex-1, menu tài khoản ở đáy, sidebar không có `overflow-y` riêng (`Sidebar.tsx:50–100`). | Chiều cao thấp/text zoom có thể làm account/logout khó tiếp cận. Không khẳng định lỗi định vị dropdown khi chưa chạy. |
+| WEB-U03 | Dashboard | `p-8`, grid tối thiểu 2 cột, `lg` 4 cột (`DashboardPage.tsx:25,70`). | Viewport hẹp cần một cột; action wrap. |
+| WEB-U04 | Danh sách xe | Hàng/action và xác nhận xoá là flex ngang; button `whitespace-nowrap shrink-0` (`apps/web/src/pages/VehiclesPage.tsx:75–89,123–188`; `apps/web/src/components/ui/button.tsx:8`). | Tên xe dài, xe active, confirm delete có thể đẩy action khỏi viewport. |
+| WEB-U05 | Form xe | Grid 1 cột → 3 cột ở `sm` theo viewport, form nằm trong shell đã trừ sidebar (`apps/web/src/components/vehicles/VehicleForm.tsx:37`). | Gần breakpoint ba field có thể quá hẹp. |
+| WEB-U06 | Login | Panel brand ẩn dưới `lg`, form `max-w-sm`, có motion (`LoginPage.tsx:33–69`; `LoginForm.tsx:32–100`). | Có thích ứng cơ bản; cần đo min-width, zoom, bàn phím ảo, lỗi dài, ngang thấp. Không kết luận login hỏng. |
+| WEB-U07 | Live map | Empty và map đều `min-h-[600px]`; overlay góc trên trái/phải tách rời (`LiveMapPage.tsx:17,33–47`). | Màn hình thấp phải cuộn; nhãn kết nối dài có thể đè tốc độ ở width hẹp. |
+| WEB-U08 | Analytics | `ResponsiveContainer width="100%" height={320}`, cards `sm` 3 cột (`apps/web/src/pages/AnalyticsPage.tsx:138,145`). | ResponsiveContainer không tự chứng minh nhãn/legend đọc được ở width hẹp; tooltip chỉ hover. |
+| WEB-U09 | Nút icon | Nút sửa/xoá xe chỉ chứa SVG, không `aria-label` tại call site (`VehiclesPage.tsx:173–187`); `icon-sm` là `size-8` (`button.tsx:30`). | Thiếu accessible name thấy trong source; cần kiểm accessibility tree. 32px không tự động vi phạm WCAG 2.5.8. |
+| WEB-U10 | Motion/theme | Radar loop (`index.css:114–127`); có biến `.dark` (`index.css:37`) nhưng page dùng nhiều màu tối cố định. | Cần kiểm reduced motion toàn app; CSS `.dark` không đủ để phát hành switch theme. |
+
+## 3. Quyết định đặc tả WEB-00
+
+Trạng thái chung của bảng: **ĐẶC TẢ MỚI (WEB-00)** — hướng đã được chủ dự án đồng ý; nội dung chi tiết: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu (REVIEW_NOTES §35–§38). Không quyết định nào ở đây là hành vi đã có.
+
+| ID | Quyết định | Căn cứ |
+|---|---|---|
+| WEB-D01 | Hồ sơ chỉ đọc email người đang đăng nhập; không hiển thị ngày tham gia chỉ vì DB có `created_at`. | WEB-G02 |
+| WEB-D02 | Không thêm API/bảng/cột. `API_CONTRACT.md` và `DATA_MODEL.md` không đổi cho toàn bộ chuỗi `WEB-01`…`WEB-13`; mọi nhu cầu ghi hồ sơ/consent/preference phía server là vòng đặc tả riêng. | WEB-G02, WEB-G08 |
+| WEB-D03 | Quyền riêng tư là trang thông tin + hướng dẫn; nội dung retention/provider qua **Privacy Content Gate** (§4.3) trước khi phát hành. | WEB-G03, WEB-G04 |
+| WEB-D04 | Cài đặt duy nhất là hiệu ứng giao diện web, lưu cục bộ theo tài khoản trên trình duyệt (§4.4). | WEB-G08 |
+| WEB-D05 | Trợ giúp là nội dung tĩnh có nguồn, dẫn tới route có thật; không contact/ticket/chat chưa xác nhận. | WEB-G01, WEB-G07 |
+| WEB-D06 | Responsive: drawer dưới 1024 CSS px, sidebar từ 1024; nội dung reflow theo không gian container. Ngưỡng 1024 là lựa chọn của NovaWay, không phải chuẩn bắt buộc. | WEB-U01…U10 |
+| WEB-D07 | Phạm vi kiểm thử 320–1920 CSS px, portrait/landscape, zoom/text, bàn phím, nhiều engine; Safari iPhone và Android Chrome thật là gate riêng. | WEB-G09 |
+| WEB-D08 | Timeout **15 giây** chỉ cho request kiểm tra phiên (`GET /api/auth/me` khi mount AppLayout/LoginPage); không áp blanket timeout lên API khác. Đây là ngưỡng UX mới, không phải hành vi đã có. | WEB-G05 |
+| WEB-D09 | Thêm sau review vòng 1 (R01). Thao tác chủ động "Đăng nhập lại" từ trạng thái lỗi phiên xoá token và user cục bộ, vô hiệu hoá kiểm tra đang chờ, rồi về `/login`. Hệ thống không tự xoá token khi lỗi khác `401` hay khi retry. Thao tác này không revoke server, không kết thúc chuyến mobile. | WEB-G05; `LoginPage.tsx:17–24` |
+| WEB-D10 | Thêm sau review vòng 1 (R02). Chỉ kết quả kiểm tra phiên còn hiệu lực (đúng thế hệ phiên và đúng token hiện hành) mới được đổi token, AuthContext, route hay UI, ở mọi tầng. | `authService.ts:15–18,25–33`; `AppLayout.tsx:18–25` |
+| WEB-D11 | Thêm sau review vòng 1 (R05). Tách gate merge Windows khỏi gate công bố hỗ trợ thiết bị thật (§4.7). | WEB-D07 |
+
+## 4. Hành vi chi tiết
+
+### 4.1. Kiểm tra phiên (FR-WEBSESSION)
+
+Trạng thái: `checking` → `authenticated` | `unauthenticated` | `error`.
+
+Bảng dưới áp dụng cho **lần kiểm tra còn hiệu lực** — tức request thuộc đúng thế hệ phiên hiện hành (xem "Thế hệ phiên" bên dưới). Kết quả của lần kiểm tra đã mất hiệu lực bị bỏ qua hoàn toàn, kể cả `401`.
+
+| Kết quả `/me` | Trạng thái | Token trong `sessionStorage` | Hiển thị |
+|---|---|---|---|
+| Không có token | `unauthenticated` | Không có | Về `/login` (giữ hành vi hiện có). |
+| `200` | `authenticated` | Giữ | Route đã yêu cầu. |
+| `401` | `unauthenticated` | Xoá theo contract hiện có — **chỉ** khi token mà request này xác minh vẫn là token hiện hành | Về `/login`. |
+| Lỗi mạng, `500` | `error` | **Giữ** | Thông báo không kiểm tra được phiên, nút "Thử lại", nút "Đăng nhập lại". |
+| `403` | `error` | **Giữ** | Thông báo không có quyền/không kiểm tra được; không được hiển thị như "mật khẩu sai". `/me` không định nghĩa `403` trong contract — mọi mã khác `401` được xử lý như lỗi không phải xác thực. |
+| `429` | `error` | **Giữ** | Thông báo quá nhiều yêu cầu, thử lại sau; không tự retry dồn dập. |
+| Quá 15 giây | `error` | **Giữ** | Như lỗi mạng; request bị huỷ. |
+
+**Xử lý tự động vs thao tác người dùng (đính chính sau review vòng 1, R01).** Hệ thống **không bao giờ tự xoá** token khi lỗi khác `401` hoặc khi retry. Người dùng có thể chủ động chọn **"Đăng nhập lại"** từ trạng thái `error`. Hành động tường minh này:
+
+1. xoá token trong `sessionStorage` và user trong AuthContext ở trình duyệt hiện tại;
+2. vô hiệu hoá mọi lần kiểm tra phiên đang chờ (tăng thế hệ phiên);
+3. điều hướng tới `/login` với form dùng được ngay. Vì không còn token, `/login` không tự kiểm tra phiên và không tự chuyển về dashboard.
+
+Hành động này **không** gọi server để thu hồi token (không có endpoint revoke — WEB-G02), **không** kết thúc chuyến trên mobile, và **không** xoá preference giảm chuyển động.
+
+Phương án đã cân nhắc (quyết định đặc tả; review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu):
+
+| Phương án | Hệ quả | Kết luận |
+|---|---|---|
+| A. Chỉ điều hướng tới `/login`, giữ token | `LoginPage` tự kiểm tra token khi mount và chuyển về `/dashboard` nếu hợp lệ (`apps/web/src/pages/LoginPage.tsx:17–24`). Khi mạng phục hồi, người dùng bị đưa ngược lại và không đổi được tài khoản. Không có một expected result duy nhất. | Loại |
+| B. "Đăng nhập lại" xoá phiên cục bộ rồi về `/login` (đề xuất của reviewer) | Hành vi xác định, dễ kiểm thử. Đổi lại, người dùng phải nhập lại mật khẩu dù token có thể vẫn hợp lệ. Chấp nhận được vì đây là thao tác chủ động, có nhãn rõ. | **Chọn** |
+| C. Điều hướng kèm cờ bỏ qua auto-check, giữ token | Trạng thái ẩn; reload hoặc Back có thể "hồi sinh" phiên mà người dùng nghĩ đã rời; thêm nhánh điều kiện ở LoginPage. | Loại |
+
+**Thế hệ phiên — chỉ kết quả còn hiệu lực mới có tác dụng (R02).** Thế hệ phiên là một khái niệm đặc tả; spec không bắt buộc tên class hay cách cài đặt cụ thể.
+
+- Mỗi lần kiểm tra phiên gắn với token nó xác minh và thế hệ phiên tại lúc bắt đầu.
+- Thế hệ phiên đổi khi: đăng nhập thành công, logout, "Đăng nhập lại", và khi bắt đầu một lần retry hay kiểm tra mới.
+- Chỉ kết quả của lần kiểm tra còn hiệu lực (cùng thế hệ, token trong storage vẫn là token đã xác minh) mới được: ghi/xoá token, đặt/xoá user trong AuthContext, điều hướng, hoặc đổi UI.
+- Kết quả mất hiệu lực, kể cả `200` và `401`, bị bỏ qua **ở mọi tầng**: service/storage, context và component. Guard chỉ ở component không đủ, vì xử lý `401` hiện nằm trong service (`apps/web/src/services/authService.ts:28–33`). Hiện trạng tham chiếu: guard `cancelled` trong `AppLayout.tsx:18–25` chỉ chặn callback của component, không chặn side effect trong service.
+- Kịch bản bắt buộc có test: phiên A `/me` đang chờ → đăng nhập B thành công → A trả `401` hoặc `200`. Kết quả mong đợi: token, user và route của B giữ nguyên, không có dữ liệu A.
+
+Ràng buộc chung:
+
+- Retry thủ công có trạng thái bận; tại mọi thời điểm chỉ một request kiểm tra phiên còn hiệu lực; bấm nhiều lần không tạo request song song có hiệu lực.
+- Request bị huỷ do timeout hoặc unmount là request đã mất hiệu lực, áp dụng quy tắc thế hệ phiên ở trên.
+- `/login` không được có unhandled rejection khi kiểm tra phiên lỗi; form đăng nhập vẫn dùng được.
+- Không đổi contract `/me`, không đổi nơi lưu token, không tuyên bố logout web thu hồi token trên mọi thiết bị (không có endpoint revoke — WEB-G02).
+
+### 4.2. Hồ sơ cá nhân (FR-WEBPROFILE)
+
+Bố cục: heading "Hồ sơ cá nhân", vùng "Email đăng nhập" với giá trị đầy đủ, link "Về Dashboard"; menu tài khoản và logout dùng chung shell. Không nút Lưu, không form. Không render `password_hash`; không tạo tên, ngày tham gia, số điện thoại, ảnh đại diện, trạng thái xác minh. Dữ liệu lấy từ user đã được AppLayout xác thực qua `/me` (AuthContext); không bắt buộc gọi `/me` lặp ở trang này — đây là hướng tái sử dụng, không đổi cơ chế session hiện tại.
+
+### 4.3. Quyền riêng tư (FR-WEBPRIVACY) và Privacy Content Gate
+
+Trang thông tin sản phẩm, **không** phải tuyên bố đã được chứng nhận pháp lý; luật nhắc trong `docs/SRS.md:167` không thay thế rà soát pháp lý tại thời điểm phát hành. Các phần nội dung:
+
+1. **Tài khoản và phương tiện** — mục đích thông tin đăng nhập và dữ liệu xe, chỉ mô tả nhóm dữ liệu có trong contract auth/vehicle.
+2. **Vị trí và chuyến đi** — consent trước tracking (FR-TRIP-01/02); dừng tracking bằng **kết thúc chuyến trên mobile** (FR-TRIP-04, FR-BGLOC-06). Đăng xuất web **không** được mô tả là dừng tracking mobile.
+3. **Xác thực khuôn mặt** — consent riêng và nguyên tắc không lưu ảnh thô tại NovaWay (FR-BIOMETRIC-04, NFR-PRIVACY-03); chính sách lưu giữ của nhà cung cấp phải được xác nhận riêng. Không khẳng định "không có bên thứ ba xử lý" vì luồng session gửi capture trực tiếp tới provider (`docs/API_CONTRACT.md:119–155`).
+4. **Thời hạn dữ liệu** — phân biệt raw GPS với trip summary; câu chữ theo retention **thực tế** đã có bằng chứng.
+5. **Tìm hướng dẫn** — link `/help`. Chưa có export/delete/revoke hay địa chỉ liên hệ khi quy trình chưa được xác nhận.
+
+**Privacy Content Gate (gate riêng, chặn `WEB-11` — không chặn `WEB-01/02/09/10` hay phần RWD):**
+
+- Người xác nhận: BA + kỹ thuật + chủ dự án; reviewer không được là chính người viết nội dung.
+- Phải có bảng trace nội bộ: mỗi cam kết dữ liệu trên trang → requirement + implementation có bằng chứng, hoặc quyết định vận hành đã được xác nhận.
+- Retention: nếu cleanup TTL chưa có bằng chứng vận hành, câu "tự xoá sau 30 ngày" bị chặn; hoặc viết đúng thực tế, hoặc hoàn tất dependency retention (§10) trước.
+- Provider sinh trắc — tách ba lớp (đính chính sau review vòng 1, R04; xem WEB-G10):
+  1. **Có trong source:** adapter `AwsRekognitionBiometricProvider` đã được implement ở R2-6 (`apps/backend/src/biometric/providers/aws-rekognition-biometric.provider.ts:33–46`; flow session ở `docs/API_CONTRACT.md:119–155`).
+  2. **Mặc định/fallback theo cấu hình:** `MockBiometricProvider`. AWS chỉ được chọn khi `BIOMETRIC_PROVIDER=aws-rekognition` (`apps/backend/src/biometric/biometric.module.ts:27–40`).
+  3. **Provider thực sự của bản phát hành:** **cần xác nhận**, chưa kiểm trong `WEB-00` (không đọc cấu hình/secret môi trường, không gọi AWS). Chính sách lưu giữ của chính provider đó phải được xác nhận trước khi viết nội dung.
+
+  Không được ghi "đang dùng AWS" hay "chỉ dùng mock" như sự thật đã kiểm chứng.
+- Đầu mối xử lý yêu cầu dữ liệu chỉ công bố khi đã có quy trình.
+- Gate **không** được đóng bằng suy luận của người viết đặc tả, và không thay đổi nghĩa vụ/luật áp dụng.
+
+### 4.4. Cài đặt ứng dụng (FR-WEBSETTINGS)
+
+**Lựa chọn:** "Theo hệ thống" (mặc định) / "Giảm chuyển động". Cả hai tôn trọng OS `prefers-reduced-motion: reduce`; không có lựa chọn ép animation bất chấp OS. "Giảm chuyển động" tắt chuyển động trang trí/transition không thiết yếu (radar, motion của login/dashboard…); dữ liệu realtime trên map vẫn cập nhật, có thể nhảy tức thì thay vì animate. Trang ghi rõ: "Chỉ áp dụng cho tài khoản này trên trình duyệt này."
+
+**Persistence (ĐẶC TẢ MỚI):**
+
+| Khía cạnh | Quy định |
+|---|---|
+| Nơi lưu | Web storage bền của trình duyệt (localStorage hoặc tương đương). Không API, không DB, không đồng bộ đa thiết bị. Tên key cụ thể do `WEB-12` đề xuất trong PR, không phải contract. |
+| Namespace | Theo `user.id` của phiên đã xác thực. Cam kết là **app không chọn/áp dụng** preference của A cho B. Namespace (dù raw hay băm) **không** phải ranh giới quyền truy cập: storage cùng origin trên một browser profile đọc được bởi bất kỳ ai dùng profile đó (N01). Vì vậy chỉ lưu giá trị không nhạy cảm (dòng "Dữ liệu"); trên máy dùng chung, lựa chọn và định danh dùng làm key còn lại sau logout. |
+| Dữ liệu | Bản ghi có `version` (bắt đầu `1`) và một giá trị enum (`system` hoặc `reduced`). **Không** email, token, mật khẩu, vị trí, dữ liệu khuôn mặt hay dữ liệu nghiệp vụ. |
+| Trước khi biết user | Trang `/login` và màn "đang kiểm tra phiên" chỉ áp dụng OS setting; preference áp dụng sau khi phiên `authenticated`. |
+| Reload | Đọc lại preference của đúng `user.id` sau khi xác thực; giữ lựa chọn. |
+| Logout | Xoá session như hiện nay; preference được **giữ** để A đăng nhập lại nhận đúng lựa chọn của A. |
+| A → B cùng trình duyệt | B nhận preference của B, hoặc mặc định nếu chưa có; không thừa hưởng của A. |
+| Trình duyệt/thiết bị khác | Không giả định đã đồng bộ; mặc định "Theo hệ thống". |
+| (a) Khởi tạo, **đọc** thất bại (storage bị chặn/ném lỗi khi đọc) | Không có giá trị đọc hợp lệ → "Theo hệ thống"; thông báo không đọc/lưu được lựa chọn trên trình duyệt này; không crash. Nếu sau đó người dùng chọn, áp dụng theo (b). |
+| (b) Người dùng đã chọn hợp lệ nhưng **ghi** thất bại (quota, storage bị chặn khi ghi) | **Giữ và áp dụng** lựa chọn vừa chọn trong phiên trang đang mở — không quay về "Theo hệ thống", không bật lại animation; thông báo không lưu được (sẽ mất khi reload). Không đụng token. |
+| (c) Giá trị đã lưu hỏng, enum lạ, `version` không hỗ trợ | Coi như không có giá trị đọc hợp lệ → "Theo hệ thống"; thông báo lựa chọn đã lưu không đọc được; lần lưu hợp lệ kế tiếp ghi đè; không đụng token. |
+| Chung cho (a)(b)(c) | OS reduce motion vẫn luôn được tôn trọng; không thêm đồng bộ đa tab hay server (R03). |
+| Phạm vi ảnh hưởng | Không đổi GPS sampling, consent, trip lifecycle, âm thanh/cảnh báo an toàn, dữ liệu realtime, API payload. |
+
+Không thêm theme sáng/tối, ngôn ngữ, push notification, "giữ đăng nhập" (đã bị gỡ có chủ đích — `LoginForm.tsx:6–16`).
+
+### 4.5. Trợ giúp (FR-WEBHELP)
+
+Mục lục ngắn hoặc heading nối tiếp; không bắt buộc accordion/search. Nội dung tối thiểu và route đích có thật (`apps/web/src/App.tsx:21–29`):
+
+| Chủ đề | Route đích | Ràng buộc nội dung |
+|---|---|---|
+| Đăng nhập/phiên hết hạn | `/login` | Không yêu cầu gửi mật khẩu/JWT cho ai. |
+| Quản lý xe | `/vehicles` | Khớp thêm/sửa/xoá/chọn xe hoạt động hiện có. |
+| Xem vị trí chuyến đi | `/start-trip` | Trang chỉ **xem** chuyến đang active; bắt đầu/kết thúc chuyến làm trên mobile. Tên route không có nghĩa web bắt đầu được chuyến. Không khẳng định "không có vị trí" luôn nghĩa là không có chuyến (WEB-G07). |
+| Lịch sử/thống kê | `/trip-history` | Mô tả filter/biểu đồ hiện có, không thêm metric. |
+| Quyền riêng tư | `/account/privacy` | Chỉ link; nội dung theo §4.3. |
+| Lỗi thường gặp | — | Mất mạng, phiên hết hạn, bản đồ chưa có vị trí; không hứa khôi phục dữ liệu/cấp quyền không có cơ chế; không yêu cầu ảnh khuôn mặt. |
+
+`/offline-sync` còn placeholder (`App.tsx:25`) — không được mô tả là chức năng web đầy đủ. Không có kênh liên hệ/ticket/form "gửi thành công" giả; chỉ thêm kênh liên hệ khi chủ dự án xác nhận có bên vận hành. Không đưa số step nội bộ/debug flag vào nội dung cho người dùng cuối.
+
+### 4.6. Responsive/adaptive (NFR-RWD)
+
+- Dưới 1024 CSS px: header + nút mở menu (drawer); từ 1024: sidebar cố định.
+- Field/card xếp theo không gian container thực, không chỉ thêm cùng một breakpoint vào mọi component.
+- Drawer: có accessible name; quản lý focus khi mở; đóng bằng Escape/nút đóng/bấm ngoài; trả focus về nút mở; chọn route thì đóng; menu ẩn không nhận Tab; resize qua 1024 không để kẹt scroll lock/backdrop hoặc nhân đôi tab stop.
+- Mục tiêu vùng chạm control chính 44×44 CSS px là lựa chọn UX của NovaWay; đánh giá WCAG 2.5.8 riêng với ngưỡng 24×24 và ngoại lệ của nó.
+- Tuyên bố hỗ trợ chỉ theo tổ hợp đã chạy và có evidence (§7.3). Không hứa "mọi thiết bị", không tuyên bố đạt WCAG từ việc viết tiêu chí. Browser emulation/WebKit automation không thay thế Safari trên iPhone thật.
+
+### 4.7. Hai phạm vi nghiệm thu: gate merge Windows và gate công bố hỗ trợ thiết bị (R05)
+
+Đây là đính chính sau review vòng 1. Mỗi micro-step RWD có **hai** phạm vi nghiệm thu tách biệt. Không phạm vi nào được dùng để che phạm vi kia.
+
+| Phạm vi | Gồm | Môi trường | Khi chưa chạy |
+|---|---|---|---|
+| **Gate merge (Windows)** — điều kiện để merge PR của step | Test mục tiêu của step trên ma trận C/F/B/Z (Chromium, Firefox, touch/DPR emulation), regression nghiệp vụ, `npm run lint/test/build`, required PR checks. AC áp dụng: các AC-RWD của step **trừ** AC-RWD-11 và **trừ** phần bàn phím ảo thật của AC-RWD-06. | Windows; không cần Mac/iPhone/Android | Chặn merge. Không được tự miễn trong PR. |
+| **Gate công bố hỗ trợ thiết bị** — điều kiện để công bố "hỗ trợ Safari iPhone" hoặc "hỗ trợ Android Chrome" | AC-RWD-11, phần bàn phím ảo thật của AC-RWD-06, các hàng ma trận có nhóm H (WEB-VH1, WEB-VH2) | iPhone thật (Safari) và/hoặc thiết bị Android thật. Mac chỉ cần nếu dùng Safari Web Inspector để thu evidence. | Ghi **NOT_RUN**, không tính PASS. **Không** chặn gate merge Windows. **Có** chặn việc công bố hỗ trợ thiết bị tương ứng. |
+
+Quy tắc:
+
+- Một step RWD được ghi "gate merge Windows PASS" khi đủ phạm vi thứ nhất. Trạng thái thiết bị ghi riêng theo từng thiết bị (`WEB-VH1`, `WEB-VH2`): NOT_RUN, PASS hoặc FAIL.
+- Không dùng một chữ "COMPLETED" chung khi gate thiết bị còn NOT_RUN. `WEB-13` ghi kết quả theo **từng phạm vi** và từng thiết bị.
+- Emulation không được ghi thay cho cột thiết bị thật.
+- Cần Mac/iPhone/Android thật **chỉ** khi muốn đóng gate công bố hỗ trợ thiết bị; không cần cho bất kỳ gate merge nào của `WEB-01`…`WEB-12`.
+
+## 5. Ma trận viewport và môi trường (WEB-V)
+
+Kích thước là CSS px; DPR và touch ghi riêng. Tên nhóm là lớp kích thước, không xác nhận model thiết bị. Toàn bộ cột Actual: **NOT_RUN**.
+
+| ID | Viewport / điều kiện | Mục đích | Engine/thiết bị đề xuất | Mức chạy | Actual |
+|---|---|---|---|---|---|
+| WEB-V01 | 320×568 | Bề rộng nhỏ; reflow text/form/menu | Chromium, DPR 1 + touch emulation | Mỗi PR layout liên quan | NOT_RUN |
+| WEB-V02 | 360×800 | Điện thoại hẹp | Chromium, touch, DPR 2 | PR shell/account/form/map | NOT_RUN |
+| WEB-V03 | 390×844 | Điện thoại đứng | Chromium emulation; đối chiếu Safari thật khi có | Smoke toàn route | NOT_RUN |
+| WEB-V04 | 430×932 | Điện thoại rộng | Chromium touch | Trước release đợt | NOT_RUN |
+| WEB-V05 | 844×390 | Điện thoại ngang, chiều cao thấp | Chromium touch; Safari thật bổ sung | Shell/menu/form/map | NOT_RUN |
+| WEB-V06 | 768×1024 | Tablet đứng | Chromium touch | Shell/account/vehicles | NOT_RUN |
+| WEB-V07 | 1024×768 | Tablet ngang, biên drawer/sidebar | Chromium touch + mouse | Shell/map/analytics | NOT_RUN |
+| WEB-V08 | 1280×720 | Laptop thấp | Chromium; Edge thật nếu có | Mỗi PR | NOT_RUN |
+| WEB-V09 | 1440×900 | Desktop trung bình | Chromium + Firefox | Smoke trước release | NOT_RUN |
+| WEB-V10 | 1920×1080 | Desktop rộng, độ dài dòng | Chromium | Trước release | NOT_RUN |
+| WEB-VB1 | 639/640/641 × 800 | Biên `sm` của form/cards | Chromium | Form/analytics | NOT_RUN |
+| WEB-VB2 | 767/768/769 × 800 | Biên `md` | Chromium | Dashboard/shell | NOT_RUN |
+| WEB-VB3 | 1023/1024/1025 × 800 | Biên `lg` và drawer | Chromium, resize hai chiều | Shell/login/account | NOT_RUN |
+| WEB-VZ1 | Text-only 200% tại 390×844 và desktop | Giữ chữ/control đầy đủ | Firefox hoặc môi trường hỗ trợ tăng riêng text | Form/account/menu | NOT_RUN |
+| WEB-VZ2 | Desktop 1280px, browser zoom 400% | Reflow tương đương 320 CSS px | Browser thật; ghi CSS viewport sau zoom | Toàn route; ngoại lệ map trong phạm vi map | NOT_RUN |
+| WEB-VZ3 | Browser zoom 200% tại desktop | Focus, menu, form | Chromium/Firefox | Smoke toàn route | NOT_RUN |
+| WEB-VH1 | Android Chrome thật: portrait/landscape, bàn phím | Visual viewport/keyboard/touch thật | Thiết bị mượn/test device | Trước tuyên bố hỗ trợ Android browser | NOT_RUN — cần thiết bị |
+| WEB-VH2 | iPhone Safari thật: portrait/landscape, safe area, toolbar, bàn phím | Hành vi Safari iOS thật | iPhone do người dùng cung cấp | Gate hỗ trợ Safari iPhone | NOT_RUN — cần thiết bị |
+
+Ngưỡng 320px và zoom/text bám W3C SC 1.4.10/1.4.4 (§7.4). Các kích thước khác là lựa chọn coverage của NovaWay. Biên 640/768/1024 bám class `sm/md/lg` đang dùng; trước khi chạy phải xác nhận breakpoint thật trong bản build.
+
+## 6. Route × trạng thái × nhóm viewport (WEB-T)
+
+Nhóm: **C** = V01/V03/V08; **F** = V01–V10; **B** = biên liên quan; **Z** = VZ1–VZ3; **H** = VH1/VH2. Mỗi hàng lưu actual riêng cho từng lần chạy; không điền một PASS chung cho mọi tổ hợp. Nhóm **H** thuộc gate công bố hỗ trợ thiết bị (§4.7): NOT_RUN không tính PASS, không chặn gate merge Windows, nhưng chặn việc công bố hỗ trợ thiết bị đó.
+
+| ID | Route / vùng | Trạng thái dữ liệu và thao tác | Viewport tối thiểu | AC liên quan | Actual |
+|---|---|---|---|---|---|
+| WEB-T01 | `/login` | Trống; credential lỗi; submitting; token sẵn + `/me` 401/500/network/timeout; "Đăng nhập lại" từ trạng thái lỗi; đăng nhập B khi `/me` của A đang chờ; text dài; keyboard | C + V05 + VB3 + Z + H | AC-WEBSESSION-01→05, AC-WEBSESSION-07, AC-WEBSESSION-08, AC-RWD-01/04/06 | NOT_RUN |
+| WEB-T02 | Shell/menu | Authenticated; mở/đóng drawer; dropdown tài khoản; đổi route; Escape; trả focus; email dài; chiều cao thấp | F + VB3 + Z + H | AC-RWD-01→04/10/11 | NOT_RUN |
+| WEB-T03 | `/dashboard` | Card "—"; badge Online tĩnh; text wrap; không biến thành metric thật | C + VB2/VB3 + Z | AC-RWD-01/12 | NOT_RUN |
+| WEB-T04 | `/vehicles` (list) | Loading; API error; empty; 1 xe; nhiều xe; active; `brand_model` dài; confirm delete; action error | C + V05/V06/V07 + Z | AC-RWD-05/09/10/12 | NOT_RUN |
+| WEB-T05 | Form xe | Create/edit; required rỗng; hợp lệ; validation/API error; submitting; cancel; bàn phím ảo; text zoom | C + VB1/VB3 + Z + H | AC-RWD-06/12 | NOT_RUN |
+| WEB-T06 | `/start-trip` | Không trip; trip chưa có vị trí; connected có vị trí/trail; disconnected/error; lỗi tile; resize | C + V05/V07 + VB3 + Z + H | AC-RWD-07 | NOT_RUN |
+| WEB-T07 | `/trip-history` | Loading/error/empty; filter car/motorbike; ít/nhiều trip; số lớn; nhãn dài; tooltip/legend | C + V06/V07/V09 + VB1 + Z | AC-RWD-08/12 | NOT_RUN |
+| WEB-T08 | `/account/profile` (sau `WEB-09`) | Email hợp lệ/dài; deep link; reload; logout/login tài khoản khác; 401/network | C + V06 + Z | AC-WEBPROFILE-01→04 | NOT_RUN — màn hiện placeholder |
+| WEB-T09 | `/account/privacy` (sau `WEB-11`) | Nội dung dài; heading/link; keyboard; không phát request consent/GPS/camera | C + V06 + Z | AC-WEBPRIVACY-01→06 | NOT_RUN — màn hiện placeholder |
+| WEB-T10 | `/settings` (sau `WEB-12`) | Mặc định; hai lựa chọn; OS reduce motion; reload; A→B; storage đọc lỗi / ghi lỗi (quota) / giá trị hỏng; resize | C + V06 + Z | AC-WEBSETTINGS-01→08 | NOT_RUN — setting là đặc tả mới |
+| WEB-T11 | `/help` (sau `WEB-10`) | Mục lục/link; text dài; keyboard; quay về route; không nêu tính năng chưa có | C + V06 + Z | AC-WEBHELP-01→05 | NOT_RUN — màn hiện placeholder |
+| WEB-T12 | Route bảo vệ/404/logout | Không token; token hết hạn; logout rồi Back; URL lạ; không lộ dữ liệu qua UI cache | C + V05 + Z | AC-WEBSESSION-01/06/07/09, AC-WEBPROFILE-04 | NOT_RUN |
+
+WEB-T06 ghi nhận hiện trạng WEB-G07; không mặc định yêu cầu `WEB-07` sửa lại state machine của map. WEB-T03 không dùng kiểm thử RWD để phê duyệt số liệu dashboard tĩnh.
+
+## 7. Phương pháp kiểm thử, dữ liệu và evidence
+
+### 7.1. Cách đánh giá layout
+
+- Kiểm cả `document` lẫn container scroll và bounding box của control/text; `overflow-hidden` có thể giấu lỗi dù trang không có scrollbar. Không kết luận PASS từ một phép so `scrollWidth/clientWidth`.
+- Chụp ảnh mỗi trạng thái quan trọng, ghi CSS viewport, DPR, browser/version, zoom. Nội dung dưới fold nhưng cuộn tới được khác với nội dung bị cắt.
+- Map được pan hai chiều trong canvas; sidebar, overlay trạng thái, action, attribution vẫn phải tiếp cận được. Ngoại lệ reflow của map không áp dụng cho toàn trang.
+- Zoom 400%, text-only 200% và viewport nhỏ là ba phép kiểm khác nhau; đặt viewport 320px không được ghi thành đã đo browser zoom.
+- Keyboard: Tab/Shift+Tab, Enter/Space, Escape cho drawer/dropdown; kiểm accessibility tree, không chỉ ảnh.
+- Animation: thử OS reduce motion và preference của app; dữ liệu map vẫn đổi, chuyển động trang trí giảm.
+
+### 7.2. Dữ liệu và môi trường
+
+- Tài khoản/dữ liệu test trong môi trường isolated; email tổng hợp; không chụp email cá nhân; không dùng tài khoản hay dữ liệu production.
+- Trạng thái lỗi/layout hiếm có thể dùng response fixture; evidence phải ghi **fixture UI**, không gọi là E2E API thật. Error body theo `docs/API_CONTRACT.md` §8 và cách parse của `apps/web/src/lib/apiClient.ts:27–33`. Không tạo route/field giả như thể API production đã có.
+- Giữ ít nhất một lượt regression với backend thật cho auth + vehicle + quan sát trip + analytics (`docs/TEST_STRATEGY.md` §3).
+- Storage/error là injection trong môi trường test; không sửa cấu hình người dùng thật; không cần raw GPS thật, biometric thật hay thiết bị đang tracking.
+
+### 7.3. Evidence record (điền khi thực thi — hiện chưa có dòng nào)
+
+| Run ID | Commit | Test ID | Browser/version | CSS viewport/DPR | Zoom/text scale | Touch/keyboard | Backend thật/fixture | Expected | Actual | Result | Evidence path | Issue |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| — | — | — | — | — | — | — | — | Theo AC liên quan | — | NOT_RUN | — | — |
+
+Không đánh PASS iOS từ Chromium emulation hoặc WebKit trên máy khác. Record phải ghi rõ mỗi dòng thuộc phạm vi nào: gate merge Windows hay gate công bố hỗ trợ thiết bị (§4.7). Gate merge Windows có thể hoàn tất trước; trạng thái thiết bị còn thiếu giữ riêng là NOT_RUN và không chặn merge, nhưng chặn công bố hỗ trợ thiết bị đó. Evidence path trong record phải là đường dẫn tương đối trong repo/CI artifact, không phải đường dẫn máy cá nhân.
+
+### 7.4. Nguồn tiêu chuẩn tham khảo
+
+Chỉ là tiêu chí chọn lọc, không phải audit WCAG đầy đủ, không phải chứng nhận:
+
+- [W3C — Understanding Reflow, SC 1.4.10](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html): nội dung cuộn một chiều ở bề rộng tương đương 320 CSS px; ví dụ 1280px zoom 400%; thành phần cần bố cục hai chiều như bản đồ có ngoại lệ trong phạm vi thành phần.
+- [W3C — Understanding Resize Text, SC 1.4.4](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html): text tăng tới 200% không mất nội dung/chức năng.
+- [W3C — Understanding Target Size (Minimum), SC 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html): 24×24 CSS px hoặc ngoại lệ (vd. spacing). Mục tiêu 44×44 của NovaWay là lựa chọn UX bổ sung.
+
+## 8. Traceability: requirement → AC → test case → micro-step → nguồn
+
+Định nghĩa đầy đủ của `FR-*`/`NFR-*` ở `docs/SRS.md` §1.15/§2.1; Given/When/Then của `AC-*` ở `docs/ACCEPTANCE_CRITERIA.md` §12; user story ở `docs/USER_STORIES.md` §5; edge case ở `docs/EDGE_CASES.md` §9; chiến lược test ở `docs/TEST_STRATEGY.md` §2.12. Test case = mức test + hàng ma trận; tên file test cụ thể do micro-step đặt.
+
+| Requirement | User story | AC | Test case (mức + ma trận) | Micro-step | Nguồn hiện trạng / quyết định |
+|---|---|---|---|---|---|
+| FR-WEBSESSION-01 | US-W-05 | AC-WEBSESSION-01, -02 | Unit/component (Vitest) state machine; Playwright WEB-T01, WEB-T12 | WEB-01 | WEB-G05; `AppLayout.tsx:7,17–39` |
+| FR-WEBSESSION-02 | US-W-05 | AC-WEBSESSION-01, -02, -06, -07 | Unit `authService` (401 vs khác); component error/retry; Playwright "Đăng nhập lại" (token hợp lệ/không hợp lệ, mạng phục hồi, Browser Back); WEB-T01, WEB-T12 | WEB-01 | `authService.ts:24–37`; `authService.spec.ts:88–114`; `API_CONTRACT.md` §8 |
+| FR-WEBSESSION-03 | US-W-05 | AC-WEBSESSION-03 | Unit timeout bằng fake timer; WEB-T01 (fixture treo) | WEB-01 | WEB-D08; `apiClient.ts:21–41` |
+| FR-WEBSESSION-04 | US-W-05 | AC-WEBSESSION-03, -04, -05, -08, -09 | Unit/integration ở tầng service + storage + context (không chỉ DOM): kết quả `/me` của A về sau khi B đăng nhập (`401` và `200`); logout/unmount/timeout/retry làm mất hiệu lực; retry trùng; WEB-T01, WEB-T12 | WEB-01 | `AppLayout.tsx:17–27`; `LoginPage.tsx:17–24` |
+| FR-WEBPROFILE-01 | US-W-01 | AC-WEBPROFILE-01, -02 | Component + Playwright WEB-T08 | WEB-09 | WEB-D01; `API_CONTRACT.md:44–48`; `authService.ts:5–8` |
+| FR-WEBPROFILE-02 | US-W-01 | AC-WEBPROFILE-03 | Component (không field/request ghi); network inspection WEB-T08 | WEB-09 | WEB-G02; `DATA_MODEL.md:14–22` |
+| FR-WEBPROFILE-03 | US-W-01 | AC-WEBPROFILE-04 | Playwright A→logout→B, Back; WEB-T08, WEB-T12 | WEB-09 | `Sidebar.tsx:41–45`; `authService.ts:43–45` |
+| FR-WEBPRIVACY-01 | US-W-02 | AC-WEBPRIVACY-01, -06 | Content review theo Privacy Content Gate; Playwright WEB-T09 | WEB-11 | WEB-D03; `SRS.md:116–122,165–167` |
+| FR-WEBPRIVACY-02 | US-W-02 | AC-WEBPRIVACY-03, -04 | Playwright/network: không request consent/GPS/camera; WEB-T09 | WEB-11 | WEB-G04; `EDGE_CASES.md:12`; `ARCHITECTURE.md:90` |
+| FR-WEBPRIVACY-03 | US-W-02 | AC-WEBPRIVACY-02 | Content review (chặn câu TTL không bằng chứng) | WEB-11 + Privacy Content Gate | WEB-G03; `SRS.md:121`; `DATA_MODEL.md:266` |
+| FR-WEBPRIVACY-04 | US-W-02 | AC-WEBPRIVACY-05 | Content review | WEB-11 + Privacy Content Gate | `API_CONTRACT.md:119–155`; `SRS.md:146–147` |
+| FR-WEBSETTINGS-01 | US-W-03 | AC-WEBSETTINGS-01, -06 | Component + Playwright WEB-T10 | WEB-12 | WEB-D04 |
+| FR-WEBSETTINGS-02 | US-W-03 | AC-WEBSETTINGS-02 | Playwright `reducedMotion` emulation + preference; WEB-T10 | WEB-12 | WEB-G08; `index.css:114–127` |
+| FR-WEBSETTINGS-03 | US-W-03 | AC-WEBSETTINGS-03 | Unit storage adapter (namespace/version/enum); Playwright reload, A→B | WEB-12 | WEB-D04; `authService.ts:3,17,40` |
+| FR-WEBSETTINGS-04 | US-W-03 | AC-WEBSETTINGS-04, -07, -08 | Unit riêng từng ca: đọc lỗi (a), ghi lỗi/quota (b), giá trị hỏng/version lạ (c); WEB-T10 | WEB-12 | §4.4 |
+| FR-WEBSETTINGS-05 | US-W-03 | AC-WEBSETTINGS-05 | Regression: request/state nghiệp vụ không đổi; WEB-T06 với preference bật | WEB-12 | FR-TRIP-*, FR-REALTIME-*, FR-WARNUI-* |
+| FR-WEBHELP-01 | US-W-04 | AC-WEBHELP-02, -05 | Playwright link tới đúng route/section; WEB-T11 | WEB-10 | `App.tsx:21–29` |
+| FR-WEBHELP-02 | US-W-04 | AC-WEBHELP-01 | Content review + WEB-T11 | WEB-10 | `ARCHITECTURE.md:90`; `TEST_STRATEGY.md:112`; `App.tsx:25` |
+| FR-WEBHELP-03 | US-W-04 | AC-WEBHELP-03, -04 | Content review; kiểm không có form/ticket giả | WEB-10 | WEB-G02 (không có support route) |
+| NFR-RWD-01 | US-W-06 | AC-RWD-02, -03 | Playwright WEB-VB3 resize hai chiều; WEB-T02 | WEB-02 | WEB-U01, WEB-U02; WEB-D06 |
+| NFR-RWD-02 | US-W-06 | AC-RWD-01, -04, -05, -06, -07, -08 | Playwright theo C/F + Z; WEB-T01…T11 | WEB-02…WEB-08 | WEB-U01…U08 |
+| NFR-RWD-03 | US-W-06 | AC-RWD-02, -05, -10 | Accessibility tree + keyboard; WEB-T02, WEB-T04 | WEB-02, WEB-05 | WEB-U09; `VehiclesPage.tsx:173–187` |
+| NFR-RWD-04 | US-W-06 | AC-RWD-09 | Đo kích thước control; WEB-T02, WEB-T04 | WEB-02, WEB-05 | WEB-U09; `button.tsx:26,30` |
+| NFR-RWD-05 | US-W-06 | AC-RWD-03, -11 | Gate merge Windows: resize/orientation (AC-RWD-03). Gate thiết bị: AC-RWD-11 trên WEB-VH1/VH2, NOT_RUN không tính PASS | WEB-02 (gate merge), WEB-13 (ghi gate thiết bị) | WEB-D07 |
+| NFR-RWD-06 | US-W-06 | AC-RWD-11 | Evidence record §7.3, ghi theo từng phạm vi §4.7 và từng thiết bị | WEB-13 | WEB-G09; `playwright.config.ts:26` |
+| NFR-RWD-07 | US-W-06 | AC-RWD-12 | Regression auth/vehicle/live/analytics với backend thật | WEB-02…WEB-08 | `TEST_STRATEGY.md:112`; WEB-G06 |
+
+## 9. Ánh xạ ID của gói khảo sát → ID chính thức
+
+| Mã gói khảo sát | ID chính thức | Ghi chú |
+|---|---|---|
+| P-SESSION-01 | FR-WEBSESSION-01…04 | |
+| P-ACCOUNT-01 | FR-WEBPROFILE-01…03 | |
+| P-PRIVACY-01 | FR-WEBPRIVACY-01…04 | |
+| P-SETTINGS-01 | FR-WEBSETTINGS-01…05 | |
+| P-HELP-01 | FR-WEBHELP-01…03 | |
+| P-RWD-01 | NFR-RWD-01…07 | |
+| P-AC-AUTH-01…06 | AC-WEBSESSION-01…06 | Giữ số thứ tự. AC-WEBSESSION-07 (R01) và -08, -09 (R02) thêm sau review vòng 1, không có mã P tương ứng. |
+| P-AC-PRO-01…04 | AC-WEBPROFILE-01…04 | Giữ số thứ tự. |
+| P-AC-PRI-01…06 | AC-WEBPRIVACY-01…06 | Giữ số thứ tự. |
+| P-AC-SET-01…06 | AC-WEBSETTINGS-01…06 | Giữ số thứ tự. Sau review vòng 1 (R03): AC-WEBSETTINGS-04 thu hẹp thành ca đọc lỗi; thêm -07 (ghi lỗi) và -08 (giá trị hỏng). |
+| P-AC-HELP-01…05 | AC-WEBHELP-01…05 | Giữ số thứ tự. |
+| P-AC-RWD-01…12 | AC-RWD-01…12 | Giữ số thứ tự. |
+| D01…D06 | WEB-D01, WEB-D03, WEB-D04, WEB-D05, WEB-D06, WEB-D07 | D01→D01, D02→D03, D03→D04, D04→D05, D05→D06, D06→D07. WEB-D02 (không đổi API/DB) và WEB-D08 (timeout 15 giây) tách thành quyết định riêng. |
+| G01…G09 | WEB-G01…G09 | |
+| U01…U10 | WEB-U01…U10 | |
+| V01…V10, VB1…VB3, VZ1…VZ3, VH1…VH2 | WEB-V01…V10, WEB-VB1…VB3, WEB-VZ1…VZ3, WEB-VH1…VH2 | |
+| T01…T12 | WEB-T01…T12 | |
+| E01…E38, X01…X03 | Trích dẫn trực tiếp `path:dòng` @`430e325`; X01…X03 → §7.4 | Không giữ mã E trong Git. |
+| WEB-00…WEB-13 | Giữ nguyên | Đã đưa vào `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`. |
+
+Tổng: 6 nhóm requirement → 19 `FR-*` + 7 `NFR-RWD-*`; 44 `AC-*` (9 + 4 + 6 + 8 + 5 + 12). Vòng 1 có 39 AC; thêm 5 AC sau review vòng 1.
+
+## 10. Dependency và backlog ngoài WEB-00…WEB-13
+
+| Backlog | Vì sao tách | Điều phải đặc tả trước code |
+|---|---|---|
+| Retention raw GPS 30 ngày (thiếu sót của FR-RETENTION-02 đã chốt, không phải feature mới) | Cleanup/DROP partition chưa có (`DATA_MODEL.md:266`); liên quan dữ liệu, idempotency | Cutoff UTC, bảo đảm tối đa 30 ngày thật (không chỉ DROP partition tháng), quan hệ `gps_event_dedup`/offline replay, backup/rollback, migration, test dữ liệu biên. Micro-step backend riêng; không gộp PR UI. |
+| Hồ sơ có chỉnh sửa | Không có field/route (WEB-G02) | Field, validation, lỗi API, ownership, migration, xác minh email nếu đổi danh tính. |
+| Đổi email/mật khẩu, quên mật khẩu, xoá/export tài khoản, quản lý phiên | Không có endpoint/lifecycle | Xác minh danh tính, vòng đời token/session, dữ liệu liên quan, lỗi nghiệp vụ. |
+| Consent/điều khiển tracking từ web | `EDGE_CASES.md:12` còn OPEN; web/mobile tách | Quyền OS, trip active, offline queue, receipt/audit, revoke, an toàn khi lái. |
+| Trạng thái live map chính xác | WEB-G07 | Loading/error/no trip/waiting GPS; contract nếu cần. |
+| Dashboard metric/kết nối thật | WEB-G06 | Công thức, nguồn dữ liệu, refresh/staleness, phân biệt 0 và unknown. |
+| Theme sáng/tối, ngôn ngữ, đồng bộ setting đa thiết bị | WEB-U10, WEB-G08 | Thiết kế + contract lưu trữ. |
+| Test harness lớn (vd. thêm project Firefox/WebKit, công cụ a11y) | Có thể vượt scope một PR | Nếu cần, tách step infrastructure được duyệt trước khi code. |
+
+## 11. Câu hỏi mở và quyết định chưa xác minh
+
+Xem bảng đầy đủ ở `docs/REVIEW_NOTES.md` §35 (mục "Quyết định còn mở") và cập nhật sau review vòng 1 ở §36. Mục 7 của §35 (xoá token khi chủ động về đăng nhập) đã được chốt ở WEB-D09 (review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu, §37). Không mục nào khác được đóng bằng suy luận của tài liệu này.

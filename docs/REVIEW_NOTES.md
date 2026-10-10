@@ -500,3 +500,138 @@ Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke tr�
 **Đồng bộ tài liệu:** runbook §8.2 còn một câu hiện trạng nói vẫn chờ "quyết định về điều kiện thiết bị LiDAR thật"; câu đó mâu thuẫn với §6 và §33 nên đã sửa, cùng các cụm "chờ Review Manager kiểm tra" ở runbook §6/§8.2 và dòng kế hoạch `8.1b`. §20, §31, §32, §33 giữ nguyên làm lịch sử; §34 này bổ sung, không thay đổi nội dung các mục trước.
 
 **Không đổi:** iPhone 16 Pro install/launch vẫn **NOT RUN** và phải xảy ra trước `8.2`; `8.1b` **chưa COMPLETED** (chờ Review Manager review cuối + merge PR #80); PR #80 giữ DRAFT, không tự merge; ~105 cảnh báo Xcode (gồm `lib_burst_generated.a`) vẫn là mục theo dõi, chưa sửa, chưa coi là vô hại; đây là smoke không-AR; storage gate cài Unity trên Mac vẫn chưa PASS.
+
+## 35. `WEB-00` — đặc tả tài khoản web và responsive: bản nháp chờ review độc lập (2026-10-09)
+
+**Bản chất mục này:** ghi nhận một thay đổi đặc tả **sau** Baseline v1.0, theo đúng quy tắc "cập nhật tài liệu trước khi code" (`AGENTS.md`, `docs/REQUIREMENT_BASELINE_V1.md` §7). Đây **không** phải phê duyệt: bản đặc tả do agent soạn (vai trò R17 Technical Documentation Writer, phối hợp góc nhìn R22 BA / R02 PM / R20 UX), **chưa** có reviewer độc lập hay Review Manager duyệt, chưa commit/PR/merge. Không mục nào trước §35 bị sửa.
+
+**Lý do thay đổi:** bốn route tài khoản web (`/account/profile`, `/account/privacy`, `/settings`, `/help`) đã có trong menu nhưng chỉ render placeholder (`apps/web/src/App.tsx:26–29` @`430e325`); PRD/SRS chưa có requirement cho chúng; app shell chưa có chế độ thu gọn theo viewport (`apps/web/src/components/layout/Sidebar.tsx:50`); kiểm tra phiên web không xử lý lỗi khác `401` ở tầng UI (`apps/web/src/layouts/AppLayout.tsx:17–27` — suy luận tĩnh, chưa tái hiện runtime). Cần requirement có truy vết trước khi bất kỳ step code nào bắt đầu.
+
+**Nguồn đồng ý đi theo đề xuất:** handoff `WEB-00` của chủ dự án (nằm ngoài Git) nêu hướng triển khai đã được chủ dự án đồng ý: hồ sơ chỉ đọc email từ `/me`; privacy là trang thông tin có gate nội dung riêng; cài đặt chỉ "Theo hệ thống"/"Giảm chuyển động" lưu cục bộ theo `user.id`; trợ giúp theo flow thật; timeout 15 giây chỉ cho kiểm tra phiên; drawer dưới 1024 CSS px. Agent không có biên bản đồng ý nào khác ngoài handoff đó. **Đồng ý hướng ≠ đặc tả cuối đã duyệt ≠ phần mềm đã triển khai/test pass ≠ cam kết quyền riêng tư đã xác minh.**
+
+**Đầu vào và mốc:** gói khảo sát tài khoản web/responsive (09/10/2026, ngoài Git, không là dependency của tài liệu). `origin/develop` = `430e325417f7b73d2e6946b813bb0168bbbf8026`, khớp `git ls-remote` trong phiên. Checkout chính `D:` vẫn ở `develop` cũ `a963562` (behind 16) với thay đổi chưa commit có sẵn ở `apps/mobile/macos/Flutter/GeneratedPluginRegistrant.swift` — **không chạm**. Bản thay đổi được soạn trong worktree riêng, branch `docs/web-account-rwd-baseline` tạo mới từ `430e325`. `apps/web/src`, `apps/backend/src/users`, `apps/backend/src/auth` không khác giữa `a963562` và `430e325` theo gói khảo sát; mọi trích dẫn hiện trạng dùng `430e325`.
+
+**Đính chính đầu vào:** gói khảo sát ghi "`AGENTS.md:7` còn ghi ở D0.4". Điều đó chỉ đúng với checkout cũ `a963562`; tại `430e325`, `AGENTS.md:7` đã ghi Baseline v1.0 ĐẠT. Kết luận của gói không đổi (baseline đạt không mặc nhiên duyệt tính năng tài khoản mới), nhưng câu trích dẫn đó không phản ánh mốc nguồn chính. Các trích dẫn source khác được agent kiểm lại tại `430e325` và khớp.
+
+**Đã thay đổi (docs-only):**
+
+- Mới: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` — hiện trạng có nguồn (WEB-G01…G09, WEB-U01…U10), quyết định WEB-D01…D08, hành vi chi tiết, Privacy Content Gate, ma trận viewport (`WEB-V*`) và route × trạng thái (`WEB-T*`), phương pháp đo, mẫu evidence, traceability requirement → AC → test → micro-step → nguồn, bảng ánh xạ `P-*` → ID chính thức, backlog ngoài phạm vi.
+- `docs/PRD.md` §5.2; `docs/SRS.md` §1.15 (19 `FR-WEB*`) + §2.1 (7 `NFR-RWD-*`); `docs/USER_STORIES.md` §5 (US-W-01…06); `docs/ACCEPTANCE_CRITERIA.md` §12 (39 AC); `docs/EDGE_CASES.md` §9; `docs/TEST_STRATEGY.md` §2.12; `docs/ARCHITECTURE.md` (đính chính chữ "CRUD user cơ bản" của `UsersModule` — giữ nguyên câu gốc, thêm ghi chú; thêm ranh giới tài khoản web ở §4); `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` (ghi chú + dòng `WEB-00`…`WEB-13`).
+- **Không đổi:** `docs/API_CONTRACT.md`, `docs/DATA_MODEL.md` — đã đọc và xác nhận: `/me` trả `{id, email}` (`API_CONTRACT.md:44–48`), `users` có 4 cột (`DATA_MODEL.md:14–22`); không có mâu thuẫn cần sửa câu chữ, và chuỗi `WEB-*` không thêm API/bảng/cột. FR-RETENTION-02 và AC-RETENTION-01 giữ nguyên, không bị hạ thấp.
+
+**Trạng thái:** `WEB-00` DRAFT chờ review độc lập; `WEB-01`…`WEB-13` NOT STARTED. Mọi actual test trong spec/AC là NOT_RUN; chưa chạy ứng dụng, test suite, trình duyệt hay thiết bị thật cho đặc tả này.
+
+**Privacy dependency (không chặn hồ sơ/trợ giúp/RWD, chỉ chặn `WEB-11`):** nội dung retention GPS và chính sách nhà cung cấp sinh trắc phải qua Privacy Content Gate (BA + kỹ thuật + chủ dự án; reviewer không phải người viết). Cleanup TTL raw GPS chưa từng được implement (`docs/DATA_MODEL.md:266`), nên không được công bố "tự xoá sau 30 ngày". Thiếu sót implementation đó là backlog backend riêng của requirement đã có, không phải phạm vi `WEB-*`. Gate này không được đóng bằng suy luận của tài liệu, và không thay đổi nghĩa vụ/luật áp dụng.
+
+**Quyết định còn mở / chưa xác minh:**
+
+| # | Mục | Trạng thái | Ai quyết |
+|---|---|---|---|
+| 1 | Review độc lập toàn bộ bản đặc tả `WEB-00` (D01–D08, semantics preference, ngưỡng 15 giây) | Chưa có | Reviewer độc lập / Review Manager + chủ dự án |
+| 2 | Ngưỡng timeout 15 giây — quyết định UX mới, chưa đo trên mạng thật | Chờ review; đo lại khi làm `WEB-01` | Chủ dự án + reviewer |
+| 3 | Nội dung retention GPS công bố trên trang privacy | OPEN — chờ Privacy Content Gate hoặc dependency retention | BA + kỹ thuật + chủ dự án |
+| 4 | Chính sách lưu dữ liệu của nhà cung cấp sinh trắc (MVP vẫn `MockBiometricProvider`, AWS Rekognition là candidate) | OPEN | Kỹ thuật + chủ dự án |
+| 5 | Đầu mối xử lý yêu cầu dữ liệu / kênh liên hệ hỗ trợ | OPEN — chưa có kênh được xác nhận; trợ giúp không có contact | Chủ dự án |
+| 6 | Key preference chứa `user.id` dạng thô hay dạng băm (định danh còn lại trên trình duyệt dùng chung sau logout) | OPEN — spec chỉ yêu cầu namespace theo `user.id`, không lưu email/token | Reviewer + Security khi duyệt `WEB-12` |
+| 7 | Có xoá token khi người dùng chủ động chọn "Về đăng nhập" từ trạng thái lỗi phiên | OPEN — `WEB-01` phải ghi rõ trong PR; không được xoá tự động với lỗi khác `401` | Reviewer `WEB-01` |
+| 8 | Cột Skills và người thực hiện của các dòng `WEB-*` | Chưa gán (khảo sát không chỉ định) | Chủ dự án |
+| 9 | Breakpoint thật (`sm`/`md`/`lg`) trong bản build trước khi chạy ma trận | Chưa xác nhận | Người làm `WEB-02` |
+| 10 | Mục tiêu vùng chạm 44×44 CSS px (lựa chọn UX, không phải yêu cầu WCAG 2.5.8) | Chờ review UX | R20 UX + reviewer |
+| 11 | Thu hồi quyền vị trí giữa chuyến (`EDGE_CASES.md` §1) | Vẫn [OPEN]; spec web không quyết định thay | Chủ dự án (vòng đặc tả consent riêng) |
+| 12 | Gate thiết bị thật Safari iPhone (`WEB-VH2`) và Android Chrome (`WEB-VH1`) | NOT_RUN — cần thiết bị; không chặn PR không phụ thuộc | QA khi có thiết bị |
+
+**Không thay đổi:** track AR Terrain (`8.x`), Sprint R8 và các dòng plan cũ; không sửa `apps/*`, cấu hình runtime, Flutter hay Unity; không bắt đầu `WEB-01`.
+
+## 36. `WEB-00` — review độc lập vòng 1 CHANGES_REQUESTED; sửa R01–R05, làm rõ N01 (2026-10-09)
+
+**Bản chất mục này:** ghi nhận kết quả review độc lập vòng 1 của bản nháp `WEB-00` (§35) và các sửa đổi tài liệu theo đó. Reviewer là agent điều phối, độc lập với agent viết tài liệu. Báo cáo review nằm ngoài Git. Kết luận vòng 1: **CHANGES_REQUESTED** — 5 finding P2 (R01–R05) và 1 ghi chú làm rõ (N01); không có Critical trong phạm vi review. Đây **không** phải phê duyệt: `WEB-00` vẫn DRAFT, **chờ re-review**, chưa commit/PR/merge; `WEB-01`…`WEB-13` vẫn NOT STARTED. §35 giữ nguyên làm lịch sử; các điểm của §35 bị thay đổi được đính chính ngay dưới đây.
+
+**Người viết đồng ý với cả 5 finding và N01; không phản biện finding nào.** Agent đã kiểm lại bằng chứng của reviewer trên source tại `430e325`. Xử lý từng mục:
+
+- **R01 — thao tác chủ động về đăng nhập.** Chốt quyết định WEB-D09: hệ thống không tự xoá token khi lỗi khác `401` hay khi retry. Nút **"Đăng nhập lại"** là thao tác chủ động: xoá token và user cục bộ, vô hiệu hoá kiểm tra đang chờ, về `/login` với form dùng được; không revoke server, không kết thúc chuyến mobile, không xoá preference. Đã ghi ba phương án và trade-off ở spec §4.1. Phương án "chỉ điều hướng, giữ token" bị loại vì `LoginPage.tsx:17–24` sẽ tự đưa người dùng về dashboard khi token hợp lệ. Thêm AC-WEBSESSION-07 (token hợp lệ/không hợp lệ, mạng phục hồi, Browser Back). Mục 7 trong bảng quyết định mở của §35 được **đóng ở mức đặc tả** bằng WEB-D09, chờ re-review; không còn giao semantics này cho PR `WEB-01`.
+- **R02 — kết quả của phiên cũ.** Chốt WEB-D10 (khái niệm "thế hệ phiên"): chỉ kết quả của lần kiểm tra còn hiệu lực — đúng thế hệ và đúng token hiện hành — mới được đổi token, AuthContext, route hay UI, ở mọi tầng. Lý do cần ở mọi tầng: xử lý `401` hiện nằm trong service (`authService.ts:28–33`), còn guard `cancelled` (`AppLayout.tsx:18–25`) chỉ chặn callback component. Thêm AC-WEBSESSION-08 (A chờ → đăng nhập B → A trả `401`/`200`) và AC-WEBSESSION-09 (logout/unmount/timeout/retry). Assertion bắt buộc ở service/storage/context, không chỉ DOM. Đây vẫn là kịch bản cần đặc tả và test, chưa phải lỗi runtime đã tái hiện.
+- **R03 — fallback storage.** Tách ba ca thống nhất ở spec §4.4, SRS FR-WEBSETTINGS-04, AC, EDGE_CASES và TEST_STRATEGY:
+  - (a) đọc lỗi khi khởi tạo → "Theo hệ thống" (AC-WEBSETTINGS-04, thu hẹp);
+  - (b) ghi lỗi/quota sau khi người dùng đã chọn → giữ và áp dụng lựa chọn trong phiên trang (AC-WEBSETTINGS-07, mới);
+  - (c) giá trị hỏng/`version` lạ → "Theo hệ thống" (AC-WEBSETTINGS-08, mới).
+
+  Cả ba ca đều tôn trọng OS; không thêm đồng bộ đa tab hay server.
+- **R04 — provider sinh trắc.** Thêm WEB-G10 vào hiện trạng của spec. Tách ba lớp ở Privacy Content Gate:
+  1. adapter AWS **có trong source** từ R2-6 (`apps/backend/src/biometric/providers/aws-rekognition-biometric.provider.ts:33–46`);
+  2. mặc định/fallback theo cấu hình là **mock** (`biometric.module.ts:27–40`);
+  3. provider thật của bản phát hành **cần xác nhận**.
+
+  Thêm đính chính có ghi ngày vào `docs/SRS.md` FR-BIOMETRIC-05 và `docs/ARCHITECTURE.md` §9 (bullet biometric provider). Cả hai giữ nguyên câu gốc, **không đổi requirement**. Không đọc cấu hình/secret môi trường, không gọi AWS. **Đính chính §35:** dòng 4 của bảng quyết định mở trong §35 ghi "MVP vẫn `MockBiometricProvider`, AWS Rekognition là candidate". Câu đó lặp lại nhận định lỗi thời của SRS. Cách đọc đúng là ba lớp nêu trên; mục 4 vẫn OPEN cho cấu hình và chính sách thực tế.
+- **R05 — hai phạm vi nghiệm thu.** Thêm spec §4.7 và quyết định WEB-D11:
+  - **Gate merge Windows** gồm test mục tiêu, regression, lint/test/build và required checks. Không cần Mac/iPhone/Android; chưa đạt thì không merge.
+  - **Gate công bố hỗ trợ thiết bị** gồm AC-RWD-11, phần bàn phím ảo thật của AC-RWD-06 và nhóm H (`WEB-VH1`/`WEB-VH2`). Chưa chạy thì ghi NOT_RUN theo từng thiết bị: không tính PASS, không chặn merge, chặn công bố hỗ trợ.
+
+  Đã sửa dòng `WEB-02`, `WEB-03`, `WEB-06`, `WEB-07` và `WEB-13` trong plan. `WEB-13` ghi theo từng phạm vi, không dùng một COMPLETED chung.
+- **N01 — mức cô lập preference.** Đã sửa spec §4.4, SRS FR-WEBSETTINGS-03/04, EDGE_CASES và TEST_STRATEGY. Cam kết chỉ là **app không chọn/áp dụng** preference của A cho B. Namespace theo `user.id`, dù raw hay băm, không phải ranh giới quyền truy cập trên cùng browser profile. Chỉ lưu giá trị không nhạy cảm; trên máy dùng chung, lựa chọn và định danh dùng làm key còn lại sau logout. **Làm rõ §35, quyết định mở mục 6:** chọn raw hay băm là quyết định về việc **lưu định danh** trên trình duyệt, không phải biện pháp bảo mật hay kiểm soát truy cập. Mục này vẫn OPEN cho `WEB-12`. Không thêm API hay mã hoá mới.
+
+**Thay đổi số lượng:** AC tăng từ 39 lên 44: thêm AC-WEBSESSION-07/08/09, AC-WEBSETTINGS-07/08; AC-WEBSETTINGS-04 thu hẹp phạm vi. Số FR/NFR giữ nguyên 26. Bảng ánh xạ `P-*` và bảng traceability của spec đã cập nhật tương ứng.
+
+**File sửa ở vòng này:** `docs/web/WEB_ACCOUNT_RWD_SPEC.md`, `docs/SRS.md`, `docs/ACCEPTANCE_CRITERIA.md`, `docs/EDGE_CASES.md`, `docs/TEST_STRATEGY.md`, `docs/ARCHITECTURE.md` (chỉ đính chính R04), `NovaWay_COMPLETE_MICRO_STEP_PLAN.md` và mục §36 này. `API_CONTRACT.md` và `DATA_MODEL.md` vẫn không đổi. Không sửa `apps/*`.
+
+**Vẫn OPEN / NOT_RUN:** re-review độc lập toàn bộ `WEB-00`; ngưỡng 15 giây; Privacy Content Gate (retention, provider thực tế, đầu mối dữ liệu/kênh hỗ trợ); key preference raw hay băm; cột Skills của các dòng WEB; breakpoint thật; mục tiêu 44 px; thu hồi quyền vị trí giữa chuyến; gate thiết bị thật `WEB-VH1`/`WEB-VH2`. Mọi actual test vẫn NOT_RUN.
+
+## 37. `WEB-00` — review độc lập vòng 2 PASS; chờ phê duyệt và merge tài liệu (2026-10-09)
+
+**Kết quả vòng 2:** reviewer độc lập (agent điều phối, không phải agent viết tài liệu) kết luận **PASS phần review kỹ thuật tài liệu**. R01–R05 và N01 của vòng 1 (§36) đã được xử lý; không còn finding chặn `WEB-00` trong phạm vi review. Reviewer đọc trực tiếp file và diff trong worktree, base/HEAD `430e325417f7b73d2e6946b813bb0168bbbf8026`, `git ls-remote` cùng SHA. Báo cáo review nằm ngoài Git.
+
+**Reviewer đã kiểm độc lập:**
+- `git diff --check` exit 0;
+- 26 FR/NFR và 44 AC, không trùng định nghĩa;
+- traceability đủ 44/44 AC và 26/26 requirement;
+- 14 dòng `WEB-00`…`WEB-13`;
+- chỉ sửa tài liệu, không đụng `apps/*`, `API_CONTRACT.md`, `DATA_MODEL.md`;
+- REVIEW_NOTES chỉ bổ sung §35–§36.
+
+**Phạm vi của PASS:** đây là kết quả review bản đặc tả, **không** phải phê duyệt merge, không phải kết quả kiểm thử, và không phải phê duyệt release cho `WEB-01`…`WEB-13`. Mọi actual test vẫn NOT_RUN.
+
+**Cập nhật ở vòng này (chỉ metadata trạng thái):** các nhãn trạng thái hiện tại trong plan, spec, PRD, SRS, USER_STORIES, ACCEPTANCE_CRITERIA, EDGE_CASES, TEST_STRATEGY và ARCHITECTURE đổi từ "DRAFT/chờ (re-)review" sang **"review độc lập PASS; chờ phê duyệt và merge tài liệu"**. Không đổi nội dung requirement, AC, ma trận hay traceability. §35 và §36 giữ nguyên.
+
+**Bước tiếp theo theo quy trình:**
+- Review Manager/chủ dự án quyết định phê duyệt và merge nhánh `docs/web-account-rwd-baseline`.
+- Khi commit theo quy trình, giữ đúng commit message `docs: define web account and responsive requirements`.
+- Không bắt đầu `WEB-01` trước khi gate tài liệu này đóng.
+
+**Vẫn mở — không chặn `WEB-00` theo phạm vi đã chốt:**
+
+| Mục | Thời hạn chốt/đo |
+|---|---|
+| Ngưỡng timeout 15 giây | Đo khi làm `WEB-01` |
+| Privacy Content Gate: retention, provider thực tế, đầu mối dữ liệu/kênh hỗ trợ | Trước `WEB-11` |
+| Key preference raw hay băm | Chọn trước `WEB-12` |
+| Gate thiết bị thật Safari iPhone/Android Chrome | Trước khi công bố hỗ trợ hai môi trường đó |
+| Cột Skills của các dòng WEB | Chưa chốt |
+| Breakpoint thật | Chưa xác nhận |
+| Mục tiêu vùng chạm 44 px | Chưa chốt |
+| Thu hồi quyền vị trí giữa chuyến (`EDGE_CASES.md` §1) | Vẫn [OPEN] |
+
+## 38. `WEB-00` — Review Manager phê duyệt tài liệu; chờ PR checks và merge (2026-10-10)
+
+**Quyết định:** **APPROVED** cho bản đặc tả `WEB-00` (tài khoản web và responsive), trên cơ sở review độc lập vòng 2 PASS (§37). Đây là phê duyệt **tài liệu**. Nó không phải kết quả kiểm thử, không phải phê duyệt release, và không cho phép bắt đầu `WEB-01` trước khi PR tài liệu qua checks và được merge.
+
+**Provenance — ghi rõ để không bị hiểu là review độc lập thêm một lần:** chủ dự án giao vai Review Manager cho chính agent đã viết tài liệu `WEB-00` và yêu cầu "nếu đạt thì phê duyệt". Vì vậy bước này **không độc lập** với người viết. Review độc lập duy nhất của `WEB-00` là hai vòng của agent điều phối (§36 vòng 1, §37 vòng 2). Phê duyệt này dựa trên kết quả của các vòng đó cộng với phép kiểm tra lại bên dưới. Nếu quy trình yêu cầu người phê duyệt khác người viết, chủ dự án cần xác nhận lại trên PR trước khi merge.
+
+**Đã kiểm tra lại trực tiếp trong worktree trước khi phê duyệt:**
+
+- Branch `docs/web-account-rwd-baseline` tại `430e325`; `origin/develop` vẫn là `430e325417f7b73d2e6946b813bb0168bbbf8026` (khớp `git ls-remote`).
+- Chỉ tài liệu thay đổi. Không có file `apps/*`, cấu hình runtime, `docs/API_CONTRACT.md` hay `docs/DATA_MODEL.md` nào bị sửa.
+- `docs/REVIEW_NOTES.md` không xoá dòng nào so với bản đã commit (502 dòng). §35–§36 trùng khớp bản đã review; §37 và mục này chỉ được nối thêm.
+- 26 FR/NFR, 44 AC, 6 US, không trùng ID; traceability đủ 44/44 AC và 26/26 requirement; link, đường dẫn và bảng Markdown hợp lệ; `git diff --check` exit 0.
+- `WEB-01`…`WEB-13` đều NOT STARTED (`WEB-11` kèm "chờ Privacy Content Gate").
+- 30/30 ô Actual của ma trận `WEB-V*`/`WEB-T*` là NOT_RUN; evidence record chưa có dòng nào. Không có kết quả test phần mềm hay thiết bị nào được ghi PASS.
+- Các vị trí mà báo cáo review vòng 2 trích dẫn vẫn đúng nội dung.
+
+**Cập nhật kèm theo (chỉ metadata trạng thái):** nhãn hiện tại trong plan, spec, PRD, SRS, USER_STORIES, ACCEPTANCE_CRITERIA, EDGE_CASES, TEST_STRATEGY và ARCHITECTURE đổi thành "review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu". Ô Step của dòng `WEB-00` trong plan đổi thành "✅ APPROVED — chờ PR checks và merge tài liệu".
+
+**Bước tiếp theo:**
+
+- Commit với đúng message `docs: define web account and responsive requirements`.
+- Push nhánh, tạo PR tài liệu vào `develop`, chạy required checks.
+- **Chưa merge** cho tới khi PR và checks được kiểm tra.
+- Không bắt đầu `WEB-01` trước khi merge.
+
+**Vẫn mở (không đổi so với §37):** ngưỡng timeout 15 giây (đo ở `WEB-01`); Privacy Content Gate (trước `WEB-11`); key preference raw hay băm (trước `WEB-12`); gate thiết bị thật Safari iPhone/Android Chrome; cột Skills; breakpoint thật; mục tiêu 44 px; thu hồi quyền vị trí giữa chuyến.
