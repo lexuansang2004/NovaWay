@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, apiClient } from '@/lib/apiClient'
-import { clearAuthSession, fetchCurrentUser, getToken, login } from '@/services/authService'
+import {
+  clearAuthSession,
+  fetchCurrentUser,
+  getToken,
+  login,
+  StaleSessionCheckError,
+} from '@/services/authService'
 
 // R6-5 (docs/roadmap/SPRINT_R6_SECURITY_HARDENING.md). AppLayout's auth guard
 // calls fetchCurrentUser() on every mount to decide whether the current
@@ -72,7 +78,18 @@ describe('authService', () => {
       const result = await fetchCurrentUser()
 
       expect(result).toEqual({ id: 'u1', email: 'driver@example.com' })
-      expect(getSpy).toHaveBeenCalledWith('/auth/me', 'jwt-token')
+      // WEB-01: the third argument carries the caller's abort signal (none here).
+      expect(getSpy).toHaveBeenCalledWith('/auth/me', 'jwt-token', { signal: undefined })
+    })
+
+    it('hands the caller-provided abort signal to the request', async () => {
+      storage.setItem(TOKEN_KEY, 'jwt-token')
+      getSpy.mockResolvedValue({ id: 'u1', email: 'driver@example.com' })
+      const controller = new AbortController()
+
+      await fetchCurrentUser({ signal: controller.signal })
+
+      expect(getSpy).toHaveBeenCalledWith('/auth/me', 'jwt-token', { signal: controller.signal })
     })
 
     it('clears the session and returns null on a 401 (token expired/invalid)', async () => {
@@ -101,6 +118,88 @@ describe('authService', () => {
 
       await expect(fetchCurrentUser()).rejects.toThrow(TypeError)
       expect(storage.getItem(TOKEN_KEY)).toBe('jwt-token')
+    })
+  })
+
+  // WEB-01 (docs/web/WEB_ACCOUNT_RWD_SPEC.md §4.1 "Thế hệ phiên", AC-WEBSESSION-08/09).
+  // The request for token A is still in flight when the stored session
+  // changes. Its answer must not act on the session that replaced it — and
+  // this has to hold in the service itself, because the 401 branch above is
+  // where the token gets removed. A guard in the UI alone would be too late.
+  describe('fetchCurrentUser — answer for a session that is no longer current', () => {
+    function pendingMe() {
+      let resolve!: (user: { id: string; email: string }) => void
+      let reject!: (error: unknown) => void
+      getSpy.mockReturnValue(
+        new Promise((res, rej) => {
+          resolve = res
+          reject = rej
+        }),
+      )
+      return { resolve, reject }
+    }
+
+    it('a late 401 for token A does not clear token B', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      const me = pendingMe()
+      const check = fetchCurrentUser()
+
+      storage.setItem(TOKEN_KEY, 'token-b') // B signed in meanwhile
+      me.reject(new ApiError(401, 'UNAUTHORIZED', 'expired'))
+
+      await expect(check).rejects.toThrow(StaleSessionCheckError)
+      expect(storage.getItem(TOKEN_KEY)).toBe('token-b')
+    })
+
+    it('a late 200 for token A is never returned as the current user once token B is stored', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      const me = pendingMe()
+      const check = fetchCurrentUser()
+
+      storage.setItem(TOKEN_KEY, 'token-b')
+      me.resolve({ id: 'user-a', email: 'a@example.com' })
+
+      await expect(check).rejects.toThrow(StaleSessionCheckError)
+      expect(storage.getItem(TOKEN_KEY)).toBe('token-b')
+    })
+
+    it('a late failure for token A is reported as stale, not as an error of the current session', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      const me = pendingMe()
+      const check = fetchCurrentUser()
+
+      storage.setItem(TOKEN_KEY, 'token-b')
+      me.reject(new ApiError(500, 'INTERNAL_ERROR', 'boom'))
+
+      await expect(check).rejects.toThrow(StaleSessionCheckError)
+      expect(storage.getItem(TOKEN_KEY)).toBe('token-b')
+    })
+
+    it('a late 401 after logout leaves storage empty and reports stale', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      const me = pendingMe()
+      const check = fetchCurrentUser()
+
+      storage.removeItem(TOKEN_KEY)
+      me.reject(new ApiError(401, 'UNAUTHORIZED', 'expired'))
+
+      await expect(check).rejects.toThrow(StaleSessionCheckError)
+      expect(storage.size).toBe(0)
+    })
+
+    it('does not clear the token on a 401 when the caller says the check was superseded', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      getSpy.mockRejectedValue(new ApiError(401, 'UNAUTHORIZED', 'expired'))
+
+      await expect(fetchCurrentUser({ isCurrent: () => false })).rejects.toThrow(StaleSessionCheckError)
+      expect(storage.getItem(TOKEN_KEY)).toBe('token-a')
+    })
+
+    it('does not return the user when the caller says the check was superseded', async () => {
+      storage.setItem(TOKEN_KEY, 'token-a')
+      getSpy.mockResolvedValue({ id: 'user-a', email: 'a@example.com' })
+
+      await expect(fetchCurrentUser({ isCurrent: () => false })).rejects.toThrow(StaleSessionCheckError)
     })
   })
 

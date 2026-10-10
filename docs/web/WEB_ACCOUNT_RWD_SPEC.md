@@ -1,6 +1,6 @@
 # NovaWay — Đặc tả tài khoản web và responsive (WEB-00)
 
-> **Trạng thái: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu.** Review độc lập vòng 1 kết luận CHANGES_REQUESTED (R01–R05, N01, xem `docs/REVIEW_NOTES.md` §36). Vòng 2 kết luận PASS phần review kỹ thuật tài liệu (`docs/REVIEW_NOTES.md` §37). Review Manager phê duyệt ngày 2026-10-10 (`docs/REVIEW_NOTES.md` §38). Bản đặc tả **chưa merge**, nên **chưa** là một phần Baseline đã duyệt cho tới khi PR tài liệu qua checks và được merge. Chủ dự án đã đồng ý **hướng triển khai** (xem `docs/REVIEW_NOTES.md` §35); đồng ý hướng không có nghĩa phần mềm đã được xây, test đã pass, hay cam kết quyền riêng tư đã được xác minh. Toàn bộ `WEB-01`…`WEB-13` là **NOT STARTED**; mọi actual test trong tài liệu này là **NOT_RUN**.
+> **Trạng thái: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu.** Review độc lập vòng 1 kết luận CHANGES_REQUESTED (R01–R05, N01, xem `docs/REVIEW_NOTES.md` §36). Vòng 2 kết luận PASS phần review kỹ thuật tài liệu (`docs/REVIEW_NOTES.md` §37). Review Manager phê duyệt ngày 2026-10-10 (`docs/REVIEW_NOTES.md` §38). Bản đặc tả **chưa merge**, nên **chưa** là một phần Baseline đã duyệt cho tới khi PR tài liệu qua checks và được merge. Chủ dự án đã đồng ý **hướng triển khai** (xem `docs/REVIEW_NOTES.md` §35); đồng ý hướng không có nghĩa phần mềm đã được xây, test đã pass, hay cam kết quyền riêng tư đã được xác minh. `WEB-01` đã triển khai và chờ review độc lập (`docs/REVIEW_NOTES.md` §40; evidence ở §7.3); `WEB-02`…`WEB-13` là **NOT STARTED**. Ngoài các dòng evidence của `WEB-01` ở §7.3, mọi actual test trong tài liệu này là **NOT_RUN**.
 
 ## 0. Mốc nguồn, đầu vào và cách đọc
 
@@ -283,11 +283,16 @@ WEB-T06 ghi nhận hiện trạng WEB-G07; không mặc định yêu cầu `WEB-
 - Giữ ít nhất một lượt regression với backend thật cho auth + vehicle + quan sát trip + analytics (`docs/TEST_STRATEGY.md` §3).
 - Storage/error là injection trong môi trường test; không sửa cấu hình người dùng thật; không cần raw GPS thật, biometric thật hay thiết bị đang tracking.
 
-### 7.3. Evidence record (điền khi thực thi — hiện chưa có dòng nào)
+### 7.3. Evidence record (điền khi thực thi)
 
 | Run ID | Commit | Test ID | Browser/version | CSS viewport/DPR | Zoom/text scale | Touch/keyboard | Backend thật/fixture | Expected | Actual | Result | Evidence path | Issue |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | — | Theo AC liên quan | — | NOT_RUN | — | — |
+| W01-R1 | base `3cf62b2` (trước sửa) | Tái hiện WEB-G05 và response phiên cũ | Chromium 149.0.7827.55 (Playwright 1.61.1) | 1280×720 / DPR 1 | 100% | Chuột | Fixture UI | Thoát màn chờ; `/login` không unhandled rejection; `401` muộn của A không xoá token B | Kẹt màn chờ sau 4 giây, 0 nút; `/login` có unhandled rejection; token B bị xoá | FAIL — lỗi được tái hiện trước sửa | `docs/REVIEW_NOTES.md` §40.1 | WEB-G05 |
+| W01-R2 | nhánh `fix/web-session-check-recovery` | AC-WEBSESSION-01→09 ở tầng service/storage/state | Không trình duyệt: Vitest 4.1.10, Node 24.17.0 | — | — | — | `fetch` và storage stub; service thật | Theo AC | 92/92 pass (61 test mới) | PASS (local) | `apps/web/src/services/authSession.spec.ts`, `apps/web/src/services/authService.spec.ts` | — |
+| W01-R3 | nhánh `fix/web-session-check-recovery` | AC-WEBSESSION-01→05, 07→09 trên UI | Chromium 149.0.7827.55 (Playwright 1.61.1) | 1280×720 / DPR 1 | 100% | Chuột + nhập form | Fixture UI | Theo AC | 26/26 pass | PASS (local) | `apps/web/e2e/session-check.fixture.spec.ts` | — |
+| W01-R4 | nhánh `fix/web-session-check-recovery` | AC-WEBSESSION-01/06 regression + golden path + 404 | Chromium 149.0.7827.55 (Playwright 1.61.1) | 1280×720 / DPR 1 | 100% | Chuột + nhập form | Backend thật (local, database tạm) | Theo AC | 5/5 pass | PASS (local) | `apps/web/e2e/session-auth-regression.spec.ts` | Rate limit 5 lần/phút: không chạy hai lượt trong một phút |
+
+Các dòng `W01-*` là kết quả local của người triển khai `WEB-01` cho AC-WEBSESSION, chạy ở một cấu hình Desktop Chrome duy nhất; chúng **không** phải kết quả của ma trận `WEB-V*`/`WEB-T*` (vẫn NOT_RUN ở §5–§6) và chưa qua review độc lập. Bảng AC → test đầy đủ: `docs/REVIEW_NOTES.md` §40.3.
 
 Không đánh PASS iOS từ Chromium emulation hoặc WebKit trên máy khác. Record phải ghi rõ mỗi dòng thuộc phạm vi nào: gate merge Windows hay gate công bố hỗ trợ thiết bị (§4.7). Gate merge Windows có thể hoàn tất trước; trạng thái thiết bị còn thiếu giữ riêng là NOT_RUN và không chặn merge, nhưng chặn công bố hỗ trợ thiết bị đó. Evidence path trong record phải là đường dẫn tương đối trong repo/CI artifact, không phải đường dẫn máy cá nhân.
 

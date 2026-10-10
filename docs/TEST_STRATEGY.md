@@ -103,7 +103,7 @@
 
 ### 2.12. Web Account & Responsive (FR-WEBSESSION/WEBPROFILE/WEBPRIVACY/WEBSETTINGS/WEBHELP, NFR-RWD) — bổ sung `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu
 
-> Bổ sung 10/2026 sau Baseline v1.0. **Chưa có test nào dưới đây được viết hay chạy — toàn bộ NOT_RUN.** Ma trận viewport (`WEB-V*`), route × trạng thái (`WEB-T*`), phương pháp đo layout, dữ liệu test và mẫu evidence: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§7; traceability requirement → AC → test → micro-step: cùng tài liệu §8.
+> Bổ sung 10/2026 sau Baseline v1.0. **Ngoài phần `WEB-01` ghi ở cuối mục này, chưa có test nào dưới đây được viết hay chạy — NOT_RUN.** Ma trận viewport (`WEB-V*`), route × trạng thái (`WEB-T*`), phương pháp đo layout, dữ liệu test và mẫu evidence: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§7; traceability requirement → AC → test → micro-step: cùng tài liệu §8.
 
 - Hiện trạng cần biết: Playwright chỉ cấu hình project `Desktop Chrome` (`apps/web/playwright.config.ts`); chưa có test viewport hay route tài khoản. Golden path E2E hiện có **không** được dùng làm bằng chứng responsive.
 - Unit/component (Vitest, `apps/web`): state machine kiểm tra phiên — `401` vs lỗi khác, timeout 15 giây bằng fake timer, retry trùng, "Đăng nhập lại" (AC-WEBSESSION-01→05, AC-WEBSESSION-07).
@@ -121,6 +121,11 @@
   - **Gate công bố hỗ trợ thiết bị** gồm AC-RWD-11, phần bàn phím ảo thật của AC-RWD-06, Android Chrome (`WEB-VH1`) và Safari iPhone (`WEB-VH2`) thật. Chưa chạy thì ghi NOT_RUN theo từng thiết bị: không tính PASS, không chặn merge, chặn công bố hỗ trợ.
   - Emulation/WebKit automation không thay thế gate thiết bị. `WEB-13` báo cáo kết quả theo từng phạm vi, không dùng một COMPLETED chung.
 - Gate chung của mỗi micro-step `WEB-01`…`WEB-12`: `npm run lint`, `npm run test`, `npm run build` (AGENTS.md) + test mục tiêu của step + required PR checks. Mobile CI vẫn phải xanh nếu là required check, nhưng kết quả web không thay cho gate Flutter.
+- **Cập nhật `WEB-01` (10/2026, chờ review độc lập — `docs/REVIEW_NOTES.md` §40):**
+  - Tầng service/storage/state: `apps/web/src/services/authSession.spec.ts` và `authService.spec.ts` (Vitest, môi trường `node`). `authService` và `apiClient` chạy thật; chỉ `fetch` và storage bị stub. `fetch` giả cố ý không tuân theo abort, để response muộn được kiểm như một ca riêng.
+  - Tầng UI: `apps/web/e2e/session-check.fixture.spec.ts` (Playwright, **fixture UI** cho `/auth/me` và `/auth/login`). `apps/web` không có jsdom/testing-library và `WEB-01` không thêm dependency, nên không có component test bằng DOM giả.
+  - Backend thật: `apps/web/e2e/session-auth-regression.spec.ts`, chạy cùng golden path trong job `e2e`.
+  - Ràng buộc khi chạy: backend giới hạn đăng ký/đăng nhập 5 lần/phút/IP và một lượt E2E đầy đủ dùng 4 lần đăng ký. Không chạy hai lượt đầy đủ trong cùng một phút.
 
 ## 3. CI/CD Gate (liên kết `9.2 chore/ci-cd-pipeline`)
 

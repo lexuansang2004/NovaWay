@@ -643,3 +643,98 @@ Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke tr�
 **Giới hạn không đổi:** Mac/iPhone test là USER-EXECUTED/USER-REPORTED, không phải agent tự chạy; bản ảnh Xcode đã che và ảnh iPhone không chứa thông tin cá nhân được lưu ngoài Git, không chép ảnh Xcode gốc vào evidence/Git. Xcode có khoảng 105 cảnh báo, gồm `lib_burst_generated.a` “no platform load command”; chưa chẩn đoán hết, chưa tuyên bố vô hại. Dung lượng Data volume `14Gi`/93% sau build (USER-REPORTED) không chứng minh sẵn sàng cài Unity Editor/iOS Build Support trên Mac. Smoke không-AR không chứng minh ARKit, LiDAR, GPS hoặc RTK.
 
 **Tiền đề `8.2` vẫn NOT RUN/BLOCKED:** cần iPhone 16 Pro vật lý, cài và khởi chạy smoke trên chính máy đó, sau đó runtime Scene Reconstruction capability check; triển khai/kiểm chứng mesh LiDAR thật chỉ bắt đầu khi các tiền đề này đạt. Không thay thế bằng iPhone 11 Pro, Unity Editor hoặc fixture Drive Visual Mock. Tài liệu hiện trạng được đồng bộ ở micro-step plan, iOS runbook, thesis baseline và open-items; không sửa source Unity hoặc `apps/*`.
+
+## 40. `WEB-01` — xử lý lỗi/timeout kiểm tra phiên web: đã triển khai, chờ review độc lập (2026-10-11)
+
+**Trạng thái: READY FOR INDEPENDENT REVIEW.** Đây là ghi chép của người triển khai (vai trò R06 Frontend Engineer), **không** phải phê duyệt. Code Review/QA và Security độc lập chưa chạy; chưa merge; `WEB-02`…`WEB-13` vẫn NOT STARTED. Không mục nào trước §40 bị sửa.
+
+**Mốc:** base `origin/develop` = `3cf62b2d184a8783d604e58385573cbd354aeedd` (khớp `git ls-remote` lúc bắt đầu; `WEB-00` đã merge qua PR #87). Branch `fix/web-session-check-recovery`, worktree riêng. Checkout chính và thay đổi Flutter có sẵn ở đó không bị chạm.
+
+### 40.1. Nguyên nhân — đã tái hiện, không còn là suy luận tĩnh
+
+Dòng nguồn dưới đây là tại base `3cf62b2`.
+
+- `apps/web/src/layouts/AppLayout.tsx:17–27` và `apps/web/src/pages/LoginPage.tsx:17–24` gọi `fetchCurrentUser().then(...)` không có nhánh lỗi. `apps/web/src/services/authService.ts:24–37` ném tiếp mọi lỗi khác `401`. `apps/web/src/lib/apiClient.ts:21–41` không có timeout.
+- `authService.ts:31–33` xoá token vô điều kiện khi `401`, bất kể token trong storage lúc đó còn là token mà request đã gửi đi hay không.
+
+**Tái hiện trước khi sửa** (Chromium 149.0.7827.55, Playwright 1.61.1, 1280×720, fixture UI cho `/auth/me`, code production chưa đổi):
+
+| Kịch bản | Kết quả quan sát trước sửa |
+|---|---|
+| Có token, `/auth/me` lỗi mạng, mở `/dashboard` | Sau 4 giây vẫn ở "Đang kiểm tra phiên đăng nhập...", 0 nút, token còn; `pageerror`: `TypeError: Failed to fetch` |
+| Có token, `/auth/me` trả `500`, mở `/dashboard` | Như trên; `pageerror`: `ApiError` |
+| Cùng hai lỗi, mở `/login` | Form vẫn gõ được, nhưng có unhandled rejection (`pageerror`) |
+| Token A, `/auth/me` của A đang chờ → đăng nhập B → A trả `401` | Token B bị xoá (`sessionStorage` = `null`) |
+
+Dự đoán WEB-G05 đúng. Thêm một lỗi thật mà gói khảo sát chỉ nêu ở mức rủi ro (R02 của review `WEB-00`): `401` muộn của phiên cũ xoá token của phiên mới.
+
+### 40.2. Thiết kế
+
+- **Một nơi giữ trạng thái phiên:** `apps/web/src/services/authSession.ts`, không phụ thuộc React. Bốn trạng thái `checking`/`authenticated`/`unauthenticated`/`error`, kèm lý do lỗi (`network`/`timeout`/`server`/`forbidden`/`rate_limited`). `AuthProvider` đọc `user` từ đây qua `useSyncExternalStore`; `setUser` bị bỏ, nên một trang không còn tự đặt user thay cho một lần kiểm tra đã mất hiệu lực.
+- **Thế hệ phiên (WEB-D10):** biến `generation` (`authSession.ts:53`). `supersede()` (`:61`) tăng thế hệ, huỷ timer và `abort()` request. Nó được gọi khi: bắt đầu kiểm tra mới, đăng nhập thành công, logout/"Đăng nhập lại", timeout, và khi trang đã khởi động kiểm tra bị unmount. Kết quả chỉ được áp dụng khi thế hệ lúc bắt đầu vẫn là thế hệ hiện tại.
+- **Bảo vệ ở tầng service:** `fetchCurrentUser` (`authService.ts:51–72`) so token trong storage với token đã gửi, cộng điều kiện của người gọi (`:55`). Kết quả mất hiệu lực không trả user, không xoá token; nó ném `StaleSessionCheckError` (`:20`) và store bỏ qua. Lớp này độc lập với lớp thế hệ ở store.
+- **Timeout 15 giây chỉ cho kiểm tra phiên:** `SESSION_CHECK_TIMEOUT_MS = 15_000` (`authSession.ts:24`), timer ở `:107`. `apiClient.get` chỉ nhận thêm `signal` tuỳ chọn (`apiClient.ts:57`); không có timeout chung, các API khác không đổi.
+- **Retry:** `retrySessionCheck()` (`:150`) bị bỏ qua khi đang có kiểm tra chạy. Trạng thái bận là màn "Đang kiểm tra phiên đăng nhập..."; nút biến mất nên không bấm lặp được. Sau `429` không có retry tự động.
+- **"Đăng nhập lại" và logout:** `endLocalSession()` (`:168`) — supersede, xoá token, đặt `unauthenticated`. Không gọi server, không đụng `localStorage`.
+- **Guard:** `useSessionCheck` (`apps/web/src/services/useSessionCheck.ts`) kiểm tra mỗi lần trang mount và coi trạng thái do trang trước để lại là `checking` cho tới khi lần kiểm tra của chính nó bắt đầu. `AppLayout` giữ nguyên URL khi lỗi, nên retry thành công vào đúng route đã yêu cầu.
+
+### 40.3. AC → test → kết quả
+
+Lệnh: **U** = `pnpm --filter @novaway/web test` (Vitest 4.1.10, Node 24.17.0). **F** = `npx playwright test e2e/session-check.fixture.spec.ts` (fixture UI). **R** = `npx playwright test e2e/session-auth-regression.spec.ts` (backend thật). Tất cả chạy local ngày 2026-10-11.
+
+| AC | Tầng service/storage/state (`src/services/authSession.spec.ts`, `authService.spec.ts`) | Trình duyệt | Kết quả local |
+|---|---|---|---|
+| AC-WEBSESSION-01 | "AC-WEBSESSION-01 — no token, 200, 401" (3 ca) | F: 3 ca cùng tên; R: token bị backend thật từ chối | PASS |
+| AC-WEBSESSION-02 | "failures other than 401 keep the token" (500/403/429/mạng, không tự retry sau 429); `authService.spec` giữ token với 500 và lỗi mạng (có từ trước, không đổi) | F: regression mạng/500; 403 và 429 có thông báo riêng, không nhắc mật khẩu | PASS |
+| AC-WEBSESSION-03 | "15 second timeout": ngưỡng 15 000; còn `checking` ở 14 999 ms, timeout ở 15 000 ms; request bị abort; 4 loại response muộn bị bỏ qua; không còn timer; API khác không có timeout/signal | F: request treo, 14 giây vẫn chờ, 15 giây ra lỗi, `401` muộn không đổi gì | PASS |
+| AC-WEBSESSION-04 | "retry": thành công, thất bại lại, bấm lặp chỉ một request, bị bỏ qua khi đang chạy | F: retry vào đúng route; retry thất bại; double-click chỉ một request | PASS |
+| AC-WEBSESSION-05 | — (hành vi của trang) | F: `/login` không có `pageerror`, form dùng được; đăng nhập qua form thay token cũ; retry; "Đăng nhập lại" tại chỗ; sai mật khẩu báo ở form, không phải lỗi phiên | PASS |
+| AC-WEBSESSION-06 | "sign in, sign out, sign in as someone else" | R: đăng nhập A → điều hướng → reload → logout → Back → đăng nhập B → Back | PASS |
+| AC-WEBSESSION-07 | "the explicit Đăng nhập lại action": xoá token và user, không request nào khác, `localStorage` nguyên; không kiểm tra lại phiên cũ; retry đang chờ bị vô hiệu với 200/401/500 muộn | F: token cũ còn hợp lệ + Back; token cũ không hợp lệ + đăng nhập người khác; mạng phục hồi ngay sau khi bấm | PASS |
+| AC-WEBSESSION-08 | "session A is still being checked when B signs in": 401/200/500/lỗi mạng muộn của A; hai thứ tự đến cùng tick; đăng nhập sai không làm hỏng kiểm tra đang chờ. `authService.spec`: 401 muộn của A không xoá token B, 200 muộn không trả user A | F: A trả 401/200/500 sau khi B đăng nhập — token, email hiển thị, URL của B giữ nguyên | PASS |
+| AC-WEBSESSION-09 | "an old answer after logout, unmount, timeout or a newer check": 4 loại response × 4 tình huống; handle cũ không huỷ kiểm tra mới | F: kiểm tra đã timeout trả 401/200/500 sau khi retry bắt đầu | PASS |
+
+Tổng: Vitest 92/92 (trước là 31; thêm 61). Playwright 31/31: 26 fixture UI, 5 backend thật (2 mới, golden path, 2 ca 404).
+
+**Độ nhạy của test** — đã kiểm bằng cách tạm phá từng lớp rồi khôi phục:
+
+| Lớp bị phá | Test Vitest fail |
+|---|---|
+| So sánh token ở service | 12+ |
+| Kiểm thế hệ ở store | 12+ |
+| `supersede` khi timeout | 8 |
+| Chặn retry trùng | 2 |
+| `supersede` khi đăng nhập | 1 (lớp service vẫn che) |
+
+### 40.4. Lệnh và kết quả
+
+| Lệnh | Kết quả |
+|---|---|
+| `pnpm install --frozen-lockfile` | Xong; lockfile không đổi |
+| `pnpm --filter @novaway/shared-types build` | Prerequisite trước test, exit 0 |
+| `npm run lint` | exit 0; 2 warning `only-export-components` có từ trước |
+| `npm run build` | exit 0 |
+| `npm run test` | exit 0; web 92/92, backend 174/174 |
+| `npx playwright test` (toàn bộ, backend thật đang chạy) | 31/31 pass |
+
+Backend thật dựng local từ chính nhánh này: Postgres/PostGIS trong container của dự án, một database tạm riêng (đã xoá sau khi chạy), biến môi trường kiểu CI, `BIOMETRIC_PROVIDER=mock`. Không đọc `.env` của checkout chính, không đụng database dev, không gọi dịch vụ trả phí.
+
+### 40.5. NOT_RUN và giới hạn
+
+- **CI của PR:** chưa có kết quả tại thời điểm viết; không ghi local PASS thay cho CI.
+- **Ma trận viewport `WEB-V*`/`WEB-T*`:** vẫn NOT_RUN. Các test trên chỉ chạy Desktop Chrome 1280×720. Firefox, WebKit, zoom và thiết bị thật không thuộc `WEB-01`.
+- **Ngưỡng 15 giây:** đã kiểm đúng biên bằng fake timer và đồng hồ giả trên trình duyệt. Chưa đo trên mạng chậm thật, nên chưa có số liệu để nói ngưỡng này hợp lý với người dùng.
+- **Test trình duyệt AC-08 không tự chứng minh lớp bảo vệ ở service:** trong trình duyệt thật, request của A bị `abort` ngay khi B đăng nhập, nên response muộn không tới được service. Test đó fail trên code trước sửa nhưng vẫn pass khi chỉ phá lớp service. Lớp service được chứng minh bằng Vitest với `fetch` cố ý bỏ qua abort.
+- **Logout hoặc unmount khi còn kiểm tra đang chờ:** không tới được qua UI (guard chỉ kiểm tra lúc mount; mục logout chỉ có sau khi kiểm tra xong). Hai ca này chỉ được test ở tầng store.
+- **Component test bằng DOM giả:** không có. `apps/web` không có jsdom/testing-library và `WEB-01` không thêm dependency; phần UI được test bằng Playwright.
+
+### 40.6. Rủi ro và điểm cần reviewer quyết
+
+1. **Rate limit khi chạy E2E:** backend giới hạn đăng ký/đăng nhập 5 lần/phút/IP. Một lượt E2E đầy đủ giờ dùng 4 lần đăng ký (trước là 2). Chạy hai lượt trong cùng một phút thì 3 test backend thật fail vì `429` (đã quan sát local); chạy lại sau một phút thì pass. Trong CI còn biên 1 lần cho retry. Nếu reviewer muốn rộng hơn, cần bàn riêng — không nới rate limit trong `WEB-01`.
+2. **Kết quả đăng nhập luôn được áp dụng:** `signIn` không có kiểm tra thế hệ riêng. Spec không yêu cầu, và UI khoá nút khi đang gửi nên không có hai lần đăng nhập song song.
+3. **"Đăng nhập lại" trên `/login`:** spec §4.1 ghi cả hai nút cho trạng thái lỗi nên thông báo ở `/login` cũng có nút này; ở đó nó bỏ phiên cũ tại chỗ và giữ nguyên form.
+4. **Trạng thái bận của retry** là màn chờ toàn trang, không phải nút "đang thử" trên thẻ lỗi. Đáp ứng AC-WEBSESSION-04 nhưng là lựa chọn UI.
+5. **Một assertion có sẵn đã đổi:** `authService.spec.ts` kiểm chữ ký lời gọi `apiClient.get`, nay có thêm tham số `{ signal }`. Các test giữ token với `500`/lỗi mạng không đổi.
+6. **Security cần xem:** thứ tự xử lý khi response của A và đăng nhập của B tới cùng tick (`authSession.spec` "arrive in the same tick"), và việc `endLocalSession` không thu hồi token trên server (đúng spec — không có endpoint revoke).
+
+**Không đổi:** backend, API, schema, Flutter, Unity, nơi lưu token, dependency, lockfile, CI. Actual của `WEB-02`…`WEB-13` vẫn NOT_RUN.

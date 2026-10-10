@@ -44,8 +44,17 @@ function authHeader(token?: string): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// Only what a caller may legitimately need to control per request. There is
+// deliberately no client-wide timeout here: WEB-01 puts a 15s limit on the
+// session check alone (docs/web/WEB_ACCOUNT_RWD_SPEC.md WEB-D08), not on every
+// business API call.
+interface RequestControl {
+  signal?: AbortSignal;
+}
+
 export const apiClient = {
-  get: <T>(path: string, token?: string) => request<T>(path, { method: 'GET', headers: authHeader(token) }),
+  get: <T>(path: string, token?: string, control: RequestControl = {}) =>
+    request<T>(path, { method: 'GET', headers: authHeader(token), signal: control.signal }),
   post: <T>(path: string, body?: unknown, token?: string) =>
     request<T>(path, {
       method: 'POST',

@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { clearAuthSession } from '@/services/authService';
+import { endLocalSession } from '@/services/authSession';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -36,11 +36,10 @@ const MAIN_MENU = [
 
 export function Sidebar() {
   const navigate = useNavigate();
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
 
   function handleLogout() {
-    clearAuthSession();
-    setUser(null);
+    endLocalSession();
     navigate('/login', { replace: true });
   }
 
