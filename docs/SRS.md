@@ -144,7 +144,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-BIOMETRIC-02 | Hệ thống kiểm tra người dùng hiện tại có quyền với phương tiện đã chọn (owner, hoặc borrower có uỷ quyền còn hiệu lực) **trước khi** tiến hành xác thực khuôn mặt — tránh chạy xác thực cho một phiên chắc chắn sẽ bị từ chối. |
 | FR-BIOMETRIC-03 | Nếu xác thực khuôn mặt thất bại, người dùng không thể bắt đầu chuyến đi; được thử lại tối đa một số lần hợp lý trước khi phải quay lại bước chọn phương tiện. |
 | FR-BIOMETRIC-04 | Hệ thống **không lưu trữ ảnh khuôn mặt thô**; chỉ lưu kết quả xác thực (thành công/thất bại, thời điểm, phương tiện liên quan). |
-| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể **đã đánh giá (R1-8, 07/2026): AWS Rekognition Face Liveness** làm primary candidate, xem `docs/architecture/TDR-biometric-provider-spike.md` — chưa implement, MVP vẫn dùng `MockBiometricProvider`. |
+| FR-BIOMETRIC-05 | MVP dùng dịch vụ/SDK xác thực khuôn mặt có sẵn (không tự xây dựng model nhận diện từ đầu); nhà cung cấp cụ thể **đã đánh giá (R1-8, 07/2026): AWS Rekognition Face Liveness** làm primary candidate, xem `docs/architecture/TDR-biometric-provider-spike.md` — chưa implement, MVP vẫn dùng `MockBiometricProvider`. *Đính chính hiện trạng (10/2026, `WEB-00` review vòng 1, R04 — requirement không đổi):* câu "chưa implement" đã lỗi thời. Từ R2-6, backend có `AwsRekognitionBiometricProvider` song song `MockBiometricProvider`. Mặc định là mock; AWS chỉ được chọn khi `BIOMETRIC_PROVIDER=aws-rekognition` (`apps/backend/src/biometric/biometric.module.ts`, TDR spike mục "Cập nhật (R2-6)"). Provider thực sự của từng môi trường/bản phát hành phải được xác nhận riêng, không suy ra từ câu này. |
 
 ### 1.14. Routing (FR-ROUTING)
 
@@ -155,6 +155,32 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-ROUTING-01 | Hệ thống cung cấp endpoint xem trước lộ trình (route preview) giữa điểm đi và điểm đến, gắn với một phương tiện cụ thể của người dùng. |
 | FR-ROUTING-02 | Lộ trình trả về phải khác nhau theo loại phương tiện (`motorbike` so với `car`) — MVP dùng dữ liệu mock (`RoutingProvider`), thay bằng routing engine thật (OSRM/GraphHopper) ở step `5.2` mà không đổi contract gọi từ web/mobile. |
 | FR-ROUTING-03 | Chỉ chủ xe hoặc borrower đang có uỷ quyền hiệu lực (FR-AUTHZ-02) cho phương tiện mới xem được route preview của phương tiện đó. |
+
+### 1.15. Web Account & Session Recovery (FR-WEBSESSION, FR-WEBPROFILE, FR-WEBPRIVACY, FR-WEBSETTINGS, FR-WEBHELP)
+
+> **Bổ sung sau Baseline v1.0 — micro-step `WEB-00` (10/2026), trạng thái: review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu** (`docs/REVIEW_NOTES.md` §35–§37). Chủ dự án đã đồng ý hướng; đây **chưa** là hành vi đã triển khai (`WEB-01`…`WEB-13` NOT STARTED). Đặc tả chi tiết, hiện trạng có nguồn, ma trận viewport và traceability: `docs/web/WEB_ACCOUNT_RWD_SPEC.md`. **Không thêm API/bảng/cột:** `API_CONTRACT.md`/`DATA_MODEL.md` giữ nguyên; hồ sơ chỉ dùng `GET /api/auth/me` hiện có (FR-AUTH-03).
+
+| ID | Yêu cầu |
+|---|---|
+| FR-WEBSESSION-01 | Web kiểm tra phiên khi vào route bảo vệ và ở `/login` với bốn trạng thái `checking`/`authenticated`/`unauthenticated`/`error`; không được treo vô hạn ở trạng thái kiểm tra. |
+| FR-WEBSESSION-02 | Hệ thống **tự động** xoá phiên cục bộ và về đăng nhập chỉ khi không có token, hoặc khi lần kiểm tra còn hiệu lực của `GET /api/auth/me` trả `401` (giữ FR-AUTH-04). Lỗi mạng, `403`, `429`, `500`, timeout hoặc retry không bao giờ tự xoá token; chúng chuyển sang `error` với thông báo phù hợp (không hiển thị như sai mật khẩu), có "Thử lại" và "Đăng nhập lại". **"Đăng nhập lại"** là thao tác chủ động của người dùng: xoá token và user cục bộ, vô hiệu hoá kiểm tra phiên đang chờ, rồi về `/login` với form dùng được; không revoke server, không kết thúc chuyến mobile, không xoá preference. |
+| FR-WEBSESSION-03 | Timeout **15 giây** chỉ áp dụng cho request kiểm tra phiên; không áp timeout chung cho API nghiệp vụ khác. Ngưỡng là quyết định đặc tả mới của `WEB-00`. |
+| FR-WEBSESSION-04 | Retry thủ công có trạng thái bận và chỉ một request kiểm tra phiên còn hiệu lực. Chỉ kết quả của lần kiểm tra còn hiệu lực — cùng thế hệ phiên, và token trong storage vẫn là token request đó xác minh — mới được ghi/xoá token, đặt/xoá user trong AuthContext, điều hướng hay đổi UI. Đăng nhập, logout, "Đăng nhập lại", retry, timeout và unmount làm mất hiệu lực các lần kiểm tra trước. Kết quả mất hiệu lực (kể cả `200` hoặc `401`) bị bỏ qua ở mọi tầng: service/storage, context, component. `/login` không có unhandled rejection. Logout/login, đổi tài khoản và Browser Back giữ auth guard; không đổi contract `/me`, không đổi nơi lưu token, không tuyên bố logout web thu hồi token trên mọi thiết bị. |
+| FR-WEBPROFILE-01 | `/account/profile` hiển thị email đầy đủ của người đang đăng nhập (dữ liệu `/me` qua cơ chế auth chung), đọc được cả email dài, có đường về Dashboard. |
+| FR-WEBPROFILE-02 | Hồ sơ chỉ đọc: không form/nút lưu, không request ghi; không hiển thị trường `/me` không trả (tên, số điện thoại, avatar, ngày tham gia, trạng thái xác minh) và không bao giờ hiển thị `password_hash`. |
+| FR-WEBPROFILE-03 | Sau logout rồi đăng nhập tài khoản khác (hoặc dùng Browser Back), không hiển thị email của tài khoản trước. |
+| FR-WEBPRIVACY-01 | `/account/privacy` là trang thông tin (không phải chứng nhận pháp lý) mô tả nhóm dữ liệu, mục đích, cách dừng tracking trên mobile và phạm vi xử lý của bên thứ ba; mỗi cam kết dữ liệu phải trace được tới requirement + implementation có bằng chứng hoặc quyết định vận hành đã xác nhận. |
+| FR-WEBPRIVACY-02 | Trang không có công tắc consent/GPS giả, không xin quyền camera/geolocation, không bắt đầu/kết thúc chuyến, không ghi consent. Dừng tracking được mô tả là thao tác kết thúc chuyến trên mobile (FR-TRIP-04); đăng xuất web không được mô tả là dừng tracking mobile. |
+| FR-WEBPRIVACY-03 | Nội dung về thời hạn lưu GPS và chính sách nhà cung cấp phải qua gate nội dung riêng (Privacy Content Gate) trước khi phát hành; không khẳng định raw GPS "tự xoá sau 30 ngày" khi chưa có bằng chứng cleanup. FR-RETENTION-02 giữ nguyên, không bị hạ thấp vì implementation chưa đáp ứng. |
+| FR-WEBPRIVACY-04 | Phần sinh trắc tách giới hạn xử lý tại NovaWay (FR-BIOMETRIC-04, NFR-PRIVACY-03) khỏi chính sách của nhà cung cấp; không hứa "không có bên thứ ba xử lý". |
+| FR-WEBSETTINGS-01 | `/settings` chỉ có một lựa chọn hiệu ứng giao diện web: "Theo hệ thống" (mặc định) / "Giảm chuyển động"; áp dụng ngay; ghi rõ chỉ áp dụng cho tài khoản này trên trình duyệt này. |
+| FR-WEBSETTINGS-02 | Cả hai lựa chọn tôn trọng thiết lập giảm chuyển động của hệ điều hành; không có lựa chọn ép animation bất chấp OS. |
+| FR-WEBSETTINGS-03 | Preference lưu cục bộ trên trình duyệt, có `version`, namespace theo `user.id`, chỉ chứa giá trị lựa chọn; không lưu email/token/mật khẩu/vị trí/dữ liệu khuôn mặt; không đồng bộ qua API/DB. Namespace chỉ bảo đảm app không áp dụng lựa chọn của tài khoản này cho tài khoản khác. Namespace **không** phải ranh giới quyền truy cập giữa các tài khoản trên cùng browser profile. |
+| FR-WEBSETTINGS-04 | Reload giữ lựa chọn của đúng tài khoản; app không áp dụng lựa chọn riêng của tài khoản trước cho tài khoản khác cùng trình duyệt. Lỗi storage xử lý theo ba ca: (a) khởi tạo không đọc được giá trị hợp lệ → "Theo hệ thống"; (b) người dùng đã chọn hợp lệ nhưng ghi thất bại/hết quota → giữ và áp dụng lựa chọn trong phiên trang đang mở; (c) giá trị hỏng, enum lạ, `version` không hỗ trợ → "Theo hệ thống". Cả ba ca đều có thông báo, không crash, không đụng token/session, luôn tôn trọng OS. Không đồng bộ đa tab/server. |
+| FR-WEBSETTINGS-05 | Preference không thay đổi GPS, consent, vòng đời chuyến đi, cảnh báo an toàn, dữ liệu realtime hay API payload. |
+| FR-WEBHELP-01 | `/help` hướng dẫn theo flow và route có thật (đăng nhập, `/vehicles`, `/start-trip` chỉ để xem, `/trip-history`, `/account/privacy`, lỗi thường gặp); link tới đúng route. |
+| FR-WEBHELP-02 | Trợ giúp phân biệt web quản lý/giám sát với mobile bắt đầu/kết thúc chuyến; không hướng dẫn thao tác không tồn tại; không mô tả `/offline-sync` là chức năng web đầy đủ khi còn placeholder. |
+| FR-WEBHELP-03 | Không có kênh liên hệ/ticket/form giả; chỉ hiển thị kênh đã được chủ dự án xác nhận. Hướng dẫn không yêu cầu gửi mật khẩu, JWT hoặc ảnh khuôn mặt. |
 
 ## 2. Non-Functional Requirements
 
@@ -177,6 +203,20 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | NFR-API-01 | `POST /api/trips/sync` phải enforce giới hạn batch tối đa 500 events/payload và trả lỗi rõ ràng nếu vượt. |
 | NFR-UX-01 | Cảnh báo hiển thị khi đang lái phải tối giản, không yêu cầu thao tác phức tạp (xem FR-WARNUI). |
 | NFR-OBS-01 | Backend phải có health check, structured logging, và metrics cơ bản (đủ để debug realtime/location issues) — tương ứng step `9.1 chore/observability-baseline` trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`. |
+
+### 2.1. Responsive/adaptive web (NFR-RWD)
+
+> Bổ sung sau Baseline v1.0 — micro-step `WEB-00` (10/2026), **review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu**. Chưa có hành vi nào dưới đây được triển khai; ma trận viewport/trạng thái và phương pháp đo ở `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §4.6–§7.
+
+| ID | Yêu cầu |
+|---|---|
+| NFR-RWD-01 | Web dùng header + drawer dưới 1024 CSS px và sidebar từ 1024 CSS px; nội dung xếp theo không gian container thực. Ngưỡng 1024 là lựa chọn của NovaWay. |
+| NFR-RWD-02 | Ở bề rộng tương đương 320 CSS px, text 200% và browser zoom 400% tại 1280px, app shell, bốn màn tài khoản và các trang web hiện có không mất nội dung/chức năng và không cần cuộn ngang để đọc nội dung thông thường (bản đồ được ngoại lệ trong phạm vi bản đồ). |
+| NFR-RWD-03 | Điều hướng bằng bàn phím có thứ tự hợp lý, focus nhìn thấy và không bị che; drawer quản lý focus, đóng bằng Escape/nút/bấm ngoài, trả focus, không còn tab stop ẩn; control icon có accessible name. |
+| NFR-RWD-04 | Control chính trên thiết bị cảm ứng đặt mục tiêu vùng chạm 44×44 CSS px (lựa chọn UX của NovaWay); WCAG 2.5.8 được đánh giá riêng theo ngưỡng 24×24 và ngoại lệ của nó. |
+| NFR-RWD-05 | Resize, đổi orientation, bàn phím ảo và safe area không làm mất route/form đang nhập, không kẹt scroll lock/backdrop, không che header/action; safe area chỉ được đánh PASS trên thiết bị thật. |
+| NFR-RWD-06 | Chỉ tuyên bố hỗ trợ theo tổ hợp browser/viewport/thiết bị đã chạy và có evidence; emulation không thay Safari trên iPhone thật hoặc Android Chrome thật; không tuyên bố "mọi thiết bị" hay đạt WCAG chỉ từ việc viết tiêu chí. |
+| NFR-RWD-07 | Thay đổi layout không đổi contract/cách tính nghiệp vụ (auth, CRUD xe, quan sát trip, analytics); không thêm metric mới hoặc start/end trip trên web. |
 
 ## 3. Constraints
 

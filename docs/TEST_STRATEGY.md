@@ -101,6 +101,27 @@
 - Integration: nạp mock GPS route file → marker web di chuyển đúng theo route (đây chính là cơ chế dùng để test 2.4–2.9 ở trên, nên bản thân nó cần test trước).
 - Integration: Developer Mode không truy cập được trên build gắn flag production.
 
+### 2.12. Web Account & Responsive (FR-WEBSESSION/WEBPROFILE/WEBPRIVACY/WEBSETTINGS/WEBHELP, NFR-RWD) — bổ sung `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu
+
+> Bổ sung 10/2026 sau Baseline v1.0. **Chưa có test nào dưới đây được viết hay chạy — toàn bộ NOT_RUN.** Ma trận viewport (`WEB-V*`), route × trạng thái (`WEB-T*`), phương pháp đo layout, dữ liệu test và mẫu evidence: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§7; traceability requirement → AC → test → micro-step: cùng tài liệu §8.
+
+- Hiện trạng cần biết: Playwright chỉ cấu hình project `Desktop Chrome` (`apps/web/playwright.config.ts`); chưa có test viewport hay route tài khoản. Golden path E2E hiện có **không** được dùng làm bằng chứng responsive.
+- Unit/component (Vitest, `apps/web`): state machine kiểm tra phiên — `401` vs lỗi khác, timeout 15 giây bằng fake timer, retry trùng, "Đăng nhập lại" (AC-WEBSESSION-01→05, AC-WEBSESSION-07).
+- Tính hợp lệ của kết quả kiểm tra phiên (AC-WEBSESSION-08/09). Assertion phải nằm ở tầng service + `sessionStorage` + AuthContext/route, **không chỉ DOM**:
+  - A `/me` đang chờ → đăng nhập B thành công → A trả `401`: token B còn nguyên, user B, route không đổi.
+  - Cùng tình huống, A trả `200`: user vẫn là B, không điều hướng, không có dữ liệu A.
+  - Response cũ về sau logout, unmount, timeout hoặc retry mới: không có side effect.
+- Adapter preference — mỗi ca một test riêng: namespace theo `user.id`, `version`, enum; (a) đọc lỗi khi khởi tạo → "Theo hệ thống" (AC-WEBSETTINGS-04); (b) ghi lỗi/quota sau khi chọn → giữ lựa chọn trong phiên (AC-WEBSETTINGS-07); (c) giá trị hỏng/`version` lạ → "Theo hệ thống" (AC-WEBSETTINGS-08). Test cô lập A/B chỉ kiểm app không áp dụng lựa chọn của A cho B; không coi đó là kiểm thử kiểm soát truy cập.
+- `WEB-01` phải **tái hiện bằng test UI** việc kẹt màn hình chờ khi `/me` lỗi mạng/`500` trước khi sửa (hiện mới là suy luận tĩnh từ source).
+- E2E/Playwright mục tiêu theo từng PR (không dồn tới `WEB-13`): route tài khoản, drawer/sidebar quanh 1024 CSS px, reflow 320, keyboard/focus, accessibility tree, `reducedMotion` emulation, logout/login A→B và Browser Back.
+- Fixture vs backend thật: trạng thái lỗi/layout hiếm có thể dùng response fixture nhưng evidence phải ghi **fixture UI**; giữ ít nhất một lượt regression với backend thật cho auth + vehicle + quan sát trip + analytics.
+- Content review (không phải test tự động): Privacy Content Gate cho `/account/privacy` (AC-WEBPRIVACY-01/02/05) và đối chiếu nội dung trợ giúp với route/flow thật (AC-WEBHELP-01→04).
+- Hai phạm vi nghiệm thu cho các step RWD (spec §4.7):
+  - **Gate merge Windows** gồm test mục tiêu C/F/B/Z bằng Chromium/Firefox/emulation, regression và required checks; không cần Mac/iPhone/Android. Chưa đạt thì không merge.
+  - **Gate công bố hỗ trợ thiết bị** gồm AC-RWD-11, phần bàn phím ảo thật của AC-RWD-06, Android Chrome (`WEB-VH1`) và Safari iPhone (`WEB-VH2`) thật. Chưa chạy thì ghi NOT_RUN theo từng thiết bị: không tính PASS, không chặn merge, chặn công bố hỗ trợ.
+  - Emulation/WebKit automation không thay thế gate thiết bị. `WEB-13` báo cáo kết quả theo từng phạm vi, không dùng một COMPLETED chung.
+- Gate chung của mỗi micro-step `WEB-01`…`WEB-12`: `npm run lint`, `npm run test`, `npm run build` (AGENTS.md) + test mục tiêu của step + required PR checks. Mobile CI vẫn phải xanh nếu là required check, nhưng kết quả web không thay cho gate Flutter.
+
 ## 3. CI/CD Gate (liên kết `9.2 chore/ci-cd-pipeline`)
 
 - Mọi PR vào `develop` phải pass: lint, unit test, integration test.
