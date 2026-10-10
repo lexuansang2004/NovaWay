@@ -635,3 +635,11 @@ Cách hiểu chủ dự án đề xuất: gate chặn merge PR #80 là smoke tr�
 - Không bắt đầu `WEB-01` trước khi merge.
 
 **Vẫn mở (không đổi so với §37):** ngưỡng timeout 15 giây (đo ở `WEB-01`); Privacy Content Gate (trước `WEB-11`); key preference raw hay băm (trước `WEB-12`); gate thiết bị thật Safari iPhone/Android Chrome; cột Skills; breakpoint thật; mục tiêu 44 px; thu hồi quyền vị trí giữa chuyến.
+
+## 39. Đóng trạng thái `8.1b` sau merge PR #80; `8.2` còn chặn bởi thiết bị (2026-09-27)
+
+**Bằng chứng mới sau §34:** GitHub xác nhận PR #80 đã merge vào `develop` ngày 2026-09-26 (merge commit `3f6e5e6860682d44a6bd5d384037f3237df05956`). §34 đã ghi Review Manager xác nhận gate iPhone 11 Pro và evidence nhiều nguồn đủ cho smoke. Vì điều kiện review/merge cuối đã đạt, `8.1b` nay **COMPLETED**; `8.1a` trước đó đã COMPLETED, nên nhóm `8.1` toolchain smoke hoàn tất. Các câu “chưa merge/chưa completed” ở §20/§31–§34 giữ nguyên làm lịch sử tại thời điểm viết, không còn là trạng thái hiện hành.
+
+**Giới hạn không đổi:** Mac/iPhone test là USER-EXECUTED/USER-REPORTED, không phải agent tự chạy; bản ảnh Xcode đã che và ảnh iPhone không chứa thông tin cá nhân được lưu ngoài Git, không chép ảnh Xcode gốc vào evidence/Git. Xcode có khoảng 105 cảnh báo, gồm `lib_burst_generated.a` “no platform load command”; chưa chẩn đoán hết, chưa tuyên bố vô hại. Dung lượng Data volume `14Gi`/93% sau build (USER-REPORTED) không chứng minh sẵn sàng cài Unity Editor/iOS Build Support trên Mac. Smoke không-AR không chứng minh ARKit, LiDAR, GPS hoặc RTK.
+
+**Tiền đề `8.2` vẫn NOT RUN/BLOCKED:** cần iPhone 16 Pro vật lý, cài và khởi chạy smoke trên chính máy đó, sau đó runtime Scene Reconstruction capability check; triển khai/kiểm chứng mesh LiDAR thật chỉ bắt đầu khi các tiền đề này đạt. Không thay thế bằng iPhone 11 Pro, Unity Editor hoặc fixture Drive Visual Mock. Tài liệu hiện trạng được đồng bộ ở micro-step plan, iOS runbook, thesis baseline và open-items; không sửa source Unity hoặc `apps/*`.
