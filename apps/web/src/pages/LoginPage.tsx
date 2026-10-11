@@ -4,29 +4,27 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Navigation } from 'lucide-react';
 import { LoginForm, type LoginSubmitPayload } from '@/components/auth/LoginForm';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
-import { fetchCurrentUser, login } from '@/services/authService';
-import { useAuth } from '@/contexts/AuthContext';
+import { SessionCheckNotice, SessionCheckProgress } from '@/components/auth/SessionCheckError';
+import { endLocalSession, retrySessionCheck, signIn } from '@/services/authSession';
+import { useSessionCheck } from '@/services/useSessionCheck';
 
 // Xác thực khuôn mặt gắn phương tiện (FaceScanner, FR-BIOMETRIC) là luồng chọn
 // xe trước khi bắt đầu chuyến đi, không phải cổng đăng nhập tài khoản — sẽ tích
 // hợp ở đúng step làm UI chọn xe/bắt đầu chuyến đi, không phải ở đây.
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const session = useSessionCheck();
 
+  // Covers both ways of ending up signed in on this page: the token already
+  // in storage turned out to be valid, or the form below just signed in.
   useEffect(() => {
-    fetchCurrentUser().then((user) => {
-      if (user) {
-        setUser(user);
-        navigate('/dashboard', { replace: true });
-      }
-    });
-  }, [navigate, setUser]);
+    if (session.status === 'authenticated') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [session.status, navigate]);
 
   async function handleSubmit({ email, password }: LoginSubmitPayload) {
-    const user = await login(email, password);
-    setUser(user);
-    navigate('/dashboard', { replace: true });
+    await signIn(email, password);
   }
 
   return (
@@ -54,7 +52,18 @@ export default function LoginPage() {
       </div>
 
       {/* Cột phải: form login glass */}
-      <div className="relative z-10 flex flex-1 items-center justify-center p-6">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-6">
+        {/* WEB-01: kiểm tra phiên cũ lỗi (không phải 401) thì báo ở đây; form
+            bên dưới vẫn dùng được và token cũ chưa bị xoá. Trong lúc "Thử lại"
+            đang chạy thì hiện trạng thái đang kiểm tra thay cho thông báo lỗi. */}
+        {session.status === 'checking' && session.retrying && <SessionCheckProgress />}
+        {session.status === 'error' && (
+          <SessionCheckNotice
+            failure={session.failure}
+            onRetry={retrySessionCheck}
+            onRelogin={endLocalSession}
+          />
+        )}
         <AnimatePresence mode="wait">
           <motion.div
             key="login-form"
