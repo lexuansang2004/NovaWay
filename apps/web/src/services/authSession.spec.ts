@@ -26,6 +26,10 @@ const BASE = 'http://localhost:3000/api'
 const USER_A = { id: 'user-a', email: 'a@example.com' }
 const USER_B = { id: 'user-b', email: 'b@example.com' }
 
+// One symbol per mounted page, as useSessionCheck creates them.
+const PAGE = Symbol('page')
+const NEXT_PAGE = Symbol('next page')
+
 type Session = typeof import('@/services/authSession')
 
 interface PendingRequest {
@@ -64,11 +68,10 @@ describe('authSession', () => {
   const token = () => storage.getItem(TOKEN_KEY)
   const errorBody = (code: string) => ({ error_code: code, message: code })
 
-  async function startCheckWithToken(value: string) {
+  async function startCheckWithToken(value: string, page: symbol = PAGE) {
     storage.setItem(TOKEN_KEY, value)
-    const handle = session.startSessionCheck()
+    session.startSessionCheck(page)
     await settle()
-    return handle
   }
 
   beforeEach(async () => {
@@ -113,10 +116,10 @@ describe('authSession', () => {
 
   describe('AC-WEBSESSION-01 — no token, 200, 401', () => {
     it('is unauthenticated without calling the API when there is no token', async () => {
-      session.startSessionCheck()
+      session.startSessionCheck(PAGE)
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(requests).toHaveLength(0)
     })
 
@@ -130,7 +133,7 @@ describe('authSession', () => {
       meRequests()[0].respond(200, USER_A)
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null, retrying: false })
       expect(token()).toBe('token-a')
     })
 
@@ -140,7 +143,7 @@ describe('authSession', () => {
       meRequests()[0].respond(401, errorBody('UNAUTHORIZED'))
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(token()).toBeNull()
     })
   })
@@ -156,7 +159,7 @@ describe('authSession', () => {
       meRequests()[0].respond(status, errorBody('FIXTURE'))
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure, retrying: false })
       expect(token()).toBe('token-a')
     })
 
@@ -166,7 +169,7 @@ describe('authSession', () => {
       meRequests()[0].fail(new TypeError('Failed to fetch'))
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'network' })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'network', retrying: false })
       expect(token()).toBe('token-a')
     })
 
@@ -195,7 +198,7 @@ describe('authSession', () => {
       expect(meRequests()[0].signal?.aborted).toBe(false)
 
       await vi.advanceTimersByTimeAsync(1)
-      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'timeout' })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'timeout', retrying: false })
       expect(meRequests()[0].signal?.aborted).toBe(true)
       expect(token()).toBe('token-a')
     })
@@ -212,7 +215,7 @@ describe('authSession', () => {
       answer(meRequests()[0])
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'timeout' })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'timeout', retrying: false })
       expect(token()).toBe('token-a')
     })
 
@@ -250,13 +253,13 @@ describe('authSession', () => {
       await failFirstCheck()
 
       session.retrySessionCheck()
-      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null, retrying: true })
 
       await settle()
       meRequests()[1].respond(200, USER_A)
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null, retrying: false })
     })
 
     it('can fail again and keep the token', async () => {
@@ -267,7 +270,7 @@ describe('authSession', () => {
       meRequests()[1].fail(new TypeError('Failed to fetch'))
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'network' })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'error', user: null, failure: 'network', retrying: false })
       expect(token()).toBe('token-a')
     })
 
@@ -304,7 +307,7 @@ describe('authSession', () => {
 
       session.endLocalSession()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(token()).toBeNull()
       // Preference survives; no revoke (or any other) request is sent.
       expect(preferences.snapshot()).toEqual({ [PREFERENCE_KEY]: 'keep-me' })
@@ -317,7 +320,7 @@ describe('authSession', () => {
       await settle()
       session.endLocalSession()
 
-      session.startSessionCheck() // what /login does on mount
+      session.startSessionCheck(NEXT_PAGE) // what /login does on mount
       await settle()
 
       expect(meRequests()).toHaveLength(1)
@@ -341,7 +344,7 @@ describe('authSession', () => {
       answer(meRequests()[1])
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(token()).toBeNull()
     })
   })
@@ -359,7 +362,7 @@ describe('authSession', () => {
 
     const expectSessionB = () => {
       expect(token()).toBe('token-b')
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_B, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_B, failure: null, retrying: false })
     }
 
     it('signing in as B makes B the session and aborts the check for A', async () => {
@@ -452,7 +455,7 @@ describe('authSession', () => {
 
       meRequests()[0].respond(200, USER_A)
       await settle()
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null, retrying: false })
     })
   })
 
@@ -472,16 +475,16 @@ describe('authSession', () => {
       answer(meRequests()[0])
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(token()).toBeNull()
     })
 
     it.each(lateAnswers)('after the page unmounts, a late %s changes nothing', async (_label, answer) => {
-      const handle = await startCheckWithToken('token-a')
+      await startCheckWithToken('token-a')
       const notified = vi.fn()
       session.subscribeToSession(notified)
 
-      session.cancelSessionCheck(handle)
+      session.releaseSessionCheck(PAGE)
       expect(meRequests()[0].signal?.aborted).toBe(true)
       expect(vi.getTimerCount()).toBe(0)
       answer(meRequests()[0])
@@ -498,7 +501,7 @@ describe('authSession', () => {
     it.each(lateAnswers)('after a newer check started, a late %s from the older one changes nothing', async (_label, answer) => {
       await startCheckWithToken('token-a')
 
-      session.startSessionCheck() // e.g. the next page mounted
+      session.startSessionCheck(NEXT_PAGE) // e.g. the next page mounted
       await settle()
       expect(meRequests()).toHaveLength(2)
       expect(meRequests()[0].signal?.aborted).toBe(true)
@@ -506,12 +509,12 @@ describe('authSession', () => {
       answer(meRequests()[0])
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null, retrying: false })
       expect(token()).toBe('token-a')
 
       meRequests()[1].respond(200, USER_A)
       await settle()
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_A, failure: null, retrying: false })
     })
 
     it.each(lateAnswers)('after a timeout and a retry, a late %s from the timed-out check changes nothing', async (_label, answer) => {
@@ -523,21 +526,139 @@ describe('authSession', () => {
       answer(meRequests()[0])
       await settle()
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'checking', user: null, failure: null, retrying: true })
       expect(token()).toBe('token-a')
     })
 
-    it('cancelling with the handle of an older check does not cancel the current one', async () => {
-      const olderHandle = await startCheckWithToken('token-a')
-      session.startSessionCheck()
+    // Review round 1, R01. The page owns its retries too: the hook used to
+    // remember only the check it started on mount, so after "Thử lại" the
+    // page could unmount and leave the retry running with nobody to cancel it.
+    // (The real hook is exercised in e2e/session-check.hook.spec.ts; these
+    // cases pin the same contract at the store.)
+    it.each(lateAnswers)(
+      'after a retry, the page unmounting cancels the retry: a late %s changes nothing',
+      async (_label, answer) => {
+        await startCheckWithToken('token-a')
+        meRequests()[0].respond(500, errorBody('INTERNAL_ERROR'))
+        await settle()
+        session.retrySessionCheck()
+        await settle()
+        expect(meRequests()).toHaveLength(2)
+        const stateAtUnmount = session.getSessionSnapshot()
+        const notified = vi.fn()
+        session.subscribeToSession(notified)
+
+        session.releaseSessionCheck(PAGE)
+        expect(meRequests()[1].signal?.aborted).toBe(true)
+        expect(vi.getTimerCount()).toBe(0)
+
+        answer(meRequests()[1])
+        await settle()
+        await vi.advanceTimersByTimeAsync(60_000)
+
+        expect(notified).not.toHaveBeenCalled()
+        expect(session.getSessionSnapshot()).toBe(stateAtUnmount)
+        expect(session.getSessionSnapshot().user).toBeNull()
+        expect(token()).toBe('token-a')
+      },
+    )
+
+    it('after a timeout and a retry, the page unmounting cancels the retry and its timer', async () => {
+      await startCheckWithToken('token-a')
+      await vi.advanceTimersByTimeAsync(15_000)
+      session.retrySessionCheck()
+      await settle()
+      const notified = vi.fn()
+      session.subscribeToSession(notified)
+
+      session.releaseSessionCheck(PAGE)
+      expect(meRequests()[1].signal?.aborted).toBe(true)
+      expect(vi.getTimerCount()).toBe(0)
+
+      meRequests()[1].respond(401, errorBody('UNAUTHORIZED'))
+      await settle()
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(notified).not.toHaveBeenCalled()
+      expect(token()).toBe('token-a')
+    })
+
+    it('after several retries, the page unmounting cancels the one that is running', async () => {
+      await startCheckWithToken('token-a')
+      meRequests()[0].respond(500, errorBody('INTERNAL_ERROR'))
+      await settle()
+      for (const index of [1, 2]) {
+        session.retrySessionCheck()
+        await settle()
+        meRequests()[index].fail(new TypeError('Failed to fetch'))
+        await settle()
+      }
+      session.retrySessionCheck()
       await settle()
 
-      session.cancelSessionCheck(olderHandle)
+      session.releaseSessionCheck(PAGE)
 
-      expect(meRequests()[1].signal?.aborted).toBe(false)
-      meRequests()[1].respond(200, USER_A)
+      expect(meRequests()).toHaveLength(4)
+      expect(meRequests()[3].signal?.aborted).toBe(true)
+      meRequests()[3].respond(200, USER_A)
       await settle()
+      expect(session.getSessionSnapshot().user).toBeNull()
+    })
+
+    it('an old page unmounting does not cancel the check of the page that took over', async () => {
+      await startCheckWithToken('token-a')
+      meRequests()[0].respond(500, errorBody('INTERNAL_ERROR'))
+      await settle()
+      session.retrySessionCheck() // the old page's retry
+      await settle()
+
+      session.startSessionCheck(NEXT_PAGE) // the next page mounts and takes over
+      await settle()
+      expect(meRequests()[1].signal?.aborted).toBe(true)
+
+      session.releaseSessionCheck(PAGE) // the old page cleans up afterwards
+      expect(meRequests()[2].signal?.aborted).toBe(false)
+      expect(vi.getTimerCount()).toBe(1)
+
+      meRequests()[2].respond(200, USER_A)
+      await settle()
+      expect(session.getSessionSnapshot()).toEqual({
+        status: 'authenticated',
+        user: USER_A,
+        failure: null,
+        retrying: false,
+      })
+    })
+
+    it('the page that took over owns the retries made after that, and its own unmount cancels them', async () => {
+      await startCheckWithToken('token-a')
+      session.startSessionCheck(NEXT_PAGE)
+      await settle()
+      meRequests()[1].respond(500, errorBody('INTERNAL_ERROR'))
+      await settle()
+      session.retrySessionCheck()
+      await settle()
+
+      session.releaseSessionCheck(PAGE) // not the owner any more: nothing happens
+      expect(meRequests()[2].signal?.aborted).toBe(false)
+
+      session.releaseSessionCheck(NEXT_PAGE)
+      expect(meRequests()[2].signal?.aborted).toBe(true)
+    })
+
+    it('releasing twice, or after the check already finished, is harmless', async () => {
+      await startCheckWithToken('token-a')
+      meRequests()[0].respond(200, USER_A)
+      await settle()
+      const notified = vi.fn()
+      session.subscribeToSession(notified)
+
+      session.releaseSessionCheck(PAGE)
+      session.releaseSessionCheck(PAGE)
+
+      expect(notified).not.toHaveBeenCalled()
       expect(session.getSessionSnapshot().status).toBe('authenticated')
+      expect(token()).toBe('token-a')
     })
   })
 
@@ -551,7 +672,7 @@ describe('authSession', () => {
       expect(token()).toBe('token-a')
 
       session.endLocalSession()
-      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'unauthenticated', user: null, failure: null, retrying: false })
       expect(token()).toBeNull()
 
       const second = session.signIn(USER_B.email, 'pw')
@@ -559,7 +680,7 @@ describe('authSession', () => {
       loginRequests()[1].respond(200, { access_token: 'token-b', user: USER_B })
       await second
 
-      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_B, failure: null })
+      expect(session.getSessionSnapshot()).toEqual({ status: 'authenticated', user: USER_B, failure: null, retrying: false })
       expect(token()).toBe('token-b')
       // The token only ever lives in sessionStorage.
       expect(preferences.snapshot()).toEqual({ [PREFERENCE_KEY]: 'keep-me' })

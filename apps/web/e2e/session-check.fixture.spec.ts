@@ -291,6 +291,84 @@ test.describe('AC-WEBSESSION-04 — retry', () => {
   });
 });
 
+// Independent review round 1, finding R02: on /login the notice used to vanish
+// on retry with nothing in its place. The page keeps its form, so the busy
+// state has to be shown next to it rather than as a full-page loader.
+test.describe('AC-WEBSESSION-04 — retry on /login shows a busy state', () => {
+  test('while /auth/me is pending after "Thử lại": accessible busy status, form still usable, token kept', async ({
+    page,
+  }) => {
+    let failing = true;
+    const held: Route[] = [];
+    await seedToken(page, TOKEN_A);
+    await page.route(ME_URL, (route) => {
+      if (failing) return apiError(route, 500, 'INTERNAL_ERROR');
+      held.push(route);
+    });
+
+    await page.goto('/login');
+    await expect(retryButton(page)).toBeVisible();
+
+    failing = false;
+    await retryButton(page).click();
+    await expect.poll(() => held.length).toBeGreaterThanOrEqual(1);
+
+    const busy = page.getByRole('status');
+    await expect(busy).toBeVisible();
+    await expect(busy).toContainText('Đang kiểm tra lại phiên đăng nhập');
+    await expect(busy).toHaveAttribute('aria-busy', 'true');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    // A second click cannot start a second check: "Thử lại" is not offered while busy.
+    await expect(retryButton(page)).toHaveCount(0);
+    await expect(page.getByLabel('Email')).toBeEditable();
+    await expect(page.getByLabel('Mật khẩu')).toBeEditable();
+    await expect(submitButton(page)).toBeEnabled();
+    expect(await readToken(page)).toBe(TOKEN_A);
+    const pendingRequests = held.length;
+    await page.waitForTimeout(300);
+    expect(held.length).toBe(pendingRequests);
+
+    // The retry fails again: busy state goes away, the error notice is back.
+    await Promise.all(held.map((route) => apiError(route, 500, 'INTERNAL_ERROR').catch(() => undefined)));
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(retryButton(page)).toBeVisible();
+    expect(await readToken(page)).toBe(TOKEN_A);
+  });
+
+  test('signing in through the form while the retry is pending signs that user in; the retry cannot undo it', async ({
+    page,
+  }) => {
+    let failing = true;
+    const heldForA: Route[] = [];
+    await seedToken(page, TOKEN_A);
+    await page.route(ME_URL, (route) => {
+      if (bearer(route) === `Bearer ${TOKEN_B}`) return json(route, 200, USER_B);
+      if (failing) return apiError(route, 500, 'INTERNAL_ERROR');
+      heldForA.push(route);
+    });
+    await page.route(LOGIN_URL, (route) => json(route, 200, { access_token: TOKEN_B, user: USER_B }));
+
+    await page.goto('/login');
+    await expect(retryButton(page)).toBeVisible();
+    failing = false;
+    await retryButton(page).click();
+    await expect(page.getByRole('status')).toBeVisible();
+
+    await fillLoginForm(page, USER_B.email);
+    await submitButton(page).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByText(USER_B.email)).toBeVisible();
+
+    await Promise.all(heldForA.map((route) => json(route, 200, USER_A).catch(() => undefined)));
+    await page.waitForTimeout(300);
+
+    expect(await readToken(page)).toBe(TOKEN_B);
+    await expect(page.getByText(USER_B.email)).toBeVisible();
+    await expect(page.getByText(USER_A.email)).toHaveCount(0);
+  });
+});
+
 test.describe('AC-WEBSESSION-05 — /login while the session check fails', () => {
   test('signing in through the form still works and replaces the old token', async ({ page }) => {
     const pageErrors = trackPageErrors(page);

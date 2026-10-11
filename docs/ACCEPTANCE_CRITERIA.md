@@ -222,7 +222,7 @@
 
 ## 12. Web Account & Responsive (bổ sung `WEB-00`, review độc lập PASS; Review Manager phê duyệt 2026-10-10; chờ PR checks và merge tài liệu)
 
-> Bổ sung 10/2026 sau Baseline v1.0, trace tới `SRS.md` §1.15/§2.1; sửa sau review độc lập vòng 1 (`docs/REVIEW_NOTES.md` §36). Đây là tiêu chí cho các micro-step `WEB-01`…`WEB-13` sắp tới, **không** phải biên bản nghiệm thu: mọi kết quả thực tế hiện là **NOT_RUN**, trừ AC-WEBSESSION-01→09 đã có kết quả local của người triển khai `WEB-01` (chờ review độc lập — `docs/REVIEW_NOTES.md` §40). Với AC-RWD, phạm vi nghiệm thu chia hai: gate merge Windows và gate công bố hỗ trợ thiết bị thật (spec §4.7). Ma trận viewport/trạng thái (`WEB-V*`, `WEB-T*`) và traceability AC → test → micro-step: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§8.
+> Bổ sung 10/2026 sau Baseline v1.0, trace tới `SRS.md` §1.15/§2.1; sửa sau review độc lập vòng 1 (`docs/REVIEW_NOTES.md` §36). Đây là tiêu chí cho các micro-step `WEB-01`…`WEB-13` sắp tới, **không** phải biên bản nghiệm thu: mọi kết quả thực tế hiện là **NOT_RUN**, trừ AC-WEBSESSION-01→09 đã có kết quả local của người triển khai `WEB-01` (review vòng 1 CHANGES_REQUESTED, đã sửa, chờ re-review độc lập — `docs/REVIEW_NOTES.md` §40–§41). Với AC-RWD, phạm vi nghiệm thu chia hai: gate merge Windows và gate công bố hỗ trợ thiết bị thật (spec §4.7). Ma trận viewport/trạng thái (`WEB-V*`, `WEB-T*`) và traceability AC → test → micro-step: `docs/web/WEB_ACCOUNT_RWD_SPEC.md` §5–§8.
 
 ### 12.1. Kiểm tra phiên web (FR-WEBSESSION) — micro-step `WEB-01`
 

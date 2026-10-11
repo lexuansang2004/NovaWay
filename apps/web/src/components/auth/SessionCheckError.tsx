@@ -76,3 +76,20 @@ export function SessionCheckNotice({ failure, onRetry, onRelogin }: SessionCheck
     </div>
   );
 }
+
+// Shown on /login in place of the notice while a "Thử lại" check is running
+// (review round 1, R02). The login form stays on screen and usable, so this is
+// a status line beside it, not a full-page loader. role="status" announces it
+// politely; aria-busy tells assistive technology the result is still coming.
+export function SessionCheckProgress() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      className="mb-4 flex w-full max-w-sm flex-col gap-2 rounded-xl border border-cyan-400/30 bg-slate-900/70 p-4"
+    >
+      <p className="text-sm text-slate-200">Đang kiểm tra lại phiên đăng nhập trước đó...</p>
+      <p className="text-xs text-slate-400">Bạn vẫn có thể đăng nhập bằng biểu mẫu bên dưới.</p>
+    </div>
+  );
+}

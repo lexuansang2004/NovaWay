@@ -32,26 +32,39 @@ export interface SessionSnapshot {
   status: SessionStatus;
   user: AuthUser | null;
   failure: SessionCheckFailure | null;
+  // True only while a check started by "Thử lại" is running. Lets a page that
+  // keeps its own content on screen (/login) show that the retry is in
+  // progress instead of just dropping the error notice.
+  retrying: boolean;
 }
 
-// Opaque to callers: only useful to hand back to cancelSessionCheck().
-export type SessionCheckHandle = number;
+// Identifies the mounted page on whose behalf checks are running. Created by
+// the page (one per mount), opaque to everything else.
+export type SessionCheckOwner = symbol;
 
 interface ActiveCheck {
-  generation: number;
   controller: AbortController;
   timer: ReturnType<typeof setTimeout>;
 }
 
-let snapshot: SessionSnapshot = { status: 'checking', user: null, failure: null };
+let snapshot: SessionSnapshot = { status: 'checking', user: null, failure: null, retrying: false };
 const listeners = new Set<() => void>();
 
 // "Thế hệ phiên" (WEB-D10). Bumped by everything that makes an in-flight
 // check obsolete: a newer check, a successful login, a logout / "Đăng nhập
-// lại", a timeout and a cancel. A check may only act while the generation it
-// started in is still the current one.
+// lại", a timeout and the owning page going away. A check may only act while
+// the generation it started in is still the current one.
 let generation = 0;
 let active: ActiveCheck | null = null;
+
+// Ownership is tracked separately from the generation, on purpose. A page
+// owns every check made on its behalf — its first one AND any retry — so its
+// cleanup has to be able to cancel "whatever is running for me now", not "the
+// request I started when I mounted". The generation cannot answer that: a
+// retry is a new generation started by the same page. (Review round 1, R01:
+// the hook used to hold the generation of its first check, so a retry
+// outlived the page.)
+let owner: SessionCheckOwner | null = null;
 
 function publish(next: SessionSnapshot): void {
   snapshot = next;
@@ -92,12 +105,12 @@ export function getSessionSnapshot(): SessionSnapshot {
 
 // Verifies the stored token with GET /api/auth/me. Starting a check always
 // supersedes the previous one, so at most one check is ever valid.
-export function startSessionCheck(): SessionCheckHandle {
+function beginCheck(retrying: boolean): void {
   supersede();
 
   if (!getToken()) {
-    publish({ status: 'unauthenticated', user: null, failure: null });
-    return generation;
+    publish({ status: 'unauthenticated', user: null, failure: null, retrying: false });
+    return;
   }
 
   const checkGeneration = generation;
@@ -109,11 +122,11 @@ export function startSessionCheck(): SessionCheckHandle {
     // supersede() first: it aborts the request and makes any answer that
     // still arrives (a server that ignores the abort included) a stale one.
     supersede();
-    publish({ status: 'error', user: null, failure: 'timeout' });
+    publish({ status: 'error', user: null, failure: 'timeout', retrying: false });
   }, SESSION_CHECK_TIMEOUT_MS);
 
-  active = { generation: checkGeneration, controller, timer };
-  publish({ status: 'checking', user: null, failure: null });
+  active = { controller, timer };
+  publish({ status: 'checking', user: null, failure: null, retrying });
 
   fetchCurrentUser({ signal: controller.signal, isCurrent }).then(
     (user) => {
@@ -123,8 +136,8 @@ export function startSessionCheck(): SessionCheckHandle {
       // has already cleared exactly that token.
       publish(
         user
-          ? { status: 'authenticated', user, failure: null }
-          : { status: 'unauthenticated', user: null, failure: null },
+          ? { status: 'authenticated', user, failure: null, retrying: false }
+          : { status: 'unauthenticated', user: null, failure: null, retrying: false },
       );
     },
     (error: unknown) => {
@@ -132,24 +145,35 @@ export function startSessionCheck(): SessionCheckHandle {
       settle();
       // Anything but a 401 keeps the token: a network blip, a 5xx, a 403 or a
       // 429 says nothing about whether the session itself is still good.
-      publish({ status: 'error', user: null, failure: classifyFailure(error) });
+      publish({ status: 'error', user: null, failure: classifyFailure(error), retrying: false });
     },
   );
-
-  return checkGeneration;
 }
 
-// For the component that started a check and is going away. A no-op when a
-// newer check, a login or a logout has already taken over.
-export function cancelSessionCheck(handle: SessionCheckHandle): void {
-  if (active?.generation === handle) supersede();
+// Called by a page when it mounts. The page becomes the owner of the check
+// it starts here and of every retry that follows, until another page takes
+// over or it releases them.
+export function startSessionCheck(checkOwner: SessionCheckOwner): void {
+  owner = checkOwner;
+  beginCheck(false);
 }
 
-// "Thử lại". Ignored while a check is already running, so repeated clicks
-// never produce parallel checks (and never hammer a server that answered 429).
+// Called by a page when it unmounts. Cancels whatever check is running on its
+// behalf — the first one or a retry — together with its timer. Does nothing
+// if another page has taken over in the meantime: an old page cleaning up
+// must never cancel the check of the page that replaced it.
+export function releaseSessionCheck(checkOwner: SessionCheckOwner): void {
+  if (owner !== checkOwner) return;
+  owner = null;
+  supersede();
+}
+
+// "Thử lại". Runs for whichever page currently owns the session check.
+// Ignored while a check is already running, so repeated clicks never produce
+// parallel checks (and never hammer a server that answered 429).
 export function retrySessionCheck(): void {
   if (active) return;
-  startSessionCheck();
+  beginCheck(true);
 }
 
 export async function signIn(email: string, password: string): Promise<AuthUser> {
@@ -157,7 +181,7 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
   // login() has just replaced the stored token. Whatever check was running
   // belonged to the previous one.
   supersede();
-  publish({ status: 'authenticated', user, failure: null });
+  publish({ status: 'authenticated', user, failure: null, retrying: false });
   return user;
 }
 
@@ -168,5 +192,5 @@ export async function signIn(email: string, password: string): Promise<AuthUser>
 export function endLocalSession(): void {
   supersede();
   clearAuthSession();
-  publish({ status: 'unauthenticated', user: null, failure: null });
+  publish({ status: 'unauthenticated', user: null, failure: null, retrying: false });
 }

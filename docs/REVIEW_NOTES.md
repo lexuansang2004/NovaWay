@@ -738,3 +738,112 @@ Backend thật dựng local từ chính nhánh này: Postgres/PostGIS trong cont
 6. **Security cần xem:** thứ tự xử lý khi response của A và đăng nhập của B tới cùng tick (`authSession.spec` "arrive in the same tick"), và việc `endLocalSession` không thu hồi token trên server (đúng spec — không có endpoint revoke).
 
 **Không đổi:** backend, API, schema, Flutter, Unity, nơi lưu token, dependency, lockfile, CI. Actual của `WEB-02`…`WEB-13` vẫn NOT_RUN.
+
+## 41. `WEB-01` — review độc lập vòng 1 CHANGES_REQUESTED; sửa R01, R02; đính chính §40 (2026-10-11)
+
+**Trạng thái: READY FOR INDEPENDENT RE-REVIEW.** Ghi chép của người triển khai (R06 Frontend Engineer), **không** phải phê duyệt. `WEB-01` chưa PASS, chưa merge; PR #88 vẫn Draft. §40 giữ nguyên làm lịch sử; các điểm sai của §40 được đính chính ở §41.3 thay vì sửa hồi tố.
+
+**Review vòng 1:** do agent điều phối thực hiện (không phải agent viết `WEB-01`), tại head `34daf0ddd93b11fbfddd1eebcce640f7d8542643`, base `3cf62b2d184a8783d604e58385573cbd354aeedd`. Kết luận **CHANGES_REQUESTED**: hai finding P2 (R01, R02) và hai ghi chú (N01, N02). Báo cáo review nằm ngoài Git. Người triển khai đồng ý cả hai finding.
+
+### 41.1. Finding → nguyên nhân → cách sửa
+
+Dòng nguồn là tại commit sửa của vòng này.
+
+**R01 — cleanup của hook không huỷ retry.**
+
+- *Nguyên nhân:* hook giữ handle của lần kiểm tra đầu (`useSessionCheck.ts` tại `34daf0d`, dòng 21–24). Retry tạo thế hệ mới, nên `cancelSessionCheck(handle)` không còn khớp và không huỷ gì.
+- *Cách sửa:* tách **quyền sở hữu của mount** khỏi **thế hệ của request**.
+  - `apps/web/src/services/authSession.ts:67` thêm `owner`.
+  - `startSessionCheck(owner)` (`:156`) gán owner.
+  - `retrySessionCheck()` (`:174`) chạy cho owner hiện tại.
+  - `releaseSessionCheck(owner)` (`:165–169`) huỷ lần kiểm tra đang chạy, kể cả retry, cùng timer — nhưng chỉ khi người gọi vẫn là owner (`:166`).
+  - Hook tạo owner bằng `Symbol` ngay trong effect (`apps/web/src/services/useSessionCheck.ts:28–31`), nên mỗi lần effect chạy (StrictMode chạy hai lần) là một owner riêng.
+  - API cũ `cancelSessionCheck`/`SessionCheckHandle` đã bỏ.
+- *Không đổi:* kiểm tra thế hệ ở store và so sánh token ở service vẫn nguyên. Bản sửa không dựa vào `abort()` để bỏ qua kết quả cũ.
+
+**R02 — `/login` không có trạng thái đang retry.**
+
+- *Nguyên nhân:* thông báo chỉ render khi `error`; khi retry chuyển sang `checking` thì không còn gì thay thế.
+- *Cách sửa:*
+  - Snapshot thêm `retrying` (`authSession.ts:38`), chỉ đúng trong lúc lần kiểm tra do "Thử lại" khởi động đang chạy.
+  - `SessionCheckProgress` (`apps/web/src/components/auth/SessionCheckError.tsx:84–96`) có `role="status"`, `aria-busy="true"`, chữ "Đang kiểm tra lại phiên đăng nhập trước đó...".
+  - `apps/web/src/pages/LoginPage.tsx:59` hiển thị nó cạnh form.
+  - Form vẫn dùng được; không dùng loader toàn trang trên `/login`. Trong lúc bận không có nút "Thử lại", nên không bấm lặp được.
+
+### 41.2. Regression: fail trước sửa, pass sau sửa
+
+Regression được viết trước khi sửa và chạy trên production code của `34daf0d`.
+
+| Test | Loại | Trước sửa (`34daf0d`) | Sau sửa |
+|---|---|---|---|
+| `apps/web/e2e/session-check.hook.spec.ts` — 12 ca | Hook thật + store + service + apiClient thật, mount/unmount thật qua `e2e/harness/sessionCheckHarness.tsx`. Chỉ transport là fixture deferred, cố ý bỏ qua abort | 8 fail, 4 pass | 12/12 pass |
+| `apps/web/e2e/session-check.fixture.spec.ts` — "retry on /login shows a busy state" (2 ca) | Trang `/login` thật, fixture UI cho API | 2 fail (không có `role="status"`) | 2/2 pass |
+| `apps/web/src/services/authSession.spec.ts` — 8 ca ownership mới | Store + service thật, `fetch` stub | Không áp dụng (API owner chưa tồn tại) | 8/8 pass |
+
+Chi tiết các ca hook:
+
+- **8 ca fail trước sửa:** thất bại → retry → unmount với 4 loại response muộn; timeout → retry → unmount; nhiều lần retry → unmount; 2 ca StrictMode. Triệu chứng: request retry không bị abort; `401` muộn xoá token; `200` muộn đặt user; store phát thêm notification (3 → 4). Khớp với kết quả probe của reviewer.
+- **4 ca pass cả trước và sau:** unmount khi chưa retry, và 3 ca mount mới tiếp quản. Các ca này vốn đúng; chúng tồn tại để chặn cách sửa sai kiểu "huỷ mọi request đang chạy".
+
+Kiểm độ nhạy: tạm bỏ điều kiện owner ở `releaseSessionCheck` → 2 ca Vitest và 2 ca hook trên trình duyệt fail (mount cũ huỷ nhầm request của mount mới). Đã khôi phục.
+
+### 41.3. Đính chính §40
+
+| §40 đã ghi | Đính chính |
+|---|---|
+| §40.5: unmount khi còn kiểm tra đang chờ "chỉ được test ở tầng store" | Test store của §40 huỷ bằng handle store vừa trả, nên không mô hình hoá handle mà hook giữ sau retry — vì vậy không bắt được R01. Nay có test mount hook thật (`session-check.hook.spec.ts`). Logout khi còn kiểm tra đang chờ vẫn chỉ test ở store. |
+| §40.6 mục 4: trạng thái bận của retry là màn chờ toàn trang | Chỉ đúng với `AppLayout`. Trên `/login` lúc đó không có trạng thái bận nào (R02); nay là dòng trạng thái cạnh form. |
+| §40.6 mục 1: trong CI "còn biên 1 lần cho retry" | Sai với test đăng ký hai tài khoản — xem N01 ở §41.4. |
+| §40.6 mục 2: UI khoá nút khi đang gửi nên không có đăng nhập song song | Chưa đủ: nút "Đăng nhập lại" trên notice không bị khoá cùng nút submit — xem N02 ở §41.4. |
+| §40.3: Vitest 92/92, Playwright 31/31 | Là số của head `34daf0d`. Số của vòng này ở §41.5. |
+
+### 41.4. Ghi chú N01, N02 — không đổi hành vi
+
+**N01 — biên rate limit.** Backend giới hạn đăng ký và đăng nhập 5 lần/phút/IP.
+
+- Một lượt E2E đầy đủ dùng 4 lần đăng ký và 4 lần đăng nhập qua UI: `not-found.spec.ts` 1, `golden-path.spec.ts` 1, `session-auth-regression.spec.ts` 2.
+- "Còn biên 1" chỉ đủ cho một **request** thêm, tức đủ để retry một test đăng ký một tài khoản.
+- Retry cả **test** `session-auth-regression` cần thêm 2 lần đăng ký và 2 lần đăng nhập, thành 6 trong cùng cửa sổ. Lần retry đó sẽ tự gặp `429`, nên retry của CI không cứu được test này nếu nó fail lần đầu.
+- Người triển khai chưa thấy CI fail vì lý do này. Không nới rate limit backend, không sửa CI, không thêm retry/sleep để che `429` trong `WEB-01`. Đây là điểm OPEN cho reviewer/chủ dự án.
+
+**N02 — POST login đang chờ rồi "Đăng nhập lại".** Phép thử tạm (không commit) ở tầng store cho kết quả:
+
+- Sau `endLocalSession()`: token `null`, trạng thái `unauthenticated`.
+- Request POST login không có abort signal.
+- Khi POST trả `200`: token mới được ghi, trạng thái `authenticated` với tài khoản vừa gửi.
+
+Tức "Đăng nhập lại" bỏ phiên cũ nhưng không huỷ lần đăng nhập đang gửi. Spec §4.1 chỉ quy định vô hiệu hoá `GET /api/auth/me`, chưa chốt chính sách cho POST login, nên `WEB-01` **không** đổi hành vi này. Ba lựa chọn để chủ dự án quyết:
+
+| Lựa chọn | Hệ quả |
+|---|---|
+| (a) Giữ nguyên | Người dùng vừa gửi form thì kết quả là đăng nhập bằng tài khoản đó. Đơn giản, nhưng nút "Đăng nhập lại" không có nghĩa "dừng mọi thứ". |
+| (b) Khoá "Thử lại"/"Đăng nhập lại" trong lúc đang gửi form | Chỉ đổi UI. Loại hẳn tình huống này, nhưng người dùng phải chờ POST xong. |
+| (c) "Đăng nhập lại" huỷ cả POST login | Cần truyền signal cho POST và thêm quy tắc thế hệ cho đăng nhập. Phải cập nhật và duyệt spec trước. |
+
+### 41.5. Evidence của vòng này — theo nguồn
+
+Chạy local ngày 2026-10-11 trên cây làm việc của commit sửa vòng này.
+
+| Kiểm tra | Người chạy | Loại | Kết quả |
+|---|---|---|---|
+| `npm run lint` | Người triển khai | — | exit 0; 2 warning có từ trước (không tăng) |
+| `npm run build` | Người triển khai | — | exit 0 |
+| `npm run test` | Người triển khai | Vitest + Jest | exit 0; web 100/100 (trước 92; +8), backend 174/174 |
+| `session-check.hook.spec.ts` | Người triển khai | Hook thật, transport fixture | 12/12 |
+| `session-check.fixture.spec.ts` | Người triển khai | Fixture UI | 28/28 (trước 26; +2) |
+| `session-auth-regression.spec.ts`, golden path, 404 | Người triển khai | **Backend thật** (local, database test cô lập, đã xoá) | 5/5 |
+| Toàn bộ `npx playwright test` | Người triển khai | Gộp ba nhóm trên | 45/45, một lượt |
+| Xem `/login` khi retry đang chờ, lỗi mạng thật | Người triển khai | Thủ công trên trình duyệt | Có `role="status"`, `aria-busy="true"`; form dùng được; token còn |
+| Probe R01/R02 tại `34daf0d` | **Reviewer** | Hook thật / `/login` thật, fixture | Tái hiện defect (theo báo cáo review) |
+| 26 fixture tại `34daf0d`, Chrome 154 | **Reviewer** | Fixture UI | 26/26 (theo báo cáo review) |
+| Required checks tại `34daf0d` | **Reviewer đọc từ GitHub** | CI | PASS (theo báo cáo review) |
+
+**NOT_RUN:**
+
+- CI tại head mới — chưa có kết quả khi viết mục này.
+- Ma trận viewport `WEB-V*`/`WEB-T*`, Firefox/WebKit, thiết bị thật.
+- Mạng chậm thật cho ngưỡng 15 giây.
+- Hook harness trên site đã deploy — spec tự bỏ qua khi `E2E_WEB_BASE_URL` được đặt, vì harness cần Vite dev server.
+- Re-review độc lập ở head mới.
+
+**Không đổi:** backend, API, schema, Flutter, Unity, dependency, lockfile, CI, nơi lưu token. `WEB-02`…`WEB-13` vẫn NOT STARTED.

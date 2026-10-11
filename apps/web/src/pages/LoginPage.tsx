@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Navigation } from 'lucide-react';
 import { LoginForm, type LoginSubmitPayload } from '@/components/auth/LoginForm';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
-import { SessionCheckNotice } from '@/components/auth/SessionCheckError';
+import { SessionCheckNotice, SessionCheckProgress } from '@/components/auth/SessionCheckError';
 import { endLocalSession, retrySessionCheck, signIn } from '@/services/authSession';
 import { useSessionCheck } from '@/services/useSessionCheck';
 
@@ -54,7 +54,9 @@ export default function LoginPage() {
       {/* Cột phải: form login glass */}
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-6">
         {/* WEB-01: kiểm tra phiên cũ lỗi (không phải 401) thì báo ở đây; form
-            bên dưới vẫn dùng được và token cũ chưa bị xoá. */}
+            bên dưới vẫn dùng được và token cũ chưa bị xoá. Trong lúc "Thử lại"
+            đang chạy thì hiện trạng thái đang kiểm tra thay cho thông báo lỗi. */}
+        {session.status === 'checking' && session.retrying && <SessionCheckProgress />}
         {session.status === 'error' && (
           <SessionCheckNotice
             failure={session.failure}
