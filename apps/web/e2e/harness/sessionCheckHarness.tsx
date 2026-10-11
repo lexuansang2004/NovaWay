@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getSessionSnapshot, retrySessionCheck, subscribeToSession } from '@/services/authSession';
 import { useSessionCheck } from '@/services/useSessionCheck';
@@ -46,9 +46,58 @@ subscribeToSession(() => {
   notifications += 1;
 });
 
+// --- Lifecycle barrier (review round 2, finding R03) -------------------------
+//
+// root.render() only SCHEDULES work. When it returns, React has neither
+// removed the old page from the DOM nor run its effect cleanup — and the
+// cleanup of a useEffect runs in a later pass than the DOM removal, so "the
+// element is gone" does not mean "the cleanup ran" either. A test that
+// answers a request right after calling mount([]) may therefore be answering
+// a page that is still mounted, which is not the "after unmount" case at all.
+//
+// So the harness reports the lifecycle itself. Each probe registers through
+// its own effect; that effect and useSessionCheck's effect are set up and
+// torn down by React in the same pass. `live` therefore only reaches the
+// requested set once the real hook's effects/cleanups for that change have
+// run. The comparison happens in a microtask, i.e. after React has finished
+// the whole synchronous pass (StrictMode's mount → cleanup → mount included),
+// so it does not depend on the order of the two effects inside the component.
+// No timers are involved: the tests run with a fake clock.
+const live = new Set<string>();
+let requested: string[] = [];
+let waiting: Array<() => void> = [];
+
+function resolveIfSettled() {
+  if (live.size !== requested.length || !requested.every((name) => live.has(name))) return;
+  const resolvers = waiting;
+  waiting = [];
+  for (const resolve of resolvers) resolve();
+}
+
+const checkAfterThisPass = () => queueMicrotask(resolveIfSettled);
+
+// Resolves once the mounted probes are exactly the requested ones and their
+// effects (or cleanups) have run.
+function whenSettled(): Promise<void> {
+  return new Promise((resolve) => {
+    waiting.push(resolve);
+    checkAfterThisPass();
+  });
+}
+
 // Exported only so React Fast Refresh treats this file as a component module.
 export function Probe({ name }: { name: string }) {
   const session = useSessionCheck();
+
+  useEffect(() => {
+    live.add(name);
+    checkAfterThisPass();
+    return () => {
+      live.delete(name);
+      checkAfterThisPass();
+    };
+  }, [name]);
+
   return (
     <section data-probe={name}>
       <output data-testid={`${name}-status`}>{session.status}</output>
@@ -66,20 +115,26 @@ const root = createRoot(document.getElementById('root')!);
 
 // Each name is one mounted page using the hook. Re-rendering with a different
 // list unmounts and mounts by key, exactly like navigating between two pages
-// that both check the session.
-function render(names: string[]) {
+// that both check the session. The returned promise is the barrier above:
+// awaiting it is what makes "after unmount" true.
+function mount(names: string[]): Promise<void> {
+  requested = [...names];
   const probes = names.map((name) => <Probe key={name} name={name} />);
   root.render(strict ? <StrictMode>{probes}</StrictMode> : <>{probes}</>);
+  return whenSettled();
 }
 
 const sessionHarness = {
-  mount: render,
+  mount,
+  whenSettled,
   respond: (index: number, status: number, body: unknown) => requests[index].respond(status, body),
   fail: (index: number) => requests[index].fail(),
   state: () => ({
     snapshot: getSessionSnapshot(),
     notifications,
     token: sessionStorage.getItem(TOKEN_KEY),
+    // Probes whose effects are currently set up — not just present in the DOM.
+    live: [...live].sort(),
     requests: requests.map((request) => ({
       authorization: request.authorization,
       aborted: request.signal?.aborted ?? null,
@@ -94,4 +149,4 @@ declare global {
 }
 
 window.sessionHarness = sessionHarness;
-render((params.get('mount') ?? 'a').split(',').filter(Boolean));
+void mount((params.get('mount') ?? 'a').split(',').filter(Boolean));

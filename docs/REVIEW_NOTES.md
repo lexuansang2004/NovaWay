@@ -847,3 +847,121 @@ Chạy local ngày 2026-10-11 trên cây làm việc của commit sửa vòng n�
 - Re-review độc lập ở head mới.
 
 **Không đổi:** backend, API, schema, Flutter, Unity, dependency, lockfile, CI, nơi lưu token. `WEB-02`…`WEB-13` vẫn NOT STARTED.
+
+## 42. `WEB-01` — re-review vòng 2 CHANGES_REQUESTED; sửa R03 (test không chờ unmount/cleanup); đính chính §41 (2026-10-11)
+
+**Trạng thái: READY FOR INDEPENDENT RE-REVIEW.** Ghi chép của người triển khai (R06 Frontend Engineer), **không** phải phê duyệt. `WEB-01` chưa PASS, chưa merge; PR #88 vẫn Draft. §40–§41 giữ nguyên; điểm sai của §41 được đính chính ở §42.5.
+
+**Re-review vòng 2:** do agent điều phối thực hiện tại head `43f10f0e8bf22cf1e17b9d2145be3058cfd9908b`. Kết luận:
+
+- R01 và R02 ở code sản phẩm **đã sửa đúng**.
+- Còn **R03 (P2)** về regression test, nên quyết định là **CHANGES_REQUESTED**.
+
+Người triển khai đồng ý với R03. Vòng này **không đổi code sản phẩm**; owner/generation giữ nguyên.
+
+### 42.1. R03 — nguyên nhân
+
+`mount()` của harness chỉ gọi `root.render(...)` rồi trả về. `root.render` chỉ lên lịch công việc. Khi nó trả về:
+
+- React chưa gỡ trang cũ khỏi DOM;
+- React chưa chạy cleanup của effect.
+
+Cleanup của `useEffect` lại chạy ở một lượt sau lượt gỡ DOM, nên "phần tử đã biến mất" cũng chưa có nghĩa "cleanup đã chạy". Test vì thế có thể đọc trạng thái hoặc trả response trong lúc trang vẫn đang mount. Đó không phải tình huống "sau unmount" mà tên test nêu.
+
+Bằng chứng trực tiếp của người triển khai (phép thử tạm, không commit): ngay trong cùng lời gọi, sau khi `mount([])` trả về, probe **vẫn còn trong DOM** và request **chưa abort** — 2/2 lần.
+
+Hệ quả có hai chiều:
+
+- **Fail giả:** các ca "unmount → response muộn" đọc `aborted=false` trước khi cleanup chạy.
+- **Pass giả:** các ca "mount cũ dọn dẹp không huỷ request của mount mới" đọc `aborted=false` có thể đúng chỉ vì cleanup *chưa chạy*, không phải vì cleanup làm đúng.
+
+### 42.2. Cách sửa — chỉ test và harness
+
+| Vị trí | Thay đổi |
+|---|---|
+| `apps/web/e2e/harness/sessionCheckHarness.tsx:66–86` | Hàng rào vòng đời. Mỗi probe đăng ký qua effect riêng (`:92–99`), được React dựng và gỡ cùng lượt với effect của `useSessionCheck`. `whenSettled()` resolve khi tập probe đang sống đúng bằng tập được yêu cầu. Phép so sánh chạy trong microtask, tức sau khi React xong cả lượt đồng bộ (kể cả StrictMode mount → cleanup → mount), nên không phụ thuộc thứ tự hai effect. Không dùng timer vì test chạy với đồng hồ giả. |
+| `sessionCheckHarness.tsx:120–125` | `mount()` trả về chính hàng rào đó. |
+| `sessionCheckHarness.tsx:137` | `state()` thêm `live`: các probe có effect đang dựng, không chỉ là có mặt trong DOM. |
+| `apps/web/e2e/session-check.hook.spec.ts:67–70` | `mountProbes()` chờ hàng rào rồi kiểm số probe trong DOM. Cả 10 lần mount/unmount trong file đều đi qua helper này; không còn lời gọi `mount` trần. |
+| `session-check.hook.spec.ts:91–100` | `expectNothingChangesAfterUnmount` tự chờ hàng rào và assert `live` rỗng **trước** khi đọc trạng thái và **trước** khi trả response muộn. Caller không thể bỏ qua. |
+| `session-check.hook.spec.ts:215–218, 240–243, 265–268` | Các ca mount mới tiếp quản assert `live` trước khi đọc `aborted`, để "không bị abort" nói về việc cleanup đã làm gì. |
+
+Không tăng sleep, không tăng retry, không skip, không bỏ assertion nào. Assertion abort/token/user/snapshot/notification/timer giữ nguyên; transport vẫn bỏ qua abort; test vẫn mount hook thật.
+
+### 42.3. Kết quả lặp, không retry
+
+Hai trình duyệt, 12 ca × 5 lượt, `retries=0`, một worker. "Trước" = spec và harness đúng như commit tại `43f10f0`. "Sau" = bản sửa vòng này. Code sản phẩm giống nhau ở cả hai.
+
+| Trình duyệt | Trước (test tại `43f10f0`) | Sau (test đã sửa) |
+|---|---|---|
+| Chrome 154.0.8037.98 (bản cài sẵn, cấu hình ngoài Git) | **49 pass / 11 fail** | **60/60** |
+| Chromium 149.0.7827.55 (Playwright mặc định) | 60/60 | 60/60 |
+
+Phân bố 11 lượt fail trên Chrome 154 trước sửa:
+
+- "several retries → unmount → late 200": 5/5 lượt. Đây đúng là ca flaky trên CI.
+- "StrictMode … late 401": 4/5.
+- "StrictMode … late 200": 2/5.
+
+Trên Chromium 149, lỗi không lộ ra ở máy người triển khai. Vì vậy con số "12/12" và "45/45" của §41 không phát hiện được R03 (xem §42.5).
+
+Các lượt khác với test đã sửa, `retries=0`:
+
+- 28 fixture + 12 hook trên Chromium 149: 40/40.
+- 28 fixture + 12 hook trên Chrome 154: 40/40.
+
+### 42.4. Độ nhạy của test đã sửa
+
+Thực hiện cô lập: sao lưu hai file production, đổi, chạy, khôi phục, rồi xác nhận trùng khớp bản sao lưu. Cây làm việc cuối chỉ khác ở hai file e2e.
+
+| Thay đổi tạm ở production | Kết quả 12 ca hook (test đã sửa) |
+|---|---|
+| Hook + store như tại `34daf0d` (lỗi R01 gốc) | 8 fail / 4 pass — đúng 8 ca "retry → unmount" |
+| Bỏ điều kiện owner trong `releaseSessionCheck` | 2 fail / 10 pass — 2 ca mount mới tiếp quản |
+| `releaseSessionCheck` không huỷ gì | 9 fail / 3 pass |
+
+Hàng rào không làm test dễ dãi hơn: nếu cleanup không huỷ request, assertion vẫn fail. Cleanup của probe vẫn chạy nên hàng rào vẫn mở; chỉ có request là không bị abort.
+
+### 42.5. Đính chính §41
+
+| §41 đã ghi | Đính chính |
+|---|---|
+| §41.2: hook spec "12/12 pass" sau sửa | Là một lượt trên Chromium 149 ở máy người triển khai. Test có race (R03) nên kết quả không ổn định: Chrome 154 fail 11/60 lượt; CI flaky 1 ca. |
+| §41.5: toàn bộ Playwright "45/45, một lượt" | Đúng cho lượt local đó, nhưng **CI tại `43f10f0` là 44 passed + 1 flaky**, không phải 45 pass sạch. Ca "several retries → unmount → late 200" fail ở `session-check.hook.spec.ts:79` rồi pass khi retry. Required checks SUCCESS nhờ retry. Người triển khai đã tự đọc log job E2E để xác nhận. |
+| §41.2: 4 ca "pass cả trước và sau" chặn cách sửa sai | Trước R03, các ca mount mới tiếp quản có thể pass giả (§42.1). Từ vòng này chúng mới đọc trạng thái sau khi cleanup của mount cũ đã chạy. |
+| §41.4 N01: lần retry của test regression "sẽ tự gặp 429" | Nói quá. Retry trong cùng cửa sổ **có thể** vượt ngưỡng; còn tuỳ thời điểm và số request đã gửi trước khi fail. |
+
+### 42.6. N01, N02 — không đổi
+
+- **N01** (biên rate limit) là rủi ro riêng của cách dựng test. Nó **không** phải nguyên nhân hook flaky: ca flaky trên CI là fixture hook, không gọi backend. Không nới throttling, không sửa CI.
+- **N02** (POST login đang chờ rồi "Đăng nhập lại") vẫn OPEN. Chưa có quyết định (a)/(b)/(c) nên `WEB-01` không đổi hành vi POST login. Reviewer khuyến nghị hướng (c) cho một micro-step riêng, sau khi spec được cập nhật và duyệt; đó chưa phải quyết định của chủ dự án.
+
+### 42.7. Evidence của vòng này — theo nguồn
+
+Chạy local ngày 2026-10-11.
+
+| Kiểm tra | Người chạy | Loại | Kết quả |
+|---|---|---|---|
+| `npm run lint` | Người triển khai | — | exit 0; 2 warning có từ trước |
+| `npm run build` | Người triển khai | — | exit 0 |
+| `npm run test` | Người triển khai | Vitest + Jest | exit 0; web 100/100, backend 174/174 (không đổi so với `43f10f0`) |
+| 12 hook × 5, Chrome 154, test tại `43f10f0` | Người triển khai | Hook thật, transport fixture | 49/11 — tái hiện R03 |
+| 12 hook × 5, Chrome 154, test đã sửa | Người triển khai | Hook thật, transport fixture | 60/60, `retries=0` |
+| 12 hook × 5, Chromium 149, test đã sửa | Người triển khai | Hook thật, transport fixture | 60/60, `retries=0` |
+| 28 fixture + 12 hook, mỗi trình duyệt một lượt | Người triển khai | Fixture UI + hook | 40/40 trên cả hai, `retries=0` |
+| Toàn bộ `npx playwright test --retries=0` | Người triển khai | Gồm 5 ca **backend thật** (database test cô lập, đã xoá) | 45/45 |
+| Ba phép kiểm độ nhạy (§42.4) | Người triển khai | Mutation tạm, đã khôi phục | Fail đúng ca mong đợi |
+| Nguyên test tại `43f10f0`: 37 pass / 3 fail; diagnostic có đồng bộ: 60/60 | **Reviewer** | Chrome 154, `retries=0` | Theo báo cáo re-review |
+| CI E2E tại `43f10f0`: 44 passed + 1 flaky | **GitHub Actions** (reviewer và người triển khai cùng đọc log) | CI | Required checks SUCCESS nhờ retry |
+
+Bản diagnostic của reviewer chờ DOM rồi poll `aborted`; nó chỉ là bằng chứng về thứ tự thực thi, không phải requirement. Bản sửa trong PR dùng hàng rào do harness cung cấp, để assertion `aborted` vẫn là assertion chứ không thành điều kiện chờ.
+
+**NOT_RUN:**
+
+- CI tại head mới — chưa có kết quả khi viết mục này.
+- Re-review độc lập ở head mới.
+- Ma trận viewport, Firefox/WebKit, thiết bị thật.
+- Mạng chậm thật cho ngưỡng 15 giây.
+- Hook harness trên site đã deploy.
+
+**Không đổi:** code sản phẩm của `apps/web/src`, backend, API, schema, Flutter, Unity, dependency, lockfile, CI, cấu hình Playwright/Vitest. `WEB-02`…`WEB-13` vẫn NOT STARTED.

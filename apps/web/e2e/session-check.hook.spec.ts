@@ -52,6 +52,21 @@ async function openHarness(page: Page, options: { strict?: boolean; mount?: stri
   const query = new URLSearchParams({ mount: options.mount ?? 'a', strict: options.strict ? '1' : '0' });
   await page.goto(`/__session-hook-harness?${query}`);
   await page.waitForFunction(() => typeof window.sessionHarness !== 'undefined');
+  await page.evaluate(() => window.sessionHarness.whenSettled());
+}
+
+// Mounts exactly these probes and waits until React has actually done it.
+//
+// Review round 2, finding R03: root.render() only schedules work, so the
+// harness call returning proves nothing about the lifecycle — the old page may
+// still be mounted and its effect cleanup not run yet. `mount` returns the
+// harness's lifecycle barrier (see sessionCheckHarness.tsx): it resolves once
+// the probes whose effects are set up are exactly `names`, i.e. after the real
+// hook's cleanup ran for every page that went away and its effect ran for
+// every page that arrived. Every mount/unmount in this file goes through here.
+async function mountProbes(page: Page, names: string[]) {
+  await page.evaluate((requested) => window.sessionHarness.mount(requested), names);
+  await expect(page.locator('[data-probe]')).toHaveCount(names.length);
 }
 
 const state = (page: Page) => page.evaluate(() => window.sessionHarness.state());
@@ -74,7 +89,15 @@ async function answer(page: Page, index: number, late: LateAnswer, user = USER_A
 // user, token untouched, the abandoned request aborted — and no timer left
 // to fire the 15s timeout later.
 async function expectNothingChangesAfterUnmount(page: Page, late: LateAnswer, abandonedIndex: number) {
+  // The barrier, enforced here as well so no caller can skip it: the unmount
+  // and its effect cleanup must be finished BEFORE the state is read and
+  // BEFORE the late answer is released. Otherwise this would be answering a
+  // page that is still mounted, which is a different (and allowed) case.
+  await page.evaluate(() => window.sessionHarness.whenSettled());
+  await expect(page.locator('[data-probe]')).toHaveCount(0);
+
   const before = await state(page);
+  expect(before.live, 'no probe is mounted any more').toEqual([]);
   // soft: keep going so one run also shows what the unaborted request then does.
   expect.soft(before.requests[abandonedIndex].aborted, 'request of the unmounted page is aborted').toBe(true);
 
@@ -104,8 +127,7 @@ test.describe('the real hook: unmount cancels the check this mount owns, includi
       await waitForRequests(page, 2);
       await expect(status(page, 'a')).toHaveText('checking');
 
-      await page.evaluate(() => window.sessionHarness.mount([]));
-      await expect(status(page, 'a')).toHaveCount(0);
+      await mountProbes(page, []);
 
       await expectNothingChangesAfterUnmount(page, late, 1);
     });
@@ -119,7 +141,7 @@ test.describe('the real hook: unmount cancels the check this mount owns, includi
 
     await page.getByRole('button', { name: 'Retry a' }).click();
     await waitForRequests(page, 2);
-    await page.evaluate(() => window.sessionHarness.mount([]));
+    await mountProbes(page, []);
 
     await expectNothingChangesAfterUnmount(page, '401', 1);
   });
@@ -138,7 +160,7 @@ test.describe('the real hook: unmount cancels the check this mount owns, includi
     }
     await page.getByRole('button', { name: 'Retry a' }).click();
     await waitForRequests(page, 4);
-    await page.evaluate(() => window.sessionHarness.mount([]));
+    await mountProbes(page, []);
 
     await expectNothingChangesAfterUnmount(page, '200', 3);
   });
@@ -147,7 +169,7 @@ test.describe('the real hook: unmount cancels the check this mount owns, includi
     await openHarness(page);
     await waitForRequests(page, 1);
 
-    await page.evaluate(() => window.sessionHarness.mount([]));
+    await mountProbes(page, []);
 
     await expectNothingChangesAfterUnmount(page, '401', 0);
   });
@@ -165,7 +187,7 @@ test.describe('the real hook: unmount cancels the check this mount owns, includi
 
       await page.getByRole('button', { name: 'Retry a' }).click();
       await waitForRequests(page, 3);
-      await page.evaluate(() => window.sessionHarness.mount([]));
+      await mountProbes(page, []);
 
       await expectNothingChangesAfterUnmount(page, late, 2);
     });
@@ -183,14 +205,17 @@ test.describe('the real hook: an old mount cleaning up never cancels the check o
     await waitForRequests(page, 2);
 
     // Page b mounts while a (with its retry pending) is still there.
-    await page.evaluate(() => window.sessionHarness.mount(['a', 'b']));
+    await mountProbes(page, ['a', 'b']);
     await waitForRequests(page, 3);
     expect((await state(page)).requests[1].aborted).toBe(true); // a's retry was superseded by b's check
 
-    // Now a goes away. Its cleanup must leave b's check alone.
-    await page.evaluate(() => window.sessionHarness.mount(['b']));
-    await expect(status(page, 'a')).toHaveCount(0);
-    expect((await state(page)).requests[2].aborted).toBe(false);
+    // Now a goes away. Its cleanup must leave b's check alone. mountProbes
+    // returns only after a's cleanup ran, so "not aborted" below is a
+    // statement about what the cleanup did, not about it not having run yet.
+    await mountProbes(page, ['b']);
+    const afterOldPageLeft = await state(page);
+    expect(afterOldPageLeft.live).toEqual(['b']);
+    expect(afterOldPageLeft.requests[2].aborted).toBe(false);
 
     // a's abandoned retry answers late: ignored.
     await answer(page, 1, '401');
@@ -212,9 +237,10 @@ test.describe('the real hook: an old mount cleaning up never cancels the check o
     await page.getByRole('button', { name: 'Retry a' }).click();
     await waitForRequests(page, 2);
 
-    await page.evaluate(() => window.sessionHarness.mount(['b']));
+    await mountProbes(page, ['b']);
     await waitForRequests(page, 3);
     const swapped = await state(page);
+    expect(swapped.live).toEqual(['b']);
     expect(swapped.requests[1].aborted).toBe(true);
     expect(swapped.requests[2].aborted).toBe(false);
 
@@ -234,15 +260,16 @@ test.describe('the real hook: an old mount cleaning up never cancels the check o
     await page.getByRole('button', { name: 'Retry a' }).click();
     await waitForRequests(page, 3);
 
-    await page.evaluate(() => window.sessionHarness.mount(['a', 'b']));
+    await mountProbes(page, ['a', 'b']);
     await waitForRequests(page, 5); // b's effect also runs twice
-    await page.evaluate(() => window.sessionHarness.mount(['b']));
+    await mountProbes(page, ['b']);
 
     // 0: a's StrictMode throwaway check (cancelled). 1: a's real check, which
     // completed with the 500 above, so it was never aborted. 2: a's retry,
     // superseded by b. 3: b's StrictMode throwaway check. 4: b's real check —
     // still running after a's cleanup.
     const afterSwap = await state(page);
+    expect(afterSwap.live).toEqual(['b']);
     expect(afterSwap.requests.map((request) => request.aborted)).toEqual([true, false, true, true, false]);
 
     await answer(page, 4, '200', USER_B);
