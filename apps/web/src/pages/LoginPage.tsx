@@ -28,11 +28,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full overflow-hidden bg-slate-950 text-white">
+    <div className="relative isolate flex min-h-dvh w-full min-w-0 flex-col bg-slate-950 text-white lg:flex-row">
       <MapGridBackdrop />
 
       {/* Cột trái: brand + visual (ẩn trên mobile) */}
-      <div className="relative z-10 hidden flex-1 flex-col justify-between p-12 lg:flex">
+      <div className="relative z-10 hidden min-w-0 flex-1 basis-0 flex-col justify-between gap-12 px-6 py-8 [overflow-wrap:anywhere] lg:flex xl:px-12">
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-emerald-400 text-slate-950">
@@ -52,30 +52,33 @@ export default function LoginPage() {
       </div>
 
       {/* Cột phải: form login glass */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center p-6">
-        {/* WEB-01: kiểm tra phiên cũ lỗi (không phải 401) thì báo ở đây; form
-            bên dưới vẫn dùng được và token cũ chưa bị xoá. Trong lúc "Thử lại"
-            đang chạy thì hiện trạng thái đang kiểm tra thay cho thông báo lỗi. */}
-        {session.status === 'checking' && session.retrying && <SessionCheckProgress />}
-        {session.status === 'error' && (
-          <SessionCheckNotice
-            failure={session.failure}
-            onRetry={retrySessionCheck}
-            onRelogin={endLocalSession}
-          />
-        )}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key="login-form"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <LoginForm onSubmit={handleSubmit} />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <main className="relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center px-3 py-6 sm:px-6 lg:px-8">
+        <div className="w-full min-w-0 max-w-sm">
+          {/* WEB-01: kiểm tra phiên cũ lỗi (không phải 401) thì báo ở đây; form
+              bên dưới vẫn dùng được và token cũ chưa bị xoá. Trong lúc "Thử lại"
+              đang chạy thì hiện trạng thái đang kiểm tra thay cho thông báo lỗi. */}
+          {session.status === 'checking' && session.retrying && <SessionCheckProgress />}
+          {session.status === 'error' && (
+            <SessionCheckNotice
+              failure={session.failure}
+              onRetry={retrySessionCheck}
+              onRelogin={endLocalSession}
+            />
+          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="login-form"
+              className="w-full min-w-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <LoginForm onSubmit={handleSubmit} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
     </div>
   );
 }

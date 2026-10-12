@@ -1032,3 +1032,66 @@ Narrator spot-check là output thật đọc trong Speech recap, không suy từ
 - WEB-VH1 Android Chrome thật và WEB-VH2 Safari iPhone thật: NOT_RUN, gate công bố hỗ trợ thiết bị tách riêng theo spec §4.7. Không tuyên bố hỗ trợ thiết bị từ emulation.
 - Các nội dung dashboard/login/form/map/analytics/bốn trang tài khoản thuộc WEB-03…WEB-12; các hàng ma trận toàn route còn NOT_RUN. WEB-02 chỉ xác nhận shell/navigation subset theo evidence, không đánh PASS RWD toàn sản phẩm.
 - N01/N02 của WEB-01, Privacy Content Gate trước WEB-11 và quyết định preference trước WEB-12 vẫn giữ nguyên. Không gộp code thêm vào PR này.
+
+## 45. WEB-02 đóng gate Windows và merge PR #89; WEB-03 bắt đầu (2026-10-12)
+
+Ghi bởi Lead điều phối. §44 giữ như snapshot local trước CI; mục này bổ sung kết quả cuối, không sửa lịch sử. [Quyết định gate trên PR #89](https://github.com/lexuansang2004/NovaWay/pull/89#issuecomment-6117950112) nêu reviewer QA/UX độc lập với các Frontend agent, Lead tích hợp và thực hiện native zoom/Narrator; đăng qua tài khoản GitHub chủ dự án, không giả native GitHub approval của người thứ hai.
+
+- Head đã duyệt và merge: `2906d75a6ab30fab57f5155c847efca2752f6844`. Source hashes khớp review độc lập; các finding đều đóng; selected-name Narrator record được reviewer đối chiếu với AC-RWD-10, không coi đó là lượt chạy Narrator thứ hai.
+- [CI run38204986222](https://github.com/lexuansang2004/NovaWay/actions/runs/38204986222) headSha đúng: Node, E2E, Mobile và Vercel SUCCESS. Lead đọc log E2E: **60 passed (1.5m), không flaky/retry**, gồm regression backend thật auth/vehicle/trip-observation/analytics.
+- Chủ dự án cho phép merge khi đạt và tiếp tục bước kế tiếp. Đã kiểm lại head/checks, chuyển Ready và squash merge PR #89 vào develop tại `1c02617ab604b1eace11011e50874d690a3c157f`. **WEB-02 gate merge Windows PASS, đã MERGED.** WEB-VH1/VH2 vẫn NOT_RUN; không dùng một COMPLETED chung hoặc tuyên bố hỗ trợ thiết bị.
+- Tree Git của develop `1c02617` bằng tree của head PR `2906d75` (`d7643395932169dbbeb36b5ff0779daede15c53c`); không có code mới ngoài tree đã kiểm. Checkout chính có thay đổi Flutter được giữ nguyên; không pull/reset/stash checkout đó, không tạo PR lên main.
+- WEB-03 bắt đầu từ develop `1c02617`, branch `style/web-login-responsive`. Chỉ layout trang/form/notice đăng nhập; không sửa auth contract/semantics hoặc N02. Gate Windows theo plan và spec; bàn phím/thiết bị thật vẫn ghi riêng. **IN PROGRESS, chưa có kết quả gate WEB-03.** WEB-04…WEB-13 chưa bắt đầu.
+- Narrator test cleanup vẫn chưa được Windows cho phép tự động; chủ dự án đã được hướng dẫn Win+Ctrl+Enter. Không nâng quyền hoặc đổi setting bảo mật/quyền riêng tư. Điều này không được ghi nhầm thành đã dọn xong.
+
+## 46. WEB-03 — diễn giải phạm vi kiểm tra layout đăng nhập (2026-10-12)
+
+Ghi bởi Lead trước khi đóng gate. Baseline `1c02617`, branch `style/web-login-responsive`; **IN PROGRESS, không phải kết quả kiểm thử hoặc phê duyệt merge**. §35–§45 được giữ nguyên.
+
+- Plan WEB-03 tham chiếu AC-RWD-06, nhưng nguyên văn AC này mô tả form phương tiện, nút Lưu/Huỷ và lỗi gắn trường. Với `/login`, áp dụng phần nguyên tắc layout/form/scroll/giữ dữ liệu khi đổi kích thước của NFR-RWD-05 cùng AC-RWD-01/04; không thêm Lưu/Huỷ, validation hoặc nghiệp vụ phương tiện vào đăng nhập. Form xe và toàn bộ AC-RWD-06 riêng cho xe được kiểm tại WEB-06.
+- Phạm vi WEB-03: bố cục trang, form, nhãn, thông báo lỗi phiên và trạng thái retry/submitting trên màn hình hẹp/thấp; giữ nguyên auth contract, trạng thái phiên, nút chủ động đăng nhập lại và N02. Không thêm ghi nhớ đăng nhập hoặc thay hành vi POST login.
+- Frontend agent tạo regression trước sửa. Reviewer QA/UX độc lập kiểm source và diagnostic riêng; Lead kiểm native browser zoom và native text-only zoom trong profile tạm. CSS tăng font, viewport emulation và giảm chiều cao cửa sổ phải ghi đúng loại, không gọi là zoom hoặc bàn phím thiết bị thật.
+- Gate Windows chỉ đóng sau test mục tiêu, regression, lint/test/build, independent review và required checks ở đúng head đều đạt. WEB-VH1/VH2 và bàn phím ảo thật vẫn NOT_RUN; không dùng kết quả Windows để công bố hỗ trợ thiết bị.
+
+## 47. WEB-03 — layout đăng nhập, review độc lập và evidence local (2026-10-12)
+
+**Trạng thái khi ghi record:** review kỹ thuật độc lập PASS; các phép local bên dưới đã chạy; required checks và merge Windows còn chờ. WEB-04 chưa bắt đầu. Baseline `1c02617`, branch `style/web-login-responsive`, commit message theo plan `style: improve responsive login layout`. §35–§46 giữ nguyên.
+
+### 47.1. Trước/sau và phạm vi
+
+- Frontend agent tái hiện trên source baseline: lỗi credential dài ở viewport320×568 với root CSS font32px làm paragraph rộng670px/scrollWidth3437px; `overflow-hidden` ngoài trang giấu phần tràn. Regression FAIL trước sửa, PASS sau sửa. Đây là CSS stress, không phải native zoom.
+- Form/notice/progress dùng chung wrapper có width rõ và min-width0; cột brand/form co theo không gian thực; trang cuộn dọc tự nhiên thay vì che nội dung. Nhãn/error wrap, input/action có chiều cao tự động và tối thiểu44px. Không thay label/input ID/autocomplete, form payload, validation, auth callback hoặc service.
+- Lượt keyboard phát hiện lớp motion trang trí tạo Tab stop rỗng trước submit. `tabIndex=-1` chỉ bỏ lớp trang trí khỏi thứ tự Tab; button thật vẫn submit bằng Enter. Không thêm nghiệp vụ hoặc thay animation preference.
+- Source chỉ LoginPage/LoginForm và styling Notice/Progress; protected SessionCheckErrorScreen không đổi. Không backend/API/schema, Flutter/Unity, generic primitives, dependency/lockfile hoặc cấu hình CI. N01/N02 của WEB-01 giữ OPEN.
+
+### 47.2. Review độc lập và identity
+
+Reviewer QA/UX `web02_final_review` không viết source/test/docs trong PR, không commit/merge. Đọc diff source, fixture18 ca và docs §45–§46; chạy probe riêng, error text khác fixture tác giả. **PASS, không có finding chặn** trên snapshot freeze:
+
+- LoginPage SHA-256 `8A90BCA953A98787889C8589374907DE00E2E1DDA462130305729E83CCC3A609`.
+- LoginForm `2B330F442BABC37E61BF4819988D1D12E3E83179BAAFF3E9A164B42CB95E66E6`.
+- SessionCheckError `E1A838DDDF64CCB6E9EA80C6C3C86797C7CF1F4E60CF4D87C95A90F50B60D034`.
+- Login fixture `32ED6071EC3453256377F457E455629A7967D48A0B5D57C103DCAD13D3BCE037`.
+
+Probe riêng: tám cấu hình empty/credential-error/resize (320×568,390×844,844×390,1280×720, biên1023/1024/1025×800,320×180 root32) và ba cấu hình notice→retry-busy/reduced-height. Toàn bộ PASS: text/document không tràn ngang, control cuộn tới được với full bbox, email/password/focus giữ nguyên, token còn giữ và form dùng được. Đây là11 lượt cấu hình, không cộng thành test của suite18 hoặc73. Reviewer không chạy native zoom, Firefox hoặc backend-real; nguồn đó ghi riêng.
+
+### 47.3. Gate local theo nguồn
+
+| Kiểm tra | Nguồn / môi trường | Actual |
+| --- | --- | --- |
+| Lint / production build | Lead, từng lệnh exit riêng trên source freeze | PASS; hai warning Fast Refresh và chunk-size warning cũ giữ nguyên |
+| Unit tests | Lead, Vitest/Jest | Web100/100, backend174/174 PASS |
+| Login fixture | Frontend agent, Chrome154.0.8037.98, one worker/retries0 | 18/18 PASS; C320/360/390/430, V05, VB3, text stress, submitting/error/session failures/timeout/retry, keyboard; touch390×844/DPR2 có input và submit tap thật |
+| Regression fixture / hook | Lead, Chrome154, one worker/retries0 | 73/73 PASS (18login+15navigation+28sessionUI+12hook); không backend thật trong lượt local này |
+| Browser zoom thật | Lead, Chrome154 profile tạm, content1280×720 ở100% | 200% CSS640×360/DPR2 và400% CSS320×180/DPR4; credential-error, session-notice, submitting, retry-busy =8 lượt PASS; bbox/scroll/value/token và capture surface |
+| Native text-only200% | Lead, Firefox144 profile tạm, viewport BiDi390×844 và1280×720/DPR1 | Credential-error, session-notice, submitting =6 lượt PASS; heading20→40px, width/DPR không đổi, text/control/value/token dùng được |
+| Required checks / backend-real regression | CI của PR chứa record này | PENDING khi viết; phải kiểm đúng head và đọc E2E log, không gán local PASS thay CI |
+
+Native zoom dùng setting thật trong profile browser tạm; không đổi profile cá nhân hoặc dependency dự án. Helper Firefox đã sửa locator đo heading để chọn heading login đang hiển thị, không heading brand bị ẩn; phép đo đầu sai không dùng làm evidence cuối. Native single-line input được cuộn text bên trong, không đòi email dài wrap như paragraph. Visual QA xem capture Chrome400% và Firefox text200%; nội dung dưới fold tiếp cận bằng cuộn dọc, không yêu cầu toàn bộ form vừa một màn hình.
+
+### 47.4. Giới hạn còn giữ
+
+- WEB-VH1/VH2, bàn phím ảo thật/safe area: NOT_RUN, gate thiết bị riêng, không chặn merge Windows nhưng chặn công bố hỗ trợ. Giảm chiều cao viewport không thay thiết bị thật.
+- Không đánh PASS toàn ma trận route/thiết bị; chỉ login subset được ghi ở W03. Không claim WCAG audit, Narrator run mới hoặc Firefox toàn regression từ sáu lượt text-zoom.
+- Lead kiểm read-only sau lượt Narrator trước: process Narrator không còn chạy; không ghi thành agent đã tự tắt bằng quyền cao. §44–§45 là lịch sử tại lúc trước, không bị sửa.
+- WEB-04 chỉ bắt đầu sau required checks/review cuối và merge WEB-03; Privacy Content Gate và các quyết định preference trước WEB-11/12 giữ nguyên.
