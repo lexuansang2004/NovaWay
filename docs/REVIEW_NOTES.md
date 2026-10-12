@@ -965,3 +965,70 @@ Bản diagnostic của reviewer chờ DOM rồi poll `aborted`; nó chỉ là b�
 - Hook harness trên site đã deploy.
 
 **Không đổi:** code sản phẩm của `apps/web/src`, backend, API, schema, Flutter, Unity, dependency, lockfile, CI, cấu hình Playwright/Vitest. `WEB-02`…`WEB-13` vẫn NOT STARTED.
+
+## 43. Đóng dependency WEB-00 và WEB-01 bằng review độc lập, merge; bắt đầu WEB-02 (2026-10-11)
+
+Ghi bởi agent điều phối, không phải Claude — tác giả WEB-00/WEB-01. Giữ nguyên §35–§42 như lịch sử. §39 đã dành cho AR 8.1b, vì vậy provenance WEB-00 được bổ sung ở đây.
+
+### 43.1. WEB-00
+
+- Review độc lập cuối tại `1827ea84c4b59523424ca0a9f3f1f979dcd8ff29`: [quyết định trên PR #87](https://github.com/lexuansang2004/NovaWay/pull/87#issuecomment-6096992054). §38 là tự phê duyệt của tác giả và **không được tính là phê duyệt độc lập**.
+- Quyết định đăng qua tài khoản GitHub chủ dự án, cũng là tài khoản tác giả PR; độc lập giữa các agent, không giả định đó là GitHub APPROVED của người dùng thứ hai.
+- PR #87 đã MERGED vào develop, commit `f563a0d1eda919ffb5339eeb5f30979e23967df3`. Ba required checks đã PASS theo quyết định review. Gate tài liệu đóng; các AC triển khai không tự thành PASS vì tài liệu merge.
+
+### 43.2. WEB-01
+
+- Review độc lập cuối PASS tại `cdd6967ce8ad0a6d3dbe587f9a784795f0a1a6ec`: [quyết định trên PR #88](https://github.com/lexuansang2004/NovaWay/pull/88#issuecomment-6105540126). R01 (cleanup retry), R02 (busy state) và R03 (hàng rào vòng đời của test) đều được đóng bằng source, test độc lập và CI, không chỉ dựa log tác giả.
+- Reviewer tự chạy: lint/build PASS (warning cũ giữ nguyên); web 100/100, backend 174/174; nguyên 12 hook test lặp 5 lượt = 60/60, zero retry/flaky/skip; fixture UI 28/28, không retry. Trình duyệt Chrome 154.0.8037.98, Windows, 1280×720. Không gọi 60 lượt là 60 kịch bản riêng.
+- [CI đúng SHA, run 38111580481](https://github.com/lexuansang2004/NovaWay/actions/runs/38111580481): Backend + Web + shared-types, E2E, Mobile đều SUCCESS; E2E log **45 passed, không flaky/retry**, khác head cũ 44 pass + 1 flaky. Vercel checks SUCCESS. Reviewer không chạy lại năm backend-real E2E local; chúng được xác nhận từ CI.
+- Chủ dự án yêu cầu merge nếu đạt. Head/checks được kiểm lại trước khi chuyển Ready và squash merge; PR #88 đã MERGED vào develop tại `4be69b84cc57229ed21da6e792e25e577ee728b1`. Không force-push, không sửa checkout chính hoặc thay đổi Flutter có sẵn.
+- N01 (biên rate limit E2E) và N02 (POST login pending sau relogin) vẫn OPEN, không được coi đã sửa. N02 cần đặc tả được duyệt ở micro-step riêng. Chưa có evidence thiết bị thật, ma trận RWD hay mạng chậm thật cho WEB-01.
+
+### 43.3. WEB-02 bắt đầu sau merge
+
+Baseline `4be69b8`, branch `feat/web-responsive-navigation`; chỉ shell/navigation trong apps/web, không đổi auth/API/schema hoặc nội dung bốn trang tài khoản. Frontend agent triển khai; UX/QA agent review độc lập; Lead tích hợp. **IN PROGRESS, chưa có quyết định PASS gate merge Windows.** Thiết bị WEB-VH1/VH2 vẫn NOT_RUN; không cần Mac/iPhone cho gate Windows. Các bước WEB-03…WEB-13 chưa bắt đầu.
+
+## 44. WEB-02 — responsive shell/navigation, review độc lập và evidence local (2026-10-12)
+
+**Trạng thái tại commit chứa record này:** review kỹ thuật độc lập PASS; kiểm tra local bên dưới đã chạy; chờ required PR checks và quyết định đóng gate merge Windows. Chưa merge, WEB-03 chưa bắt đầu. Baseline `4be69b8`; branch `feat/web-responsive-navigation`; commit message theo plan: `feat: add responsive web navigation`. §35–§43 được giữ nguyên.
+
+### 44.1. Hành vi và phạm vi
+
+- Bề rộng CSS <1024: header với nút mở drawer có tên; ≥1024: sidebar. Chỉ một cây navigation được mount; Outlet/form giữ nguyên identity khi đổi breakpoint.
+- Drawer quản lý focus, Escape/nút đóng/bấm ngoài, chọn route kể cả route hiện tại, nested account menu, Browser Back/Forward; resize dọn portal/scroll lock và đưa focus sang control còn hiển thị nếu focus thuộc navigation.
+- Navigation cuộn trong chiều cao thực, nhãn và email đầy đủ wrap; control chính tối thiểu 44×44 CSS px. Email tách khỏi nút tài khoản để anchor không vượt viewport. Account popup được fit theo viewport khi mount, resize và khi animation của chính nó kết thúc; mở sau khi thả pointer để tránh chọn nhầm mục nằm đè lên trigger.
+- Chỉ AppLayout/ResponsiveNavigation/Sidebar, một fixture spec và hồ sơ tài liệu. Không đổi API/schema/auth service, nội dung trang tài khoản, Flutter/Unity, dependency/lockfile hoặc cấu hình CI.
+
+### 44.2. Review độc lập
+
+Reviewer `web02_final_review` không viết source hoặc tài liệu trong PR; Lead tích hợp khác các Frontend agent viết source. Review source trước/sau, chạy diagnostic độc lập, không chỉ đọc log tác giả.
+
+- R04 [P2]: email dài làm trigger cao hơn viewport, popup/logout nằm ngoài màn hình ở 320×180 và 320×568 khi tăng root CSS font 32px. Đã tái hiện độc lập; cách sửa đầu còn đo rectangle trong animation. Bản cuối refit sau animation thật, có callback ref/RAF hợp lệ và cleanup. Thuộc tính `onPlaced` không được public type của thư viện hỗ trợ đã loại; build xác nhận lại PASS.
+- Reviewer đóng R04: bốn cấu hình keyboard Enter/Space/ArrowDown, Home/End, Escape/focus PASS; cùng diagnostic với animation/transition tắt cũng PASS; menu 99% trong viewport trước resize. Bốn cấu hình viewport với nested account portal và sáu vòng chuyển breakpoint mỗi cấu hình PASS; không pageerror hay lock còn sót. Một regression đổi chiều cao chạy lại độc lập PASS, retries=0.
+- Source identity đã review: Sidebar SHA-256 `FAF618A0F073648423D35CE6CA25790ED9DA616B00CA4F20386EC8B836B58238`; ResponsiveNavigation `1EFDBEE8905865F30F0BA9D26067F3C666FCA2F5C6CE55E8534BD49E772346E7`; AppLayout `4F94D8E09E6E1E94FE9343D7A2E45B68D00081558706B7C14C04A2BC2E2EAEB1`; fixture spec `AD8FB646D4D1CE5BE891F679A133E254587B7BD7810FB58FAC27D7862C53D1F5`.
+- Reviewer không tự chạy các phép native zoom, Narrator hoặc backend-real; các nguồn bên dưới ghi riêng. Đây không phải chứng nhận accessibility hay release toàn dự án.
+
+### 44.3. Evidence local theo nguồn
+
+| Kiểm tra | Nguồn | Môi trường / phạm vi | Actual |
+| --- | --- | --- | --- |
+| lint / build | Lead, chạy từng lệnh kiểm exit riêng sau sửa type | Root workspace, Node 24.17.0 | PASS; hai warning Fast Refresh và warning chunk-size cũ còn giữ |
+| unit tests | Lead | Web Vitest / backend Jest | 100/100 và 174/174 PASS; không đổi service/backend trong lượt sửa CSS/lifecycle menu |
+| Fixture navigation | Frontend agent | Chrome 154.0.8037.98, one worker, retries=0; `apps/web/e2e/responsive-navigation.fixture.spec.ts` | 15/15 PASS; viewport/mouse/keyboard; ca riêng touch/DPR2 thực hiện tap |
+| Viewport + resize | Fixture spec / reviewer diagnostic độc lập | 320×568, 844×390, 1024×768, 1280×720; 1023↔1024↔1025; thêm 1024×180 | PASS trong phạm vi shell, focus, form giữ dữ liệu, logout/deep link/404 |
+| CSS stress / R04 | Frontend / reviewer | Root font 32px; 320×180/568; popup resize 568→180→390→568→180→568 | PASS sau sửa; không gọi đây là native text zoom |
+| True browser zoom | Lead | Chrome 154, content size 1280×720 tại 100%; browser setting thật | 200%: CSS 640×360/DPR2; 400%: CSS 320×180/DPR4; root font vẫn16px; menu/action/focus PASS sau animation thật |
+| Native text-only 200% | Lead | Firefox 144.0, profile tạm; viewport BiDi 390×844 và1280×720, DPR1 | Width/DPR không đổi; CSS text14→28px, glyph height19→37px; action/menu PASS |
+| Screen-reader tên control (AC-RWD-10) | Lead, Computer Use / Narrator Speech recap thực tế | Narrator10.0.26100.8972, Chrome154,390×844, fixture tài khoản tổng hợp | PASS spot-check: dialog/close button, navigation/link, account button+popup role, Hồ sơ cá nhân1/5, Quyền riêng tư2/5, Cài đặt ứng dụng3/5 |
+| Required PR checks / regression backend thật | GitHub Actions | Head PR chứa record này | PENDING tại lúc viết — không thay bằng local PASS |
+
+Phép browser zoom dùng setting Chrome trong profile tạm, không CSS zoom hoặc thu nhỏ viewport. Chờ completion của animation trước đo bounding box; capture surface trực tiếp tránh screenshot bị crop do context DPR không đổi theo browser zoom. Firefox bundled151 tải được nhưng không launch do assembly `mozglue`; dùng Firefox144 đã cài và Selenium trong môi trường QA ngoài Git. Không thay dependency dự án hoặc profile trình duyệt cá nhân.
+
+Narrator spot-check là output thật đọc trong Speech recap, không suy từ aria-label. Lượt kiểm rộng hơn bị ngắt bởi timeout của browser-read wait/kernel reset; **không** gán PASS cho toàn bộ Escape/resize khi Narrator bật hoặc mọi menu item. Các luồng keyboard/focus được xác nhận riêng bởi fixture/reviewer. Windows từ chối tắt Narrator tự động; chủ dự án đã được báo phím Win+Ctrl+Enter để tắt. Không nâng quyền hoặc đổi security/privacy setting. Không thêm ảnh hoặc thông tin cá nhân vào Git.
+
+### 44.4. Còn mở
+
+- Required checks phải SUCCESS ở đúng head; đọc log E2E để phân biệt sạch với flaky/retry. Regression backend-real auth/vehicle/trip-observation/analytics nằm trong golden path của CI, chưa được Lead chạy lại local ở bước này.
+- WEB-VH1 Android Chrome thật và WEB-VH2 Safari iPhone thật: NOT_RUN, gate công bố hỗ trợ thiết bị tách riêng theo spec §4.7. Không tuyên bố hỗ trợ thiết bị từ emulation.
+- Các nội dung dashboard/login/form/map/analytics/bốn trang tài khoản thuộc WEB-03…WEB-12; các hàng ma trận toàn route còn NOT_RUN. WEB-02 chỉ xác nhận shell/navigation subset theo evidence, không đánh PASS RWD toàn sản phẩm.
+- N01/N02 của WEB-01, Privacy Content Gate trước WEB-11 và quyết định preference trước WEB-12 vẫn giữ nguyên. Không gộp code thêm vào PR này.
