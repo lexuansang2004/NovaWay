@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { ResponsiveNavigation } from '@/components/layout/ResponsiveNavigation';
 import { SessionCheckErrorScreen } from '@/components/auth/SessionCheckError';
 import { endLocalSession, retrySessionCheck } from '@/services/authSession';
 import { useSessionCheck } from '@/services/useSessionCheck';
@@ -39,9 +39,9 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-950 text-slate-100">
-      <Sidebar />
-      <main className="relative flex-1 overflow-y-auto">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-950 text-slate-100 min-[1024px]:flex-row">
+      <ResponsiveNavigation />
+      <main id="main-content" className="relative min-h-0 min-w-0 flex-1 overflow-y-auto">
         <Outlet />
       </main>
     </div>
