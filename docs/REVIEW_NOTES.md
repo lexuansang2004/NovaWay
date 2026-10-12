@@ -1095,3 +1095,55 @@ Native zoom dùng setting thật trong profile browser tạm; không đổi prof
 - Không đánh PASS toàn ma trận route/thiết bị; chỉ login subset được ghi ở W03. Không claim WCAG audit, Narrator run mới hoặc Firefox toàn regression từ sáu lượt text-zoom.
 - Lead kiểm read-only sau lượt Narrator trước: process Narrator không còn chạy; không ghi thành agent đã tự tắt bằng quyền cao. §44–§45 là lịch sử tại lúc trước, không bị sửa.
 - WEB-04 chỉ bắt đầu sau required checks/review cuối và merge WEB-03; Privacy Content Gate và các quyết định preference trước WEB-11/12 giữ nguyên.
+
+## 48. WEB-03 đóng gate Windows và merge PR #90; WEB-04 bắt đầu (2026-10-12)
+
+Ghi bởi Lead điều phối sau merge. §47 là snapshot local trước CI và được giữ nguyên. [Quyết định phê duyệt cuối trên PR #90](https://github.com/lexuansang2004/NovaWay/pull/90#issuecomment-6122549124) có provenance QA/UX độc lập với Frontend author và Lead tích hợp; đăng qua tài khoản chủ dự án, không giả phê duyệt GitHub của người dùng thứ hai.
+
+- Head đã duyệt `c845e74aceae7b7d4e2c2b9bacd9bbd88136fdfd`; bốn source/test hashes giữ nguyên từ review. QA audit thêm docs/evidence JSON cuối: PASS, không finding chặn; phân biệt18 fixture tác giả,73 regression Lead và11 lượt probe reviewer, không cộng số liệu sai.
+- [CI run38236742395](https://github.com/lexuansang2004/NovaWay/actions/runs/38236742395) đúng headSha: Node, Mobile, E2E và Vercel SUCCESS. Lead đọc E2E log: **78 passed (1.8m), không flaky/retry/fail/skip**, gồm regression backend thật.
+- Đã kiểm lại checks/head, chuyển Ready và squash merge PR #90 theo yêu cầu của chủ dự án. Merge commit `20b9bc579191454ed8e5c3b2f3ecd14fec5c844a`; merge/head tree cùng `2cc6c362ab428ff4f8b942a2f98526acf5f98147`. **WEB-03 gate merge Windows PASS, MERGED; WEB-VH1/VH2 và bàn phím thật vẫn NOT_RUN.** Không merge main hoặc suy thành production release.
+- WEB-04 bắt đầu sau merge từ develop `20b9bc5`, branch `style/web-dashboard-responsive`. Chỉ Dashboard layout và sizing tối thiểu của StatCard nếu cần; StatCard còn dùng trong Analytics nên phải kiểm regression label/tổng số hiện hành, không triển khai WEB-08. Card `—` và badge Online tĩnh được giữ, không gọi đó là số liệu hoặc health API thật.
+- Frontend author và reviewer QA/UX tiếp tục riêng biệt; Lead owns docs, native zoom, gate và CI. WEB-04 **IN PROGRESS, chưa PASS**. WEB-05…WEB-13 chưa bắt đầu. N01/N02, Privacy Content Gate, quyết định preference và gate thiết bị giữ nguyên; checkout chính và thay đổi Flutter có sẵn không bị chạm.
+
+## 49. WEB-04 — Dashboard reflow, review độc lập và evidence local (2026-10-12)
+
+**Trạng thái khi ghi record:** review kỹ thuật độc lập PASS; gate local đã chạy; required PR checks/merge Windows còn chờ. WEB-05 chưa bắt đầu. Baseline `20b9bc5`, branch `style/web-dashboard-responsive`, commit message `style: improve responsive dashboard layout`. §35–§48 được giữ nguyên.
+
+### 49.1. Tái hiện và phạm vi
+
+- Frontend agent tái hiện trước sửa tại320×568/root CSS font32px: badge Online x332.47→481.91 và CTA x113→441.64 vượt main0→320; caption client94/scroll98, bốn giá trị `—` client14/scroll48. Parent overflow có thể giấu lỗi. Test baseline FAIL, sau sửa PASS; đây là CSS stress, không native zoom.
+- Dashboard có gutter đáp ứng không gian, header/action wrap, nút cao tự động/tối thiểu44px. Grid theo chiều rộng container: một cột khi hẹp, hai từ28rem, bốn từ56rem; không giả định sidebar ở1024 còn đủ chỗ cho bốn cột.
+- StatCard dùng chung với Analytics chỉ đổi min-width/wrap/gap/icon-shrink; props, value/label/accent, Analytics source/formula/filter/chart và API không đổi. Regression analytics kiểm tổng/bộ lọc hiện hành; không triển khai WEB-08.
+- Giữ nguyên bốn giá trị `—`, badge Online **tĩnh**, route `/start-trip` chỉ để quan sát. Dashboard không thêm metric API; action không tạo POST start/end trip. Không biến placeholder thành số liệu thật hoặc health check thật.
+- Source chỉ DashboardPage/StatCard và một fixture mới. Không auth/navigation/service, backend/API/schema, Flutter/Unity, generic primitives, dependency/lockfile hoặc CI configuration.
+
+### 49.2. Review độc lập và source identity
+
+Reviewer QA/UX `web02_final_review` không viết source/test/docs trong PR. Đọc source/consumer/fixture và chạy probe riêng:13 cấu hình PASS, gồm C, biên767/768/769 và1023/1024/1025, chiều cao thấp, root32 CSS stress riêng. Kiểm main/text/control bbox, label/icon không đè, một cột khi320px, bốn `—`/Online tĩnh, no metric API, focus/route qua resize và Enter sang `/start-trip` không POST. Reviewer tự chạy lại một test StatCard/analytics: **1/1 PASS, retries0**. Không coi13 lượt probe là13 test của tác giả; không gán native zoom/unit/CI của Lead thành reviewer tự chạy.
+
+Source/test frozen SHA-256:
+
+- DashboardPage `3A9E2D3514E418D5A84A5D4EEF6AF86005BBA4CE5BB5241E0C8D6D1C1CED7C7A`.
+- StatCard `BC4DA4A0369CD267A8600F2610BFC612125C98B3F0CE95CD645317D4D2A4DE97`.
+- Dashboard fixture `B8AC2F386767A6F7412C7B776FBC6D1FA75DD7570EEFE6F60046FBB95C6EE474`.
+
+**Technical review PASS, không finding chặn**, chưa thay required checks hoặc gate thiết bị.
+
+### 49.3. Evidence local theo nguồn
+
+| Kiểm tra | Nguồn / môi trường | Actual |
+| --- | --- | --- |
+| Lint/build | Lead, từng lệnh exit riêng trên source freeze | PASS; hai Fast Refresh warning và chunk-size warning cũ giữ nguyên |
+| Unit tests | Lead, Web Vitest / backend Jest | 100/100 và174/174 PASS |
+| Dashboard fixture | Frontend agent, Chrome154.0.8037.98, one worker/retries0 | 13/13 PASS:6 viewport,3 CSS-stress, biên md/lg/focus, keyboard CTA, touch390×844/DPR2 có tap, shared analytics regression |
+| Full fixture/hook regression | Lead, Chrome154, one worker/retries0 | 86/86 PASS (13dashboard+18login+15navigation+28sessionUI+12hook); không backend thật trong lượt này |
+| Native browser zoom | Lead, Chrome154 profile tạm, content1280×720 ở100% | 200% CSS640×360/DPR2 và400% CSS320×180/DPR4:2 lượt PASS; text/card/CTA cuộn tới được, static values giữ, action route đúng |
+| Native text-only200% | Lead, Firefox144 profile tạm, viewport BiDi390×844 và1280×720/DPR1 | 2 lượt PASS; heading24→48px, glyph32→64px, width/DPR không đổi; static values/action route giữ nguyên |
+| Required checks / backend-real regression | CI của PR chứa record này | PENDING khi viết; không thay bằng local PASS; phải đọc đúng head/E2E log |
+
+Visual QA xem actual Chrome400% action và Firefox text200% cards capture. Nội dung dưới fold tiếp cận qua cuộn dọc; không đòi tất cả card vừa một màn hình. Browser profile/fixture data tổng hợp/diagnostics ngoài Git; không đổi profile cá nhân, đọc secret hoặc đưa screenshot vào Git. `git diff --check` sạch; main checkout và thay đổi Flutter có sẵn giữ nguyên.
+
+### 49.4. Giới hạn
+
+WEB-VH1/VH2 và safe area/thiết bị thật NOT_RUN; không công bố hỗ trợ từ emulation. Không claim dashboard metric/API mới, đầy đủ Analytics RWD, full Firefox regression, Narrator mới hoặc WCAG audit. N01/N02, Privacy Content Gate và quyết định preference giữ OPEN. WEB-05 chỉ bắt đầu sau exact-head required checks và merge WEB-04.
