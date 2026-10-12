@@ -59,17 +59,17 @@ export function SessionCheckNotice({ failure, onRetry, onRelogin }: SessionCheck
   return (
     <div
       role="alert"
-      className="mb-4 flex w-full max-w-sm flex-col gap-3 rounded-xl border border-amber-400/30 bg-slate-900/70 p-4"
+      className="mb-4 flex w-full min-w-0 flex-col gap-3 rounded-xl border border-amber-400/30 bg-slate-900/70 p-4 [overflow-wrap:anywhere]"
     >
       <p className="text-sm text-slate-200">{FAILURE_MESSAGE[failure ?? 'network']}</p>
       <p className="text-xs text-slate-400">
         Phiên đăng nhập trước đó vẫn được giữ. Bạn có thể thử lại, hoặc đăng nhập bằng biểu mẫu bên dưới.
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+        <Button type="button" size="sm" variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal px-3 py-2 [overflow-wrap:anywhere]" onClick={onRetry}>
           Thử lại
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onRelogin}>
+        <Button type="button" size="sm" variant="ghost" className="h-auto min-h-11 max-w-full whitespace-normal px-3 py-2 [overflow-wrap:anywhere]" onClick={onRelogin}>
           Đăng nhập lại
         </Button>
       </div>
@@ -86,7 +86,7 @@ export function SessionCheckProgress() {
     <div
       role="status"
       aria-busy="true"
-      className="mb-4 flex w-full max-w-sm flex-col gap-2 rounded-xl border border-cyan-400/30 bg-slate-900/70 p-4"
+      className="mb-4 flex w-full min-w-0 flex-col gap-2 rounded-xl border border-cyan-400/30 bg-slate-900/70 p-4 [overflow-wrap:anywhere]"
     >
       <p className="text-sm text-slate-200">Đang kiểm tra lại phiên đăng nhập trước đó...</p>
       <p className="text-xs text-slate-400">Bạn vẫn có thể đăng nhập bằng biểu mẫu bên dưới.</p>

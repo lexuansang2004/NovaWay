@@ -44,7 +44,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
   return (
     <motion.div
-      className="w-full max-w-sm rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-6 shadow-[0_0_40px_rgba(34,211,238,0.12)] backdrop-blur-xl"
+      className="w-full min-w-0 rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-4 shadow-[0_0_40px_rgba(34,211,238,0.12)] backdrop-blur-xl [overflow-wrap:anywhere] sm:p-6"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -54,7 +54,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
         <p className="mt-1 text-sm text-cyan-100/60">Truy cập không gian điều hướng thông minh</p>
       </div>
 
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      <form className="flex min-w-0 flex-col gap-4" onSubmit={handleSubmit}>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="text-sm font-medium text-cyan-50/80">
             Email
@@ -66,7 +66,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
-            className="border-white/10 bg-slate-950/60 text-white placeholder:text-slate-500 focus-visible:border-cyan-400/60 focus-visible:ring-cyan-400/30"
+            className="h-auto min-h-11 border-white/10 bg-slate-950/60 py-2 text-base text-white placeholder:text-slate-500 focus-visible:border-cyan-400/60 focus-visible:ring-cyan-400/30 md:text-base"
           />
         </div>
 
@@ -81,17 +81,17 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
-            className="border-white/10 bg-slate-950/60 text-white placeholder:text-slate-500 focus-visible:border-cyan-400/60 focus-visible:ring-cyan-400/30"
+            className="h-auto min-h-11 border-white/10 bg-slate-950/60 py-2 text-base text-white placeholder:text-slate-500 focus-visible:border-cyan-400/60 focus-visible:ring-cyan-400/30 md:text-base"
           />
         </div>
 
-        {error && <p className="text-sm font-medium text-red-400">{error}</p>}
+        {error && <p className="min-w-0 text-sm font-medium text-red-400 [overflow-wrap:anywhere]">{error}</p>}
 
-        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+        <motion.div tabIndex={-1} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
           <Button
             type="submit"
             disabled={submitting}
-            className="mt-1 w-full border-0 bg-gradient-to-r from-cyan-400 to-emerald-400 font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] hover:from-cyan-300 hover:to-emerald-300"
+            className="mt-1 h-auto min-h-11 w-full whitespace-normal border-0 bg-gradient-to-r from-cyan-400 to-emerald-400 font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] [overflow-wrap:anywhere] hover:from-cyan-300 hover:to-emerald-300"
           >
             {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
