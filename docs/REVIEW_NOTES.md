@@ -1147,3 +1147,56 @@ Visual QA xem actual Chrome400% action và Firefox text200% cards capture. Nội
 ### 49.4. Giới hạn
 
 WEB-VH1/VH2 và safe area/thiết bị thật NOT_RUN; không công bố hỗ trợ từ emulation. Không claim dashboard metric/API mới, đầy đủ Analytics RWD, full Firefox regression, Narrator mới hoặc WCAG audit. N01/N02, Privacy Content Gate và quyết định preference giữ OPEN. WEB-05 chỉ bắt đầu sau exact-head required checks và merge WEB-04.
+
+## 50. WEB-04 đóng gate Windows và merge PR #91; WEB-05 bắt đầu (2026-10-12)
+
+Ghi bởi Lead sau merge; §49 giữ nguyên như snapshot trước CI. [Phê duyệt cuối trên PR #91](https://github.com/lexuansang2004/NovaWay/pull/91#issuecomment-6123077026) có provenance Frontend author, QA/UX reviewer độc lập và Lead tích hợp riêng; đăng qua tài khoản chủ dự án, không giả GitHub approval của người dùng thứ hai.
+
+- Head đã duyệt `ae83093562fbf0e1ab2b62fe1af40badb49f8832`; source/test hashes khớp review. QA audit cuối scope6 file, docs/evidence/JSON PASS, không finding chặn; REVIEW_NOTES của PR chỉ nối thêm52 dòng.
+- [CI run38239359669](https://github.com/lexuansang2004/NovaWay/actions/runs/38239359669) đúng headSha: Node/Mobile/E2E/Vercel SUCCESS. Lead đọc E2E log: **91 passed (2.3m), không flaky/retry/fail/skip**, gồm backend-real regression. Job chờ lâu ở bước cài trình duyệt trước suite; không dùng retry để che lỗi test.
+- Đã kiểm lại head/checks, chuyển Ready và squash merge theo yêu cầu chủ dự án. Merge commit `d5c6d460c56bb2dafb46976aca912d4accd36ce0`; merge/head tree cùng `eb94d6427ec93ae664da6d34d59ece847e995fd0`. **WEB-04 gate merge Windows PASS, MERGED; gate thiết bị vẫn NOT_RUN.** Không merge main hoặc tự công bố release.
+- WEB-05 bắt đầu từ develop `d5c6d46`, branch `fix/web-vehicle-list-responsive`. Tái sử dụng worktree sạch, branch WEB-04 được giữ nguyên; không thay checkout chính có Flutter dirty. Chỉ list/action/inline-confirm của VehiclesPage, không triển khai VehicleForm WEB-06 hoặc thêm API/schema/permission/state semantics.
+- Giới hạn fixture hợp lệ đã đối chiếu DTO và schema: plate≤20, brand_model≤100. Tên nút phải gồm hành động và xe; control chính44px. Focus khi open/cancel/delete phải kiểm runtime, không suy mất focus chỉ từ việc JSX đổi nhánh vì React có thể reuse Button; chỉ sửa hành vi UI cần cho lỗi thật và không giật focus từ control còn tồn tại khi async hoàn tất.
+- AC-RWD-10 yêu cầu selected-name spot-check bằng trình đọc màn hình cho nút xe; evidence navbar cũ không thay phần này. Narrator hiện tắt, NVDA không có tại các đường dẫn cài chuẩn; Lead đã hỏi chủ dự án trước khi bật Narrator tạm vì lượt trước Windows chặn cleanup tự động. **Chưa có reader output mới; không tính accessibility tree thành reader PASS.**
+- WEB-05 IN PROGRESS, chưa PASS gate; WEB-06…WEB-13 chưa bắt đầu. N01/N02, Privacy Content Gate, preference và gate thiết bị giữ nguyên.
+
+## 51. WEB-05 source/test freeze, review kỹ thuật và evidence local (2026-10-15)
+
+### 51.1. Phạm vi và provenance
+
+Lead tiếp tục công việc bị gián đoạn từ §50 trên branch `fix/web-vehicle-list-responsive`, base/develop `d5c6d460c56bb2dafb46976aca912d4accd36ce0` (fetch/ls-remote kiểm lại). Giữ nguyên phần đang làm dở và checkout chính có thay đổi Flutter; không tự tạo requirement từ hình tài liệu tốt nghiệp.
+
+- Frontend author: agent `/root/web05_implementation`; chỉ sửa `VehiclesPage.tsx` và fixture mục tiêu. QA/UX reviewer `/root/web05_independent_review` không viết/sửa hai file này; Lead `/root` tích hợp, chạy gates/native zoom/reader và quản lý PR. Đây là ba vai trò/phiên agent riêng, không giả tài khoản GitHub reviewer thứ hai hoặc model bên ngoài chưa gọi được.
+- List/action/inline-confirm reflow theo container; plate20/brand100 hợp lệ không bị che; nút có tên hành động + xe và mục tiêu44px. Không sửa VehicleForm (WEB-06), services, auth/API/schema, Flutter/Unity, dependency, lockfile hoặc CI.
+- Probe baseline trước sửa cho thấy Add/plate/brand/badge vượt main ở320px/CSS root32; icon32px chưa có tên. Open/cancel đã giữ focus nhờ React reuse Button trên cả xe active và inactive; không coi đổi nhánh JSX là bằng chứng mất focus.
+- Chỉ sửa lỗi focus thực tế khi DELETE thành công gỡ dòng đang giữ focus: intent thuộc thao tác, theo dõi focus đã chuyển, yêu cầu dòng đã gỡ/BODY/document đang có focus/page còn mount, target Add ref riêng. Lỗi API/unmount xoá intent; không autofocus nút destructive hoặc giành focus của form/control/dialog/route khác. Không đổi semantics nghiệp vụ CRUD.
+
+### 51.2. Snapshot đã review
+
+- VehiclesPage SHA-256 `D3789A02B36BFD9BCCD25025DD7EC959AFF8D445C764EA2AD1917F63ADB4F9D0`.
+- Fixture `vehicle-list-responsive.fixture.spec.ts` SHA-256 `1E952E2D69970453EAA96562AA7D323771A1601EA14652F3FBF0D659398B012C`.
+- QA/UX review source/test PASS, không finding chặn trên snapshot; báo cáo `WEB_05_INDEPENDENT_REVIEW.md` và diagnostics lưu ngoài Git cùng gói audit của Lead. Không thay thế final integration/CI approval.
+
+### 51.3. Actual theo nguồn; chưa đóng gate hồi quy
+
+| Kiểm tra | Người chạy / môi trường | Actual |
+| --- | --- | --- |
+| Fixture mục tiêu | Frontend author, Chrome, one worker/retries0 | 19/19 PASS; keyboard/async subset lặp3:18/18 PASS; tsc-b exit0 |
+| Probe độc lập | QA/UX reviewer, Chrome155.0.8059.79, fixture riêng | 25 tình huống:24 PASS,1 NOT_VERIFIED (headless không tạo blur tab thật); guard hasFocus=false instrumented PASS, không gọi đó là background-tab thật |
+| Native browser zoom | Lead, Chrome155.0.8059.79, profile tạm | 200% CSS640×360/DPR2 và400% CSS320×180/DPR4 từ content1280×720:2 lượt PASS;3 xe active/inactive, tên dài/inline-confirm/cancel/action44px, không request ghi |
+| Native text-only200% | Lead, Firefox144 profile tạm, BiDi390×844 và1280×720/DPR1 | 2 lượt PASS; heading24→48px; glyph32→128px ở390 do wrap,32→64px ở1280; width/DPR giữ nguyên; không CSS-root giả native zoom |
+| Reader selected-name spot-check | Lead, Narrator10.0.26100.8972 + Chrome155, fixture headed riêng | Actual Speech recap đọc tên + role của nút Đặt đang dùng và Sửa cho xe DEMO-0001: PASS selected2; không claim mọi nút/full reader audit |
+| Lint / build / unit | Lead, từng exit code riêng | lint/build exit0; hai Fast Refresh warning và chunk-size warning cũ; web100/100,backend174/174 PASS |
+| Full fixture/hook regression đầu | Lead, Chrome155, one worker/retries0; đồng thời có native reader inspection | 103 PASS,2 FAIL: loginEmail và formBiển số mất focus khi resize; không báo105/105 PASS |
+| Hai ca resize chạy lại | Lead, Chrome155, repeat3/retries0; native browser đã đóng, có diagnostics headless chạy đồng thời | 5 PASS,1 FAIL (Biển số); chưa xác định nguồn lỗi, không kết luận đơn giản là OS blur hay Narrator |
+| Required checks / backend-real regression | CI đúng head PR | PENDING khi ghi; không thay bằng local PASS |
+
+Selected reader spot-check dựa trên lời đọc trong Speech recap, không lấy aria-label/accessibility tree làm kết quả reader. UIA của recap báo higher-integrity: không elevation, bypass, đổi cài đặt bảo mật hoặc input vào cửa sổ đó. Chỉ đọc ảnh thụ động; đã nhắc chủ dự án tắt Narrator bằng shortcut đã đồng ý. Browser fixture riêng đã đóng; không claim Lead tự tắt Narrator. Delete/Confirm/Cancel chưa reader-verified trong lượt này; tên và keyboard behavior được test riêng.
+
+Visual QA xem actual Chrome400% inline-confirm và Firefox text200%390 capture: nội dung/action cuộn dọc tiếp cận, không đòi toàn bộ xe vừa một màn. Screenshot/profile/fixture/diagnostics ngoài Git; không dùng dữ liệu cá nhân thật hoặc đọc secret.
+
+### 51.4. Gate còn mở
+
+**WEB-05 chưa PASS gate Windows, chưa phê duyệt merge:** phải xác định hai regression focus resize và có bằng chứng nghiệm thu phù hợp; required checks đúng head và E2E không flaky còn phải kiểm. Không tăng retry/sleep, skip assertion hoặc đổi test để che lỗi. Reviewer instrumented đã thấy activeElement BODY/hasFocus=true ở một số ca, nên không đủ căn cứ gọi đó chỉ là mất focus cửa sổ. Tiếp tục so sánh có kiểm soát, không gán nguyên nhân khi chưa chứng minh.
+
+WEB-06…WEB-13 chưa bắt đầu. WEB-VH1/VH2, keyboard/safe-area thiết bị thật NOT_RUN riêng. N01/N02, Privacy Content Gate và preference giữ OPEN; không công bố release hoặc hỗ trợ mọi thiết bị.
