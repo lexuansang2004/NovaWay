@@ -179,7 +179,7 @@ test('golden path: login → select vehicle → start trip → see location → 
     // match colliding with the sidebar's logged-in user email, which also
     // embeds a Date.now()-based timestamp and can share the same digits.
     await expect(page.getByText(licensePlate, { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Đặt đang dùng' }).click();
+    await page.getByRole('button', { name: `Đặt phương tiện ${licensePlate} đang dùng`, exact: true }).click();
     // exact: true -- the page's static description paragraph ("... chọn
     // phương tiện đang hoạt động.") also contains this phrase, and
     // Playwright's default text match is a case-insensitive substring, so it

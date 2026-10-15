@@ -1200,3 +1200,37 @@ Visual QA xem actual Chrome400% inline-confirm và Firefox text200%390 capture: 
 **WEB-05 chưa PASS gate Windows, chưa phê duyệt merge:** phải xác định hai regression focus resize và có bằng chứng nghiệm thu phù hợp; required checks đúng head và E2E không flaky còn phải kiểm. Không tăng retry/sleep, skip assertion hoặc đổi test để che lỗi. Reviewer instrumented đã thấy activeElement BODY/hasFocus=true ở một số ca, nên không đủ căn cứ gọi đó chỉ là mất focus cửa sổ. Tiếp tục so sánh có kiểm soát, không gán nguyên nhân khi chưa chứng minh.
 
 WEB-06…WEB-13 chưa bắt đầu. WEB-VH1/VH2, keyboard/safe-area thiết bị thật NOT_RUN riêng. N01/N02, Privacy Content Gate và preference giữ OPEN; không công bố release hoặc hỗ trợ mọi thiết bị.
+
+## 52. WEB-05 tích hợp golden-path, đối chứng focus và cập nhật provenance (2026-10-15)
+
+§50–§51 giữ nguyên snapshot. Lead ghi phần này; không biến review của tác giả thành phê duyệt độc lập hoặc xoá các failure trước.
+
+### 52.1. CI đầu và sửa locator tích hợp
+
+[PR #92](https://github.com/lexuansang2004/NovaWay/pull/92) được mở Draft tại `7a299898f0e9169b71edd84538764344b7b33818`. [CI38626502750](https://github.com/lexuansang2004/NovaWay/actions/runs/38626502750) đúng head: Node/Mobile/Vercel SUCCESS; E2E **109 PASS,1 FAIL**, golden-path fail cả retry cấu hình sẵn. Không phải xanh/không phải lỗi rate limit hay thiếu partition trong lượt này.
+
+Log chỉ rõ `golden-path.spec.ts:182` tìm accessible name cũ `Đặt đang dùng`; WEB-05 đã thêm định danh xe vào tên. Tác giả chỉ đổi locator thành tên mới gồm hành động + `licensePlate` động, `exact:true`. Không bỏ assertion, sửa backend, tăng timeout/retry hoặc thay tên production. Reviewer độc lập đã đọc một dòng sửa và xác nhận cùng thao tác/đúng chiếc xe, runtime còn do Lead kiểm.
+
+- Golden-path SHA-256 sau sửa: `9CC30CCC22B756AEAE290757E586BA822594AEC0B593D18341447BB32234311B`.
+- Source và fixture mục tiêu giữ hai hash ở §51.2; thực tế scope có thêm một file test tích hợp cũ, không chỉ fixture mới. Local backend-real5/5 PASS, retries0 (golden-path +404/auth regression), database test riêng/provider mock; không dùng DB dev hoặc AWS thật.
+- Đính chính version: tác giả đã dùng Chrome channel nhưng không ghi `browser.version()` trong19/19 và18/18, nên version **NOT_CAPTURED**, không phải Chrome154. Baseline W05-R1 cũng không có version capture đủ căn cứ; spec sửa nhãn thành NOT_CAPTURED. Chrome155.0.8059.79 là quan sát runtime riêng của Lead/reviewer, không hồi tố cho các lượt khác.
+
+### 52.2. Đối chứng focus — không suy nguyên nhân từ một lượt xanh
+
+| Điều kiện / nguồn | Actual | Diễn giải |
+| --- | --- | --- |
+| Full fixture/hook chạy tuần tự, Lead, Chrome155 | 105/105 PASS, retries0 | Có một lượt sạch; không tự xoá failure §51 |
+| Hai ca resize lặp10, Lead, chỉ một browser runner, native UI dừng, Narrator còn process | 14 PASS,6 FAIL, cả6 là formBiển số | Không đủ căn cứ quy lỗi chỉ cho browser chạy đồng thời |
+| Probe reviewer với pre-focus/assert trước resize | 5/10 PASS; input cùng DOM/còn connected/visible, focus về BODY | Không sửa test chỉ bằng thêm focus ban đầu; chưa xác định nguồn blur. Việc không thấy main-world focus call không loại trừ isolated-world/native/AX |
+| User báo đã tắt reader, lượt đầu chạy lại | 18 PASS,2 FAIL; trước lượt vẫn quan sát process Narrator | Không gọi đây là đối chứng reader-OFF sạch |
+| Lượt kế tiếp sau xác nhận process Narrator không còn, cùng hai test×10, Lead | Runner record `status:passed`, `failedTests:[]`,20 ca cấu hình; process vẫn không có khi tiếp tục | PASS của cấu hình reader-OFF được quan sát; không chứng minh nguyên nhân gốc hoặc claim đã sửa full reader-ON workflow |
+
+Các lần raw probe khác và failure trace được giữ ngoài Git cùng gói audit; không ghi tổng hợp chúng thành test suite mới. Không thay source hoặc hai test resize để lấy xanh. Actual reader selected-name ở §51.3 vẫn chỉ là hai utterance thật, không bao phủ workflow resize khi reader bật.
+
+### 52.3. Gate cuối trên cây đã tích hợp
+
+Lead kiểm lại reader process count0, backend health/DB test và chạy lại full suite trên Chrome channel, một worker/retries0, không native UI/diagnostic browser đồng thời. **Full suite110/110 PASS (3.6m), exit0, không retry/flaky/skip**, gồm105 fixture/hook và5 backend thật; runner JSON được giữ ngoài Git, không chỉ dựa một ảnh console. Các lệnh lint/build/test đều exit0 riêng; unit web100/100 vàbackend174/174 PASS. Hai Fast Refresh warning/chunk warning cũ giữ nguyên. Sau lượt chạy reader process count vẫn0; đây là kết quả của cấu hình đã quan sát, không claim đã sửa reader-ON workflow.
+
+Reviewer backup `/root/web05_final_review_backup` không phải tác giả hoặc Lead, đọc source/test/contract/hashes/CI và hồ sơ tích hợp riêng; reviewer trước đã dừng vì giới hạn phiên, không giả rằng họ duyệt phần chưa xem. Review kỹ thuật nguồn PASS không thay required checks đúng head mới. PR vẫn Draft; WEB-06 không bắt đầu trước merge.
+
+Gate merge Windows chỉ được đóng bằng actual đã chạy, review tích hợp và CI head mới sạch. Không sửa AC hoặc tự miễn gate. Quan sát mất focus khi reader còn chạy vẫn là **OPEN / nguyên nhân NOT_VERIFIED**, không gọi FIXED; không tuyên bố toàn bộ hỗ trợ Narrator/WCAG. WEB-VH1/VH2 và keyboard/safe-area thiết bị thật giữ NOT_RUN; các OPEN items khác không đổi.
