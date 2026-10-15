@@ -1234,3 +1234,58 @@ Lead kiểm lại reader process count0, backend health/DB test và chạy lại
 Reviewer backup `/root/web05_final_review_backup` không phải tác giả hoặc Lead, đọc source/test/contract/hashes/CI và hồ sơ tích hợp riêng; reviewer trước đã dừng vì giới hạn phiên, không giả rằng họ duyệt phần chưa xem. Review kỹ thuật nguồn PASS không thay required checks đúng head mới. PR vẫn Draft; WEB-06 không bắt đầu trước merge.
 
 Gate merge Windows chỉ được đóng bằng actual đã chạy, review tích hợp và CI head mới sạch. Không sửa AC hoặc tự miễn gate. Quan sát mất focus khi reader còn chạy vẫn là **OPEN / nguyên nhân NOT_VERIFIED**, không gọi FIXED; không tuyên bố toàn bộ hỗ trợ Narrator/WCAG. WEB-VH1/VH2 và keyboard/safe-area thiết bị thật giữ NOT_RUN; các OPEN items khác không đổi.
+
+## 53. WEB-05 phê duyệt cuối/merge PR #92; WEB-06 bắt đầu (2026-10-15)
+
+Lead ghi sau merge, giữ nguyên §51–§52 như snapshot và đối chứng lịch sử. [Phê duyệt cuối độc lập](https://github.com/lexuansang2004/NovaWay/pull/92#issuecomment-6194917999) ghi rõ tác giả, reviewer backup `/root/web05_final_review_backup` và Lead là các agent/phiên riêng. Comment đăng qua tài khoản chủ dự án, không giả formal approval của người dùng GitHub thứ hai.
+
+- Head cuối `72e0aa51f921bfe911baf5eebf8501d95cfa7879`; hai hash source/fixture §51.2 và golden-path §52.1 khớp snapshot review. Reviewer backup tự đọc source, contract, tài liệu, runner JSON và CI đúng head; không finding chặn gate Windows theo phạm vi đã định.
+- [CI run 38753813722](https://github.com/lexuansang2004/NovaWay/actions/runs/38753813722) đúng head SUCCESS: Node, Mobile, E2E và Vercel. Lead và reviewer đọc log E2E job `116486831738`: **110 passed (2.6m), không flaky/retry/fail/skip**, gồm regression backend thật. Không lấy kết quả head cũ thay head mới.
+- Đã chuyển Ready sau checks, squash merge với head guard; không admin bypass hoặc merge `main`. Merge commit `1041e37d0e9694690fdd0584228a3a5abd9ac100`; tree merge/head cùng `d50f6ca597231abe8a8d4bf9a8f9e514cf553ff4`. **WEB-05 MERGED, gate Windows PASS; gate thiết bị NOT_RUN.**
+- Reader selected-name chỉ hai utterance đã ghi §51.3. Các ca mất focus khi reader còn chạy vẫn **OPEN, nguyên nhân NOT_VERIFIED**, không gọi FIXED hoặc toàn bộ Narrator/WCAG PASS. Reader process count 0 được xác nhận trước/sau lượt local cuối; không xoá hoặc gán lại nguyên nhân failure cũ.
+- Backend test riêng đã dừng; chỉ database tạm do lượt review tạo được xoá và xác nhận không còn. Không chạm DB dev, dữ liệu người dùng hoặc thay đổi Flutter có sẵn ở checkout chính.
+- WEB-06 bắt đầu sau merge từ `1041e37`, branch `style/web-vehicle-form-responsive`, tái sử dụng worktree sạch. Frontend author `/root/web06_implementation` chỉ sửa VehicleForm và fixture mới; reviewer `/root/web05_final_review_backup` chỉ đọc/probe độc lập; Lead sở hữu docs, native zoom, integration gates và PR.
+- Phạm vi WEB-06 là container/reflow, label/input/error summary/Lưu/Huỷ tiếp cận được, giữ route/dữ liệu/focus qua resize. Không đổi payload, validation, API hoặc nghiệp vụ: brand rỗng vẫn được bỏ khỏi payload; Huỷ không có nghĩa abort POST/PATCH đã gửi. Không thêm maxlength hoặc chính sách huỷ request chưa được duyệt.
+- WEB-06 IN PROGRESS, chưa phê duyệt/gate PASS. WEB-07…WEB-13 chưa bắt đầu. Bàn phím ảo, safe area và WEB-VH1/VH2 thật giữ NOT_RUN; N01/N02, Privacy Content Gate và preference giữ OPEN. Chưa cần Mac/iPhone cho gate Windows này.
+
+## 54. WEB-06 form responsive — source freeze, review độc lập và evidence local (2026-10-15)
+
+### 54.1. Phạm vi, baseline và source identity
+
+Base `1041e37d0e9694690fdd0584228a3a5abd9ac100`, branch `style/web-vehicle-form-responsive`. Tác giả `/root/web06_implementation` chỉ sửa `VehicleForm.tsx` và thêm `vehicle-form-responsive.fixture.spec.ts`; reviewer `/root/web05_final_review_backup` không sửa source/test/docs, chạy probe riêng; Lead `/root` đọc lại, chạy native zoom/gates và tích hợp tài liệu. Không giả model bên ngoài hoặc tài khoản reviewer GitHub khác.
+
+- Tác giả chạy hai baseline test trên source trước sửa: **2 FAIL**, control chọn loại xe chỉ 36px ở 320×568; viewport 1440×900 nhưng form thực bị giới hạn 280px vẫn dùng ba cột theo `sm`. Có failure artifacts; không chỉ suy từ source. Browser channel Chrome, baseline version **NOT_CAPTURED**; không hồi tố version của lượt sau.
+- Form dùng container riêng; một cột cho tới khi content thực đạt 38rem rồi ba cột. Min-width/wrap/auto-height và kích thước tối thiểu 44px giữ label/control/error/Lưu/Huỷ tiếp cận được. Single-line input vẫn được cuộn giá trị bên trong; không coi đó là paragraph bị cắt.
+- `useId` liên kết error summary `role=alert` với form qua `aria-describedby`; `aria-busy` phản ánh submitting hiện có. Không gán lỗi API chung thành lỗi riêng từng field, không autofocus hoặc thay logic nghiệp vụ.
+- Submit handler không đổi: `required` của biển số giữ nguyên, không thêm trim/maxlength/validation; brand rỗng vẫn `undefined`/bỏ khỏi JSON, kể cả PATCH. Save bị disable khi gửi; field và Huỷ giữ hành vi cũ. Huỷ không abort POST/PATCH đã gửi; không giới thiệu chính sách huỷ request mới.
+- Không sửa VehiclesPage, service/auth/shared UI primitives, backend/API/schema, Flutter/Unity, dependency/lockfile hoặc CI. Scope tổng cộng năm file: component, fixture mới, plan, spec và REVIEW_NOTES.
+
+Snapshot SHA-256 đã đối chiếu bởi tác giả, reviewer và Lead:
+
+- VehicleForm `37D1E9EED33BEC3BED9C26ABE302303A007CE756F59F70CF95CB15095DB07972`.
+- Fixture `92332560F87740B8F89D62E5E4E6D601E853EFD26494CCAE88CED78B5FF7E0AD`.
+
+### 54.2. Review độc lập
+
+Reviewer đọc toàn bộ source/fixture/contract và chạy probe riêng **26/26 PASS**, Chrome **155.0.8059.79**, synthetic transport/real UI, không native zoom hoặc thiết bị thật. Gồm 16 create/edit layout + lỗi dài tại tám viewport (320/390/639/640/641/844/1024/1280), hai CSS-root32 short-height, hai resize focus/dữ liệu, hai required/optional payload, hai pending/Cancel, keyboard order/focus-visible và null brand. Không có finding chặn review kỹ thuật.
+
+Reviewer không tự nhận đã chạy 21 test của tác giả, native zoom hoặc full gates của Lead. Báo cáo `WEB_06_INDEPENDENT_REVIEW.md` và raw diagnostics nằm ngoài Git. Browser ownership được chuyển tuần tự tác giả → reviewer → Lead; tất cả context đóng trước lượt tiếp theo. Không bật lại Narrator; review này không đóng quan sát reader-ON focus ở §51–§53.
+
+### 54.3. Actual local theo nguồn
+
+| Kiểm tra | Người chạy / môi trường | Actual |
+| --- | --- | --- |
+| Fixture mục tiêu | Tác giả, Chrome155.0.8059.79, one worker/retries0 | 21/21 PASS (35.3s); tsc-b exit0; create/edit active/inactive, container280, biên sm/lg, lỗi dài, submitting/cancel, payload/required, keyboard/touch390×844/DPR2 |
+| Probe độc lập | Reviewer, Chrome155, fixture riêng | 26/26 PASS; không finding chặn, giữ hash source/test |
+| Native browser zoom | Lead, Chrome155.0.8059.79, profile tạm; content1280×720 ở100% | 4/4 PASS: create/edit ở200% CSS640×360/DPR2 và400% CSS320×180/DPR4; pending → lỗi dài, summary/data/control/cancel tiếp cận được |
+| Native text-only200% | Lead, Firefox144 profile tạm; BiDi390×844 và1280×720/DPR1 | 4/4 PASS create/edit; label14→28px, glyph19→37px, width/DPR giữ; pending/lỗi dài/giá trị/payload/cancel đúng |
+| Lint / build / unit | Lead, từng lệnh exit riêng | Lint/build/test exit0; web100/100, backend174/174; hai Fast Refresh warning và chunk-size warning cũ |
+| DB/partition regression | Lead, database test riêng, mock providers | 11 migration từ DB mới và partition integration script PASS; không dùng DB dev hoặc gọi AWS |
+| Full regression cuối | Lead, Chrome155, one worker/retries0, reader process0 trước/sau | **131/131 PASS (4.1m), exit0**, gồm126 fixture/hook +5 backend thật; runner JSON không flaky/skip/fail |
+| Required checks / phê duyệt tích hợp cuối | CI đúng head PR | PENDING khi ghi; local PASS không thay CI, chưa merge hoặc bắt đầu WEB-07 |
+
+Lead trực tiếp xem ảnh Chrome400% và Firefox text200%390: error dài wrap, action cuộn tới được, không đòi toàn bộ form/lỗi vừa một màn. Native browser zoom và text-only zoom là hai phép đo thật riêng với CSS-root32 stress; profile tạm, screenshots/JSON/scripts/trace ngoài Git, chỉ dữ liệu tổng hợp. Checkout chính và Flutter dirty không bị chạm; không đọc secret hoặc đưa ảnh vào Git.
+
+### 54.4. Giới hạn và gate còn mở
+
+WEB-06 chưa được công bố hoàn thành gate Windows cho tới khi final independent integration review và required checks đúng head sạch. WEB-07 chưa bắt đầu. Bàn phím ảo/safe area thật và WEB-VH1/VH2 **NOT_RUN**, không suy PASS từ resize/touch emulation; không full Firefox regression hoặc Narrator/WCAG audit. Reader-ON focus cause vẫn OPEN/NOT_VERIFIED. N01/N02, Privacy Content Gate, preference và các giới hạn sản phẩm khác không đổi.
