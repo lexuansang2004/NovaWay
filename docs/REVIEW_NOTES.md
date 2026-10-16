@@ -1289,3 +1289,66 @@ Lead trực tiếp xem ảnh Chrome400% và Firefox text200%390: error dài wrap
 ### 54.4. Giới hạn và gate còn mở
 
 WEB-06 chưa được công bố hoàn thành gate Windows cho tới khi final independent integration review và required checks đúng head sạch. WEB-07 chưa bắt đầu. Bàn phím ảo/safe area thật và WEB-VH1/VH2 **NOT_RUN**, không suy PASS từ resize/touch emulation; không full Firefox regression hoặc Narrator/WCAG audit. Reader-ON focus cause vẫn OPEN/NOT_VERIFIED. N01/N02, Privacy Content Gate, preference và các giới hạn sản phẩm khác không đổi.
+
+## 55. WEB-06 final approval/merge PR #93; tiếp tục WEB-07 (ghi 2026-10-16)
+
+Lead ghi bổ sung sau merge ngày 2026-10-15; §54 giữ nguyên snapshot trước CI. [Quyết định phê duyệt cuối](https://github.com/lexuansang2004/NovaWay/pull/93#issuecomment-6195459756) có provenance: author `/root/web06_implementation`, reviewer độc lập `/root/web05_final_review_backup`, Lead `/root` tích hợp. Reviewer không viết source/test/docs của WEB-06; comment đăng qua tài khoản chủ dự án, không giả formal approval của người dùng GitHub thứ hai.
+
+- Exact head đã duyệt `7ac0bb56cb4e5ecf83d489895097483a1d723733`, base `1041e37`. Scope năm file, submit handler không đổi, hash source/test và hồ sơ append-only khớp; reviewer đọc source/contracts/docs, tự chạy 26 probe và kiểm final JSON131/131 của Lead với attribution riêng.
+- [CI run 38757361623](https://github.com/lexuansang2004/NovaWay/actions/runs/38757361623) đúng head SUCCESS. Reviewer và Lead tự kiểm all checks: Node, Mobile, E2E, Vercel và Preview Comments SUCCESS; E2E job `116499205487` ghi **131 passed (3.1m), hai worker, Chromium149.0.7827.55, không flaky/retry/fail/skip**. Không suy version CI từ Chrome155 local, không lấy local PASS thay CI.
+- Đã đọc lại PR body, kiểm head/checks/CLEAN, chuyển Ready và squash merge với head guard; không admin bypass hoặc merge main. Merge commit `d70bb83408f39f6ccc2b775741f9344095de5d07`; tree merge/head cùng `67d3b25632668a85c13de2f9031e060ef1a2e647`. **WEB-06 MERGED, gate Windows PASS; gate thiết bị NOT_RUN.**
+- Backend test riêng đã dừng sau xác minh PID/listener; chỉ database tạm WEB-06 được xoá, xác nhận không còn. Không đổi DB dev, checkout chính hoặc Flutter dirty. Reader-ON focus ở WEB-05 vẫn OPEN/NOT_VERIFIED, không bị đóng bởi kết quả WEB-06.
+- WEB-07 branch `fix/web-live-map-responsive` được tạo sau merge từ `d70bb83`. Lượt author đầu bị giới hạn sử dụng trước khi sửa file; audit tiếp tục 2026-10-16 xác nhận worktree sạch/remote develop vẫn cùng SHA rồi phân công lại: author `/root/web07_author_resumed`, reviewer `/root/web07_independent_review`, Lead sở hữu docs/native zoom/full gates/PR. Không coi lần bị ngắt là implementation hoặc review PASS.
+- WEB-07 chỉ xử lý layout/canvas/overlay/attribution/empty-state reflow theo WEB-T06 và AC-RWD-07. Giữ nguyên `useLiveTrip`, dữ liệu geometry/position/trail, poll/socket/API và provider; không thêm start/end trip trên web. WEB-G07 (gộp không trip/chưa có GPS, lỗi poll) là backlog riêng, không tự sửa state machine hoặc biến nội dung giao diện tốt nghiệp thành requirement.
+- WEB-07 IN PROGRESS, chưa PASS gate; WEB-08…WEB-13 chưa bắt đầu. Fixture layout/transport/style phải được ghi rõ, không thay GPS/provider hoặc thiết bị thật. Native zoom/full regression/required CI chỉ tính actual đã chạy. WEB-VH1/VH2, keyboard/safe area thật NOT_RUN; N01/N02, privacy/preference và giới hạn reader vẫn OPEN.
+
+## 56. WEB-07 live map responsive — source freeze và kiểm chứng theo nguồn (2026-10-16)
+
+### 56.1. Phạm vi và lỗi được tái hiện
+
+Base `d70bb83408f39f6ccc2b775741f9344095de5d07`, branch `fix/web-live-map-responsive`. Author `/root/web07_author_resumed` chỉ sửa `LiveMapPage.tsx` và thêm `live-map-responsive.fixture.spec.ts`; reviewer `/root/web07_independent_review` chỉ đọc/probe riêng; Lead `/root` tích hợp docs, native zoom, backend regression và PR. Không tự phê duyệt code do mình viết hoặc giả model/vendor/GitHub reviewer khác.
+
+- Baseline tác giả **1 FAIL / 1 PASS**, Chrome155.0.8059.79: ở320×568 nhãn disconnected đè tốc độ; canvas đã resize đúng cả khi đổi window lẫn chỉ đổi container. Nhận định đầu rằng cần sửa resize là giả thuyết, không phải defect đã xác nhận. Không sửa TripMap hoặc thêm ResizeObserver thừa.
+- Hai lỗi ban đầu của fixture (attribution có suffix MapLibre và PNG chưa decode được) được sửa trước khi xác nhận baseline; không ghi chúng thành lỗi sản phẩm.
+- Speed/status chuyển vào flex layout có wrap phía trên map, không còn hai overlay absolute đè nhau. Bỏ minimum600px; viewport map giữ tối thiểu12rem và cuộn dọc khi màn hình quá thấp. Empty state dùng natural reflow. Nhãn chữ, điều kiện trip/position, làm tròn tốc độ, dữ liệu route/position/trail giữ nguyên; icon trang trí aria-hidden.
+- TripMap/provider/geometry, useLiveTrip/poll5s/socket lifecycle/trail cap500, services/auth/backend/API/schema, Flutter/Unity, dependency/lockfile/CI không đổi. Không thêm start/end trip trên web. WEB-G07 vẫn là backlog riêng, không biến no-trip/waiting-GPS/poll-error thành state machine mới.
+
+Hash SHA-256 snapshot:
+
+- LiveMapPage `9F16D0116334893BFD1EB28A10EB8C485D7F09F7E1C3667277F2087F8EFB0F23`.
+- Fixture `C7F3584ACD300AC69A644399DDFB8FB71FA486798FEC223E081AC9921B82E373`.
+
+### 56.2. Fixture và review độc lập
+
+Tác giả chạy **15 ca riêng ×2 =30/30 PASS**, Chrome155.0.8059.79, một worker/retries0. UI, useLiveTrip, Socket.IO client và MapLibre/canvas chạy thật; chỉ REST, Engine.IO/Socket.IO wire, style/raster tile là fixture. Kiểm GET/Bearer/join đúng trip, không location:update hoặc start/end từ web; có actual marker motion, trail path, tile failure, touch/DPR2/orientation, container-only resize, empty/poll error và drawer đóng rồi dùng canvas. Không gọi đó là backend thật, GPS thực địa hoặc provider availability.
+
+Reviewer source/test/contracts PASS, tự viết/chạy **22/22 probe** và **5/5 lượt resize bổ sung** trên Chrome155. Lượt probe đầu21/22 được giữ riêng: phép đo chỉ chờ bitmap bằng CSS canvas rồi đọc container quá sớm. Bản diagnostic sửa bằng chờ navigation breakpoint commit và canvas/container/bitmap cùng khớp, không sleep/retry hoặc sửa production. Các lượt resize giữ actual observer samples: có giá trị chuyển tiếp lệch tới410px rồi settled≤2px; mỗi lượt sáu transition. Đây là sửa đồng bộ phép đo, không phải sửa defect production hoặc xoá failure lịch sử.
+
+Reviewer không nhận kết quả tác giả/Lead thành tự chạy. Browser slot được chuyển tuần tự; không bật lại Narrator. Báo cáo `WEB_07_INDEPENDENT_REVIEW.md`, JSON/raw/ảnh/scripts ở ngoài Git; ảnh QA tổng hợp không phải ảnh minh chứng GPS/provider/sản phẩm cho báo cáo tốt nghiệp.
+
+### 56.3. Actual tích hợp theo nguồn
+
+| Kiểm tra | Nguồn / môi trường | Actual |
+| --- | --- | --- |
+| Fixture mục tiêu | Author, Chrome155, one worker/retries0 | 30/30 PASS;15 ca riêng; tsc-b/oxlint exit0, hai warning cũ |
+| Probe độc lập | Reviewer, Chrome155, fixture riêng | 22/22 và resize5/5 PASS; R1 measurement21/22 giữ riêng |
+| Native browser zoom | Lead, Chrome155; content1280×720 ở100% | Completed6 ca connected/disconnected/error tại200% CSS640×360/DPR2 và400% CSS320×180/DPR4 PASS về reflow/canvas/attribution; diagnostic caveat ở §56.4 |
+| Native text-only200% | Lead, Firefox144, BiDi390×844 và1280×720/DPR1 | 6/6 PASS cùng ba trạng thái; speed font18→36px/glyph24→48, width/DPR giữ |
+| Native navigation diagnostic | Lead, Chrome155, thêm6 ca200/400 | Trigger x12/y8,44×44/hit-test true, windowScrollY0; Enter mở/Escape đóng/khôi phục focus/backdrop được gỡ; không chứng minh capture cause |
+| Lint/build/unit | Lead, từng exit code riêng | Lint/build/test exit0; web100/100, backend174/174; hai Fast Refresh/chunk warning cũ và thông báo build timing |
+| DB/partition setup | Lead, DB test riêng, không DB dev | 11 migration từ DB mới và partition integration script PASS |
+| Full suite | Lead, Chrome155, một worker/retries0, reader process0 | **146/146 PASS (4.3m), exit0**; JSON146 expected/0 unexpected/flaky/skipped, gồm141 fixture/hook +5 backend thật |
+| Map UI với backend thật, diagnostic riêng | Lead, Chrome155,390×844; NestJS/Postgres/PostGIS trên DB test riêng, biometric mock | **1/1 PASS, exit0**: browser join trip thật,2 GPS broadcast đã persist/ack, tốc độ24→31 và marker di chuyển, end trip thật; không REST/WS stub, chỉ style local; web không gửi request ghi |
+| Required checks / final approval | CI đúng head PR | PENDING; chưa merge hoặc bắt đầu WEB-08 |
+
+Native zoom dùng transport server REST/Socket.IO tổng hợp riêng và style GeoJSON local, nhưng UI/hook/MapLibre thật; không phải backend NovaWay. Native Firefox/Chrome không gọi tile provider có phí hoặc đọc secret. Captures/JSON/temp profile ngoài Git. Chỉ fixture/hosted style được thay trong các bài test, không đổi provider production. Golden-path có backend thật nhưng không mở LiveMapPage; vì vậy diagnostic map UI riêng nêu trên là bằng chứng bổ sung, không gán kết quả đó cho golden-path hoặc CI chưa chạy diagnostic này.
+
+### 56.4. Diagnostic chưa được xác minh và ranh giới nghiệm thu
+
+Một lượt diagnostic native Chrome trung gian timeout5s khi chờ canvas/container/DPR alignment ngay bước200%; thiếu snapshot chi tiết lúc fail. Các lượt sáu ca hoàn tất sau đó PASS, nhưng không gộp lượt bị ngắt thành PASS hoặc tuyên bố mọi native run không lỗi timing. Nguyên nhân lượt timeout **NOT_VERIFIED**, không có speculative production patch.
+
+Một số ảnh CDP surface ở400% bị trống glyph/header hoặc frame trong khi ảnh khác hiển thị được; fromSurface=false cũng có frame trống. Chưa xác định capture/compositor hay nguyên nhân khác. DOM rect/hit-test, windowScrollY0 và keyboard drawer thực tế đã kiểm riêng, nên chưa có bằng chứng header bị đẩy khỏi màn hình hoặc control bị chặn. Giữ ảnh gốc/diagnostic, không nói mọi ảnh mới đều sạch hoặc vấn đề đã FIXED. Reviewer đã xem và không tìm thấy production finding từ ảnh đơn lẻ; final approval vẫn phải xét full regression/backend smoke/CI.
+
+Gate Windows chưa đóng tại snapshot này. WEB-VH1/VH2, keyboard/safe area và hỗ trợ thiết bị thật **NOT_RUN**; không full Firefox/Narrator/WCAG audit. Reader-ON focus cũ, N01/N02, Privacy Content Gate, preference và WEB-G07 vẫn OPEN. Không công bố GPS accuracy, provider uptime, release hoặc hỗ trợ mọi thiết bị.
+
+Lead đã dừng transport fixture tổng hợp trước khi chạy backend NovaWay thật, rồi dừng backend test sau smoke bằng xác minh PID/listener. Chỉ database tạm WEB-07 do lượt review tạo được xoá, xác nhận không còn; DB dev/checkout chính/Flutter dirty giữ nguyên. Source/test hash không đổi sau integration; docs QA kiểm scope năm file, append-only so với base, bảng/PII và `git diff --check` PASS.
