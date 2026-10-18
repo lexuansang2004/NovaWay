@@ -68,7 +68,8 @@ test.describe('responsive navigation — fixture UI', () => {
       for (const link of await page.getByRole('navigation').getByRole('link').all()) await reachableTarget(link);
       await reachableTarget(account(page));
       // Test text containers, not just document overflow (overflow-hidden can mask clipping).
-      const email = page.getByText(EMAIL, { exact: true });
+      // Scoped to the shell (<aside>): since WEB-09 the profile page in <main> shows the same email.
+      const email = page.getByRole('complementary').getByText(EMAIL, { exact: true });
       expect(await email.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await account(page).click();

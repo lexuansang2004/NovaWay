@@ -147,7 +147,9 @@ test.describe('AC-WEBSESSION-01 — no token, 200, 401', () => {
 
     await expect(page).toHaveURL(/\/account\/profile$/);
     await expect(page.getByRole('heading', { name: 'Hồ sơ cá nhân' })).toBeVisible();
-    await expect(page.getByText(USER_A.email)).toBeVisible();
+    // The shell (<aside>) shows the signed-in user from AuthContext; since
+    // WEB-09 the profile page in <main> shows the same email as well.
+    await expect(page.getByRole('complementary').getByText(USER_A.email)).toBeVisible();
     expect(await readToken(page)).toBe(TOKEN_A);
   });
 
@@ -632,7 +634,8 @@ test.describe('AC-WEBSESSION-09 — the timed-out check answers after a retry ha
 
       await json(held[held.length - 1], 200, USER_A);
       await expect(page.getByRole('heading', { name: 'Hồ sơ cá nhân' })).toBeVisible();
-      await expect(page.getByText(USER_A.email)).toBeVisible();
+      // Scoped to the shell (<aside>); since WEB-09 <main> shows the same email too.
+      await expect(page.getByRole('complementary').getByText(USER_A.email)).toBeVisible();
       await expect(page.getByText(USER_B.email)).toHaveCount(0);
     });
   }

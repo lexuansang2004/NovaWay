@@ -1431,3 +1431,128 @@ Diagnostic Analytics riêng dùng REST/Socket.IO thật với NestJS/Postgres/Po
 Attempt smoke đầu bị backend từ chối VALIDATION_ERROR vì script ngoài Git thiếu `accuracy_m` bắt buộc trong LocationUpdateDto/API contract. Sửa payload test thêm5m, không sửa sản phẩm hoặc nới validation; tài khoản test dang dở không dùng làm evidence PASS. Lượt sau hoàn tất3filter như trên. Đây là dữ liệu GPS tổng hợp gửi qua backend thật, không phải chuyến đi thực địa/độ chính xác định vị hoặc provider sinh trắc thật.
 
 Lead đã xác minh PID/listener và dừng đúng backend test; xoá hai database tạm WEB-08 do lượt review tạo ngày17/18, xác nhận count0. Không xoá container/volume hoặc DB dev; checkout chính và Flutter dirty giữ nguyên. Reviewer cuối yêu cầu sửa provenance W08-R1: baseline không lưu browser version, đã ghi NOT_CAPTURED thay vì lấy version final điền ngược. Full/backend local đã PASS; **final independent approval và required CI đúng head vẫn PENDING**, chưa merge, WEB-09 chưa bắt đầu.
+
+## 59. WEB-08 merged qua PR #95; bắt đầu WEB-09 (ghi 2026-10-18)
+
+§58 giữ nguyên làm snapshot lúc viết (khi đó final approval/CI còn PENDING). Mục này ghi closure. Người viết mục này là agent Claude triển khai WEB-09, **không** phải reviewer của WEB-08; mọi điểm dưới đây tự kiểm lại từ GitHub và git, không chép từ handoff.
+
+- [Phê duyệt độc lập cuối](https://github.com/lexuansang2004/NovaWay/pull/95#issuecomment-6247221481) đăng 2026-10-18T07:38:26Z, duyệt head `1313a0196982002b4b1ac44713b2571c9b0d0e6a`, base `f3052d4`.
+- Check runs tại `1313a01`: Backend + Web + shared-types, E2E, Mobile và Vercel Preview Comments đều success. Log job E2E `117617468975` (run [39107849719](https://github.com/lexuansang2004/NovaWay/actions/runs/39107849719)): "Running 164 tests using 2 workers" → **164 passed (4.2m)**, không có dòng retry/flaky/failed.
+- PR #95 MERGED 2026-10-18T07:39:06Z, merge commit `1fc55172659956b34728c011c87dea6b9524058b`. Tree của head và merge commit cùng là `6544beb65b4cdff6545f924ecbb9378f494261e9`.
+- **WEB-08 MERGED — gate Windows PASS, thiết bị NOT_RUN.** Các mục OPEN/NOT_VERIFIED của §58.3–§58.5 giữ nguyên.
+
+**WEB-09 bắt đầu:** `origin/develop` = `1fc5517` (khớp `git ls-remote`). Branch `feat/web-account-profile-readonly` tạo mới từ đó, trong worktree riêng. Không có `.codegraph/`. Checkout chính (`develop` cũ `a963562`, thay đổi Flutter có sẵn) không bị chạm.
+
+## 60. WEB-09 — hồ sơ cá nhân chỉ đọc: đã triển khai, chờ review độc lập (2026-10-18)
+
+**Trạng thái: READY FOR INDEPENDENT REVIEW.** Ghi chép của tác giả (agent Claude, Frontend Engineer phía chủ dự án); **không** phải phê duyệt. Lead Codex giữ review và tích hợp. Chưa merge; WEB-10…WEB-13 NOT STARTED.
+
+### 60.1. Phạm vi và thiết kế
+
+Nguồn: FR-WEBPROFILE-01…03, AC-WEBPROFILE-01…04, spec §4.2 / WEB-D01 / WEB-D02 / WEB-T08.
+
+- `apps/web/src/pages/AccountProfilePage.tsx` (mới, 31 dòng):
+  - heading "Hồ sơ cá nhân" (`:16`);
+  - một `dl` với "Email đăng nhập" và giá trị email (`:18–21`);
+  - link "Về Dashboard" tới `/dashboard` (`:23–28`).
+- Email lấy từ `useAuth().user` (`:12`), tức user mà AppLayout đã xác thực qua `GET /api/auth/me`. Trang không gửi request nào, không có form, input hay nút Lưu.
+- Email dùng `[overflow-wrap:anywhere]`, không `truncate`, không `title`, nên địa chỉ dài xuống dòng và đọc được hết.
+- Link có vùng chạm `min-h-11` (44px) và vòng focus `focus-visible:outline`.
+- `apps/web/src/App.tsx:8,28`: chỉ thay element của route `/account/profile`. Route và ranh giới AppLayout giữ nguyên.
+- Không đổi store, context hay service của WEB-01; không đổi shell/shared component của WEB-02…08.
+- Không đổi backend, API, schema, Flutter, Unity, dependency/lockfile, CI hay cấu hình test chung.
+
+SHA-256 (nội dung chuẩn hoá LF) lúc freeze:
+
+| File | SHA-256 |
+|---|---|
+| AccountProfilePage.tsx | `1BD661E6117873EC4283FCCF3116CD2C5D56EABE442B5D94DCD21CDCBD970E11` |
+| App.tsx | `D4961DC1838A59D9379D359DB9F0E2CA77E524873AC36D64E7C8BB6C52C98492` |
+| `e2e/account-profile.fixture.spec.ts` | `293F6473CBDBCE50198FEC191D668CBDA65634CD109261B2410949017FA9E5CA` |
+
+### 60.2. Test và điều chỉnh test cũ
+
+- **Mới — `apps/web/e2e/account-profile.fixture.spec.ts`, 19 ca, fixture UI.** App thật chạy nguyên; chỉ transport REST là fixture. Mọi request được ghi method, path, Bearer và body. Tài khoản tổng hợp `example.com`. Init script ghi lại nếu trang dùng geolocation hay camera.
+- **Sửa assertion cũ — 8 ca strict mode.** `responsive-navigation.fixture.spec.ts` (1 dòng) và `session-check.fixture.spec.ts` (2 dòng) đo email trên shell bằng `page.getByText(email)`. Sau WEB-09, `main` cũng hiển thị email nên locator khớp 2 phần tử. Các assertion này được giới hạn vào `<aside>` (`getByRole('complementary')`), đúng ý định gốc là đo email trên shell; không dùng `.first()`, không bỏ assertion.
+- **Backend thật — bổ sung vào `session-auth-regression.spec.ts`, không tạo tài khoản mới.**
+  - A mở hồ sơ từ menu; kiểm request chỉ là GET.
+  - B mở bằng deep link và reload.
+  - Bước của B đặt **sau** lời gọi `request.get` cũ (`:94`), để không đổi khoảng thời gian trước lời gọi đó (xem F1).
+  - Số lần đăng ký mỗi lượt E2E vẫn là 4 (N01 không nặng thêm).
+
+### 60.3. Requirement → AC → test → kết quả
+
+Chạy local ngày 2026-10-18 bởi tác giả; Chromium 149.0.7827.55 (Playwright 1.61.1) trừ khi ghi khác.
+
+| Requirement | AC | Test (`account-profile.fixture.spec.ts` trừ khi ghi khác) | Kết quả |
+|---|---|---|---|
+| FR-WEBPROFILE-01 | AC-WEBPROFILE-01 | Deep link (heading, nhãn, email đúng của A, link `/dashboard`, chỉ GET `/auth/me`); từ menu tài khoản ở 1280×720 và 390×844 (drawer); reload. Backend thật: A từ menu; B deep link + reload | PASS |
+| FR-WEBPROFILE-01 | AC-WEBPROFILE-02 | 320×568, 390×844, 768×1024, 844×390, 1280×720; CSS stress (`html` 32px) ở 320×568 và 1280×720; resize qua 1025/1024/1023 và đổi chiều. Mỗi ca đo: email không tràn hộp của nó, mọi tổ tiên tới `main` chứa trọn nó, `text-overflow: clip`, `white-space: normal`, không `title`, document và `main` không cuộn ngang, không phần tử nào trong `main` tràn ra ngoài | PASS |
+| FR-WEBPROFILE-02 | AC-WEBPROFILE-03 | Fixture `/me` cố ý gửi thêm `password_hash`, tên, SĐT, avatar, `created_at`: trang không render; không form/input/button/img trong `main`; không `user.id`, token hay chữ "Lưu"; HTML không chứa hash; chỉ GET `/auth/me`; không gọi geolocation/camera | PASS |
+| FR-WEBPROFILE-03 | AC-WEBPROFILE-04 | A từ menu → logout → Back (về mục `/dashboard` được bảo vệ) → `/login`, token null → B đăng nhập → hồ sơ qua menu (điều hướng SPA) rồi deep link → chỉ email B; Back không lộ A. Login POST được tách riêng khỏi request của trang. Các ca không token / 401 / lỗi mạng giữ đúng hành vi WEB-01. Backend thật: A → logout → Back → B | PASS |
+| — | Bàn phím, cảm ứng | Tab tới link (focus ring hiển thị), Shift+Tab rời, Enter điều hướng; touch/DPR 2 ở 390×844, vùng chạm ≥ 44×44, tap | PASS |
+
+### 60.4. Bằng chứng trước/sau, lặp và độ nhạy
+
+| Lượt | Code | Kết quả |
+|---|---|---|
+| Toàn bộ Playwright, `retries=0` | Base `1fc5517` chưa sửa, backend thật | **164/164** (JSON: expected 164, unexpected/flaky/skipped 0) |
+| Spec mới | Base chưa sửa | 16 fail / 3 pass. Cả 16 fail cùng vì thiếu "Email đăng nhập" trong `main` (placeholder). 3 ca pass là các ca auth đã đúng từ WEB-01 |
+| Spec mới | Sau sửa | 19/19 |
+| Spec mới × 5, `retries=0`, 2 worker | Sau sửa | **95/95**, unexpected/flaky 0 |
+| Toàn bộ Playwright, `retries=0`, 2 worker, backend thật | Sau sửa (cuối) | **183/183** (164 cũ + 19 mới); unexpected/flaky/skipped 0 |
+
+Độ nhạy: tạm cấy lỗi vào trang, chạy spec, khôi phục, rồi xác nhận file trùng khớp bản sao lưu.
+
+| Lỗi cấy vào | Ca fail |
+|---|---|
+| Email `truncate` + `title` | 8 (toàn bộ AC-02) |
+| Thêm ô nhập + nút Lưu | AC-03 (+1 ca stress) |
+| Hiển thị `user.id` | AC-03 |
+| Trang nhớ email đầu tiên trong module | AC-04 |
+| Trang gửi PATCH `/users/me` | 16 ca |
+
+Hai lỗi phía test trong lúc viết, đã sửa:
+
+- Helper `scrollIntoViewIfNeeded` không cuộn phần tử đang hiện một phần (tỉ lệ 0,716 dưới CSS stress). Thay bằng cuộn thật và kiểm phần tử cao hơn viewport theo cạnh trên/cạnh dưới.
+- Ca A→B mở thẳng `/account/profile` làm mục lịch sử đầu, nên Back sau logout ra `about:blank`. Thêm mục `/dashboard` phía trước.
+
+Không ghi hai lỗi này là defect sản phẩm.
+
+### 60.5. Zoom native, CSS stress và gate
+
+**Phân biệt bắt buộc:**
+
+- **CSS stress** = `html { font-size: 32px }` trong test, **không** phải zoom.
+- **Zoom native** = mức zoom mặc định thật của Chrome, đặt trong Preferences của một profile tạm ngoài Git (`partition.default_zoom_level`).
+- **Cỡ chữ native** = `webkit.webprefs.default_font_size` của Chrome — **không** phải text-only zoom của Firefox.
+
+| Kiểm tra | Môi trường (tác giả, probe ngoài Git) | Actual |
+|---|---|---|
+| Zoom native 200% | Chrome 155.0.8059.82, cửa sổ 1280×720; đo được CSS 631×312, DPR 2 | PASS: email đầy đủ, không tổ tiên nào cắt, không cuộn ngang document/`main`; link trong viewport và Tab tới được; chỉ GET `/auth/me` |
+| Zoom native 400% | Như trên; CSS 315×156, DPR 4 (hẹp hơn 320) | PASS cùng tiêu chí |
+| Cỡ chữ mặc định Chrome 32px | Chrome 155; CSS 1262×624, root 32px | PASS cùng tiêu chí; link cao 88px |
+| Text-only 200% native (Firefox) | — | **NOT_RUN**: máy không có Firefox cho Playwright, và không tải thêm trình duyệt khi chưa được phép |
+
+Ảnh `page.screenshot` dưới zoom native chỉ lấy một góc khung (đúng hiện tượng §58.3). Ảnh kiểm bằng mắt được chụp lại toàn khung vật lý 1262×624 qua CDP `Page.captureScreenshot`. Tác giả đã xem các ảnh 200% và 400%: email xuống dòng trong thẻ, link có vòng focus. Ảnh và JSON nằm ngoài Git.
+
+| Gate | Kết quả |
+|---|---|
+| `npm run lint` | exit 0; 2 warning Fast Refresh có từ trước (không tăng) |
+| `npm run build` | exit 0 |
+| `npm run test` | exit 0; web 100/100, backend 174/174 |
+| Shared-types | Build trước test |
+| Dependency | `pnpm install --frozen-lockfile`, lockfile không đổi |
+| Backend thật | Database test `novaway_web09_e2e` tạo mới (kiểm tra chưa tồn tại trước khi tạo), 11 migration, `BIOMETRIC_PROVIDER=mock`, `ROUTING_PROVIDER=mock`. Sau khi chạy: dừng đúng tiến trình đang nghe cổng 3000, xoá đúng database đó (đếm lại = 0). Không xoá container/volume, không đụng DB dev |
+
+### 60.6. Finding ngoài phạm vi, NOT_RUN và giới hạn
+
+- **F1 — `ECONNRESET` ở test backend thật có sẵn (OPEN, nguyên nhân NOT_VERIFIED).** Trong 1 lượt full local (trước khi bổ sung bước hồ sơ vào spec này), `request.get('/auth/me')` tại `session-auth-regression.spec.ts:94` (dòng `:80` ở base) lỗi `read ECONNRESET`. Log backend không ghi nhận request đó; backend vẫn khoẻ. Request xảy ra khoảng 5 giây sau lần dùng `APIRequestContext` trước — giả thuyết là race keep-alive phía client, chưa chứng minh. Baseline và các lượt sau (gồm full cuối 183/183) pass. Không sửa trong WEB-09; đề xuất một micro-step test-infra riêng nếu tái diễn.
+- **Quan sát:** ở zoom native 400% (CSS 315×156), header di động của shell WEB-02 chiếm khoảng 60/156 CSS px chiều cao, vùng đọc còn hẹp nhưng cuộn được. Không phải phạm vi WEB-09; ghi lại để Lead cân nhắc.
+- **NOT_RUN:**
+  - text-only 200% native (Firefox);
+  - Safari iPhone và Android Chrome thật (WEB-VH1/VH2), bàn phím ảo và safe area thật;
+  - trình đọc màn hình (không bật Narrator, theo yêu cầu);
+  - ma trận đầy đủ của WEB-T08 ngoài các tổ hợp liệt kê;
+  - CI và review độc lập ở head mới.
+- Không tuyên bố hỗ trợ thiết bị hay đạt WCAG. N01, N02, Privacy Content Gate, preference, WEB-G07 và các mục OPEN của §58 giữ nguyên.

@@ -60,6 +60,20 @@ test('sign in, navigate, sign out, Browser Back, then sign in as another account
   await expect(page.getByText(emailA)).toBeVisible();
   expect(await readToken(page)).toBe(tokenA);
 
+  // WEB-09: the profile page, reached from the account menu, shows A's email
+  // as returned by the real /auth/me. Read-only: no request beyond GET.
+  const profileRequests: string[] = [];
+  const recordProfileRequest = (req: { method: () => string; url: () => string }) => {
+    if (req.url().includes('/api/')) profileRequests.push(`${req.method()} ${new URL(req.url()).pathname}`);
+  };
+  await page.getByRole('button', { name: `Tài khoản: ${emailA}` }).click();
+  page.on('request', recordProfileRequest);
+  await page.getByRole('menuitem', { name: 'Hồ sơ cá nhân' }).click();
+  await expect(page).toHaveURL(/\/account\/profile$/);
+  await expect(page.getByRole('main').getByText(emailA, { exact: true })).toBeVisible();
+  page.off('request', recordProfileRequest);
+  expect(profileRequests.every((entry) => entry.startsWith('GET '))).toBe(true);
+
   // A signs out; Back must not show A's content again.
   await signOut(page, emailA);
   expect(await readToken(page)).toBeNull();
@@ -79,6 +93,14 @@ test('sign in, navigate, sign out, Browser Back, then sign in as another account
   // The backend agrees about who that token belongs to.
   const me = await request.get(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${tokenB}` } });
   expect(await me.json()).toMatchObject({ email: emailB });
+
+  // WEB-09: deep link and reload of the profile show B only, from the real /auth/me.
+  await page.goto('/account/profile');
+  await expect(page.getByRole('main').getByText(emailB, { exact: true })).toBeVisible();
+  await expect(page.getByText(emailA)).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('main').getByText(emailB, { exact: true })).toBeVisible();
+  await expect(page.getByText(emailA)).toHaveCount(0);
 
   // Back from B's dashboard never lands on anything of A's.
   await page.goBack();
