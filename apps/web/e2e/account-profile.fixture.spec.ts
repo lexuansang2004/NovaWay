@@ -16,7 +16,8 @@ const TOKEN_A = 'fixture-profile-token-a';
 const TOKEN_B = 'fixture-profile-token-b';
 const USER_A = { id: '00000000-0000-4000-8000-0000000009a1', email: 'profile.reader.a@example.com' };
 const USER_B = { id: '00000000-0000-4000-8000-0000000009b2', email: 'profile.reader.b@example.com' };
-// A long but valid address: 64-character local part, total length 175 (< 254).
+// Presentation stress: local part65/total155; deliberately exceeds the normal
+// 64-character local-part limit. Valid-boundary coverage is separate (review §61).
 const LONG_LOCAL = 'very.long.profile.local.part.for.reflow.checks.only.1234567890abc';
 const LONG_EMAIL = `${LONG_LOCAL}@extremely-long-subdomain-label-used-for-layout-checks.department.organisation.example.com`;
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };

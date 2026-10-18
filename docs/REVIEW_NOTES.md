@@ -1556,3 +1556,29 @@ Không ghi hai lỗi này là defect sản phẩm.
   - ma trận đầy đủ của WEB-T08 ngoài các tổ hợp liệt kê;
   - CI và review độc lập ở head mới.
 - Không tuyên bố hỗ trợ thiết bị hay đạt WCAG. N01, N02, Privacy Content Gate, preference, WEB-G07 và các mục OPEN của §58 giữ nguyên.
+
+## 61. WEB-09 — review độc lập và kiểm chứng bổ sung của Lead (2026-10-18)
+
+Tiếp nối §60, không sửa lịch sử tác giả. Reviewer `/root/web09_independent_review` không viết source/test/docs trong repo, tự đọc diff chín file, spec/contracts, hash LF, raw JSON và ảnh. Lead `/root` sở hữu diagnostic bổ sung, đính chính chú thích và hồ sơ tích hợp. Không nhận lượt tác giả thành reviewer/Lead tự chạy; không giả approval của người GitHub thứ hai hoặc model/vendor chưa kết nối.
+
+### 61.1. Kết quả source/test review và đính chính evidence
+
+- Không tìm thấy blocking product finding: trang31dòng đọc user hiện hành từ AuthContext trong AppLayout guard; chỉ render email/link có thật, không request hoặc field mới. Ba locator cũ chuyển vào complementary giữ đúng assertion trên shell, không `.first()` hoặc bỏ assertion. Backend regression vẫn dùng số tài khoản cũ, không thêm registration.
+- **W09-N01 (Low), đã sửa chú thích:** fixture có local-part65/tổng155, không phải địa chỉ hợp lệ local64/tổng175 như chú thích ban đầu. Chỉ đổi hai dòng comment để gọi đúng là presentation stress vượt giới hạn local-part; không đổi data/assertion/hành vi hoặc gán kết quả cũ thành valid-boundary. Các claim dựa trên địa chỉ đó ở §60 được hiểu theo đính chính này. Lượt native và backend-real mới bên dưới dùng biên hợp lệ64/254, được validator backend hiện có chấp nhận.
+- Reviewer tự parse raw tác giả: baseline164 sạch; spec trên base3pass/16fail thiếu nhãn Email; targeted19 và repeat95 sạch; full trung gian174pass/9fail gồm8strict locator và1ECONNRESET; full cuối183 sạch. Độ nhạy cấy lỗi vẫn là tác giả báo, không gán là reviewer tự tái hiện. F1 giữ OPEN/NOT_VERIFIED: không thấy request trong log không chứng minh request không tới server, càng không xác nhận keep-alive là nguyên nhân; không sửa HTTP/backend hoặc chữa bằng retry.
+- Product/App giữ hash LF §60.1. Fixture sau **comment-only** có SHA-256 LF `4C6E354F391D37CB930E6F83DCDF9F9F03B90631B47FABC48706E6FFD8B82046`; so với tác giả chỉ khác chú thích, không sửa executable test.
+
+### 61.2. Actual do Lead chạy, không thay cho CI
+
+| Gate | Môi trường / nguồn | Actual |
+|---|---|---|
+| Native text-only200 bổ sung | Firefox144 headless đã có trên máy, profile test riêng; không tải browser; Selenium/BiDi + native preference | **6/6 PASS**:320×568,390×844,1280×720 × email thường/biên254; CSS viewport/DPR1 giữ, heading24→48px |
+| Đọc email/focus native | Synthetic HTTP transport, React/AuthContext/router thật | Glyph/own/ancestor bounds và main/document không cuộn ngang; đầu/cuối email cuộn tới được; Tab tới link có focus/hit-test, Enter về Dashboard. Email dài có thể cao hơn viewport, không đòi cả địa chỉ nằm trong một ảnh. Không dùng CSS stress thay native |
+| Node gates | Lead chạy riêng ba lệnh | lint/build/test exit0; web100/100, backend174/174; hai Fast Refresh warning và chunk-size warning có từ trước |
+| Full regression | Chrome155.0.8059.82, hai worker/retries0; DB review mới, mock provider | **183/183 PASS (2.5m), exit0**, unexpected/flaky/skipped0;178 fixture/hook +5 backend thật; không gán lượt này thành Chromium149 của tác giả/CI |
+| Valid-boundary backend-real | Chrome155 tại320×568, REST/NestJS/Postgres/PostGIS thật, không route stub | **1/1 PASS**: đăng ký/đăng nhập email64/254, UI profile đúng đầy đủ email, không overflow/form; màn chỉ GET `/auth/me`, pageerror0. Request POST đăng ký/login là setup riêng |
+| DB/môi trường | Database tạm riêng do Lead tạo sau kiểm tra chưa tồn tại | 11 migration + partition integration PASS; sau chạy xác minh PID/listener, dừng đúng backend/Vite test và xoá đúng DB tạm (count0); container/volume, DB dev, checkout chính và Flutter dirty không đổi |
+
+Reviewer độc lập đã kiểm code probe, JSON6ca và bốn ảnh mẫu Firefox; không tự chạy browser trong review này. Lead đã xem ảnh email/focus mới. Screenshots/probes/raw JSON ngoài Git, chỉ dữ liệu tổng hợp `example.com`; không ảnh/email cá nhân hoặc token vào repo. Native này kiểm đúng trang/điều kiện đã nêu, không chứng nhận toàn Firefox/Narrator/WCAG hoặc thiết bị thật.
+
+Local review/gates đã PASS; **final independent approval và required CI của head chứa đính chính mới vẫn PENDING**. Không dùng CI xanh `6d2ddef` để duyệt commit sau đó. PR #96 vẫn Draft, chưa merge; WEB-10…WEB-13 chưa bắt đầu. Text-only Firefox của tác giả vẫn NOT_RUN như lịch sử, nay được bổ sung bằng lượt Lead riêng. WEB-VH1/VH2, keyboard/safe area, screen reader và F1/các mục OPEN ở §60.6 giữ nguyên, không bật Narrator.
