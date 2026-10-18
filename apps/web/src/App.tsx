@@ -6,6 +6,7 @@ import VehiclesPage from '@/pages/VehiclesPage';
 import LiveMapPage from '@/pages/LiveMapPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import AccountProfilePage from '@/pages/AccountProfilePage';
+import HelpPage from '@/pages/HelpPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 import { AppLayout } from '@/layouts/AppLayout';
@@ -27,7 +28,7 @@ function App() {
         <Route path="/settings" element={<ComingSoonPage title="Cài đặt" />} />
         <Route path="/account/profile" element={<AccountProfilePage />} />
         <Route path="/account/privacy" element={<ComingSoonPage title="Quyền riêng tư" />} />
-        <Route path="/help" element={<ComingSoonPage title="Trợ giúp" />} />
+        <Route path="/help" element={<HelpPage />} />
 
         {/* Catch-all: URL không khớp route nào. Đặt trong AppLayout để người
             đã đăng nhập vẫn còn Sidebar đi tiếp; người chưa đăng nhập bị auth

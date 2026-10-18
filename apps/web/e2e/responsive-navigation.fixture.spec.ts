@@ -99,7 +99,7 @@ test.describe('responsive navigation — fixture UI', () => {
     expect(await closer(page).evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none');
     await page.keyboard.press('Escape');
     await expect(opener(page)).toBeFocused();
-    await expect(page.getByRole('navigation')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
     await opener(page).click();
     await closer(page).click();
     await expect(opener(page)).toBeFocused();
@@ -142,7 +142,7 @@ test.describe('responsive navigation — fixture UI', () => {
       await page.setViewportSize({ width: 1024, height: 800 });
       await expect(drawer(page)).toHaveCount(0);
       await expect(page.getByRole('menu')).toHaveCount(0);
-      await expect(page.getByRole('navigation')).toHaveCount(1);
+      await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(1);
       await expect(page.getByRole('link', { name: 'Dashboard', exact: true })).toBeFocused();
       await noLock(page);
       await page.setViewportSize({ width: 1025, height: 800 });
@@ -151,7 +151,7 @@ test.describe('responsive navigation — fixture UI', () => {
       await expect(opener(page)).toBeFocused();
       await expect(drawer(page)).toHaveCount(0);
       await expect(page.getByRole('menu')).toHaveCount(0);
-      await expect(page.getByRole('navigation')).toHaveCount(0);
+      await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
       await noLock(page);
       await opener(page).click();
       await expect(drawer(page)).toBeVisible();
