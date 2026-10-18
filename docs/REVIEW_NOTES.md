@@ -1352,3 +1352,82 @@ Một số ảnh CDP surface ở400% bị trống glyph/header hoặc frame tron
 Gate Windows chưa đóng tại snapshot này. WEB-VH1/VH2, keyboard/safe area và hỗ trợ thiết bị thật **NOT_RUN**; không full Firefox/Narrator/WCAG audit. Reader-ON focus cũ, N01/N02, Privacy Content Gate, preference và WEB-G07 vẫn OPEN. Không công bố GPS accuracy, provider uptime, release hoặc hỗ trợ mọi thiết bị.
 
 Lead đã dừng transport fixture tổng hợp trước khi chạy backend NovaWay thật, rồi dừng backend test sau smoke bằng xác minh PID/listener. Chỉ database tạm WEB-07 do lượt review tạo được xoá, xác nhận không còn; DB dev/checkout chính/Flutter dirty giữ nguyên. Source/test hash không đổi sau integration; docs QA kiểm scope năm file, append-only so với base, bảng/PII và `git diff --check` PASS.
+
+## 57. WEB-07 final approval/merge PR #94; tiếp tục WEB-08 (2026-10-16)
+
+§55–§56 giữ nguyên snapshot/hạn chế lúc viết. [Phê duyệt độc lập cuối](https://github.com/lexuansang2004/NovaWay/pull/94#issuecomment-6207757111) do Lead `/root` đăng sau review của `/root/web07_independent_review`, tác giả source/test là `/root/web07_author_resumed`. Reviewer không viết source/test/docs WEB-07; quyết định đăng qua tài khoản chủ dự án, không giả formal approval của người GitHub thứ hai hoặc model/vendor bên ngoài.
+
+- Head được duyệt `6a529858a9c96c117ca53250a110ed3c969c7119`, base `d70bb83`. Reviewer đọc lại scope năm file, frozen hash, append-only, PR body và JSON/raw; tự chạy22 probe +resize5/5, kiểm nguồn/bằng chứng của Lead riêng. Không finding chặn gate Windows; native diagnostic ở §56.4 vẫn NOT_VERIFIED.
+- [CI run38847607287](https://github.com/lexuansang2004/NovaWay/actions/runs/38847607287) đúng head SUCCESS. Lead và reviewer tự đọc required checks + Vercel/Preview Comments: cả5 SUCCESS. E2E job `116801576504` ghi **146 passed (3.5m), hai worker, Chromium149.0.7827.55**, không retry/flaky/fail/skip. Không lấy local Chrome155/backend-real map smoke thay kết quả CI hoặc gán smoke ngoài CI cho job này.
+- Lead đọc lại PR body, xác nhận exact head/base/CLEAN/checks rồi chuyển Ready, squash merge bằng head guard; không bypass hoặc merge `main`. Merge commit `f3052d4813e5d587cd4ae2d52e48ca7824785553`; tree head/merge cùng `a404486acb09207dc25d2de762dc37587dbbcf29`. **WEB-07 MERGED — gate Windows PASS, thiết bị NOT_RUN.**
+- Branch `fix/web-analytics-responsive` tạo sau merge từ `f3052d4` cho WEB-08. Author `/root/web07_author_resumed` sở hữu AnalyticsPage và fixture mới; reviewer `/root/web07_independent_review` audit/probe độc lập, không sửa sản phẩm; Lead sở hữu docs/native zoom/full gates/tích hợp. Chỉ xử lý WEB-T07/AC-RWD-08/12: filter wrap, tổng/biểu đồ/legend đọc được và truy cập số liệu không phụ thuộc hover. Giữ nguyên nguồn API, lọc/sort/làm tròn/công thức/tổng; không thêm metric, API/schema hoặc thay backend/Flutter/Unity/dependency/CI.
+- WEB-08 IN PROGRESS, chưa PASS; WEB-09…WEB-13 chưa bắt đầu. WEB-VH1/VH2, keyboard/safe area thật NOT_RUN. Reader-ON focus cũ, native diagnostic WEB-07, N01/N02, privacy/preference và WEB-G07 vẫn OPEN. Checkout chính/Flutter dirty và DB dev giữ nguyên; không bật lại Narrator.
+
+## 58. WEB-08 analytics responsive — source freeze và evidence theo nguồn (2026-10-17)
+
+### 58.1. Khôi phục phiên, phạm vi và baseline
+
+Tiếp tục từ base `f3052d4813e5d587cd4ae2d52e48ca7824785553`, branch `fix/web-analytics-responsive`. Phân công đầu ở §57 bị giới hạn sử dụng trước khi sửa source. Audit ngày2026-10-17 xác nhận remote develop vẫn cùng SHA, chỉ ba file docs của Lead đang thay đổi; không có source/test chưa biết tác giả. Phân công lại author `/root/web08_author`, reviewer độc lập `/root/web08_review`, Lead `/root` sở hữu tài liệu, native zoom và tích hợp. Reviewer không viết source/test/docs chính; không giả model/vendor hoặc approval của người GitHub khác.
+
+- Baseline tác giả đo trên source gốc: nút lọc cao34px, chưa có control đọc số liệu ngoài hover, và nhãn trục số lớn ở320px vượt SVG (trái20px so với SVG49px; phải282.75px so với SVG271px). Hai diagnostic ban đầu chọn nhầm legend SVG hoặc selector tick rỗng được giữ ngoài Git, không ghi thành lỗi sản phẩm.
+- Chỉ sửa phần render của AnalyticsPage và bỏ import Legend. Giữ nguyên toàn bộ đoạn fetch/data trước `return`: chỉ trip ended, sort started_at tăng, mỗi trip là một dòng kể cả trùng ngày; xe không còn trong list chỉ thuộc All, không thuộc filter car/motorbike. Chart distance làm tròn2 chữ số như cũ; tổng cộng raw rồi toFixed1; thời gian/số cảnh báo không đổi. Services/API/schema/backend/shared component, Flutter/Unity, dependency/lockfile và CI không đổi.
+- Filter wrap, mục tiêu44px, aria-pressed/focus; padding và grid theo container thật; HTML legend wrap và chỉ rõ km/trục trái, phút/trục phải. Hai Y axis tự đo width; tick số lớn dùng ký hiệu khoa học chỉ cho nhãn trục, không đổi data/tổng/tooltip. Tooltip wrap. Native details/ordered list đọc cùng chartData bằng bàn phím/cảm ứng, giữ chính xác giá trị chart distance và thời gian/số cảnh báo; không thêm metric hoặc request.
+- Visual QA phát hiện nhãn ngày chồng khi CSS-root32 dù phép kiểm glyph trong SVG đạt. Freeze đầu bị thu hồi, tăng minTickGap40 và thêm assertion nhãn trục không chồng thật, bắt buộc có label group portaled thay vì selector rỗng. Các lượt36 PASS trước assertion mạnh hơn vẫn lưu riêng, không dùng làm kết quả cuối. Không tăng retry/sleep/skip hoặc sửa cách tính để làm test xanh.
+
+Hash SHA-256 snapshot v2 (đã thu hồi freeze sau native check, không phải bản cuối):
+
+- AnalyticsPage `C83734BB6847D2E205514954E54DEDBE592A566A547BC8B54400F5B6C9555A4C`.
+- Fixture `2DC813E3144E20AE16DA8B45C2DE8729E6CA12DFB92896BBDA668923CF513127`.
+
+### 58.2. Fixture và kiểm tra độc lập
+
+Author chạy **18 ca ×2 =36/36 PASS**, Chrome155.0.8059.82, một worker/retries0; JSON expected36, unexpected/flaky/skipped0. Actual React/Recharts/auth session UI, chỉ REST transport fixture; kiểm GET/Bearer/no-write, ended/filter/sort/raw totals, same-day và unknown vehicle, ít/nhiều trip/số lớn, loading/error/empty, actual-container và biên sm/lg, CSS text stress, tooltip và non-hover keyboard/touch/DPR2. Một số duration có phần thập phân là stress cho cách trình bày số hiện có, không phải khẳng định DB INTEGER/API thường trả giá trị đó. Source không chứa fixture.
+
+Type-check, targeted oxlint và whitespace của tác giả exit0. Test sửa selector dot portal và đo mark/plot settled trước khi chụp; không gọi các lỗi selector là production defect. Native zoom, full suite, backend thật và CI là các nguồn riêng, không nhận kết quả author thành reviewer/Lead tự chạy.
+
+Reviewer tự chạy24/24 probe trên v2, Chrome155.0.8059.82; dataset riêng có duration/warnings nguyên theo contract, raw distance tổng0.056→0.1 khác tổng chart đã làm tròn, active poison, trùng ngày và unknown vehicle. Có geometry clip/overlap thực ở portaled X/two Y, actual-parent320, CSS-root32 và strict GET/search rỗng/Bearer/no-write. Lượt setup đầu trỏ nhầm5173 bị connection refused, không phải app assertion. Diagnostic tiếp theo chờ first bar visible sai: bar0.01km cạnh outlier123456789.99km có height0, path `v0`; outlier có height215.1675px và41 group đã attached. Đổi helper sang attached và positive-size marks, giữ số dòng/data/geometry assertions; preserve raw, không sửa production hoặc nhận lỗi helper là defect. Những probe này là scoped technical review, chưa phải final approval/CI.
+
+### 58.3. Tích hợp và giới hạn
+
+Lead chạy lint/build/test trên v2: từng exit0, web100/backend174 PASS, hai warning Fast Refresh cũ và chunk-size/build-timing warning. Chrome native browser200/400 có6 ca geometry/control PASS; ảnh page.screenshot ra640×360/320×180, không đủ làm full physical-frame1280×720 evidence, giữ ảnh gốc và sửa capture probe ngoài Git, không patch sản phẩm vì capture.
+
+Firefox144 native text-only200 tại390×844/DPR1, dataset ít trip: first case chưa đạt. Diagnostic lặp đo hai Y tick `16`/`60` có glyph y319.25 trong khi SVGtop322, vượt2.75px, computedfont24px; x vẫn trong SVG57…333. Ảnh và rect chi tiết được giữ; không khẳng định toàn bộ glyph mất hoặc quy nguyên nhân browser khi chưa có bằng chứng. Freeze v2 bị thu hồi, yêu cầu author sửa headroom của biểu đồ; không thay failure này bằng CSS-root32 PASS. Sau sửa phải chạy lại native và các gate cho đúng snapshot.
+
+Một lỗi setup native Chrome ban đầu dùng Response.ok() thay vì property của fetch, xảy ra trước khi mở app; sửa probe ngoài Git, không tính PASS hoặc production defect. Full suite/backend-real analytics/required CI và final approval chưa chạy trên bản mới. Gate Windows chưa đóng, chưa merge hoặc bắt đầu WEB-09. WEB-VH1/VH2, keyboard/safe area thật NOT_RUN. Không bật lại Narrator; reader-ON focus cũ, diagnostic native WEB-07, N01/N02, Privacy Content Gate, preference và WEB-G07 vẫn OPEN/NOT_VERIFIED theo từng mục. Không claim full Firefox/Narrator/WCAG, GPS accuracy, provider uptime hoặc hỗ trợ mọi thiết bị. Screenshots/JSON/probe tổng hợp nằm ngoài Git, không phải ảnh thực địa hay evidence sản phẩm cuối cho tài liệu tốt nghiệp.
+
+### 58.4. Headroom rework v3 và kiểm chứng tiếp tục 2026-10-18
+
+Tác giả chỉ tăng margin.top20→32 trong ComposedChart; toàn bộ nghiệp vụ trước render tiếp tục khớp nguyên văn với base sau chuẩn hoá CRLF/LF (chỉ bỏ import Legend). Fixture tăng cường ca390 sẵn có bằng Y tick font34px, glyph thực46px: trước sửa vượt4.93px, sau sửa target PASS. Đây là synthetic regression, không thay native Firefox.
+
+Hash SHA-256 v3 hiện hành:
+
+- AnalyticsPage `BE969325D8A9DCACECBDEC0A1E974FD906DF525F1CCF953C4BBD17F894E851D6`.
+- Fixture `A4B51230B296C2AB6A8AEBA499A2FC540A049F542CC4B8790BDB5A60786D4DF0`.
+
+Author v3 **18×2=36/36 PASS**, Chrome155.0.8059.82, một worker/retries0; type-check/targeted lint/whitespace exit0. Reviewer ban đầu chạy lại riêng **24/24 PASS** trên v3, không gán kết quả v2 thành chạy lại. Native Firefox sau sửa6/6 và lượt layout-settled lặp6/6 PASS trên cùng hash; top glyph cách SVGtop9.25px thay vì vượt2.75px, đúng chênh12px. Không suy kết quả này thành native Safari/thiết bị hoặc chứng nhận Firefox toàn app.
+
+Một attempt v3 trước đó quan sát main.scrollWidth825/client768 ở desktop; thiếu snapshot offender tại điểm fail. Lượt standalone và hai full native sau đó PASS mà không sửa source. Nguyên nhân **OPEN/NOT_VERIFIED**, không quy chắc cho tooltip/observer hoặc công bố FIXED. Collector mới chờ actual main/host/SVG cùng khớp và giữ samples; các samples hoàn tất main390/host276 hoặc main768/host606 đều khớp. Không xoá attempt cũ, không tăng retry hoặc patch overflow-hidden để giấu.
+
+Phiên 18/10 audit remote/base/hash vẫn khớp; source không đổi. Reviewer cuối `/root/web08_final_review` thay reviewer đã hết lượt sử dụng, tự đối chiếu source/contracts/hash và evidence; không nhận36/24 ca trước thành tự chạy. Source/test không do reviewer cuối hoặc Lead viết.
+
+| Kiểm tra | Nguồn / môi trường | Actual trên v3 |
+| --- | --- | --- |
+| Native browser200/400 | Lead, Chrome155.0.8059.82; physical1280×720, CSS640×360/DPR2 và320×180/DPR4 | 6/6 PASS, dữ liệu ít/nhiều/số lớn, keyboard disclosure/filter/menu; glyph và post-filter mark centers đúng, geometry ổn định4rAF |
+| Native text-only200 | Lead, Firefox144;390×844 và1280×720/DPR1, font heading24→48 | 6/6 PASS mới ngày18/10, đủ ba dataset; width/DPR giữ, final main/scroll và host/SVG khớp, ba axis groups không rỗng, glyph/overlap đúng, mark centers ổn định4rAF |
+| Node gates | Lead, ba lệnh exit riêng ngày18/10 | lint/build/test exit0; web100/100, backend174/174; hai Fast Refresh warning cũ, chunk/build-timing warning và npm update notice không phải lỗi |
+| DB setup | Lead, database test mới riêng ngày18/10 | 11 migration và partition integration script PASS; không DB dev, routing/biometric mock |
+| Full/backend regression và required CI | Lead / CI đúng head | PENDING; không dùng scoped/native PASS thay full/CI |
+
+Native finish mới đo lại sau car→All trước chụp và lưu JSON finalGeometry/finalMarks. Capture probe ban đầu yêu cầu một bar rectangle cho mỗi trip nhưng dataset có một trip distance làm tròn0 nên chỉ hai rectangle/ba line point; sửa helper sang đủ line point + centers trong plot + geometry không đổi4rAF, không sửa product. Ảnh Chrome mới có đủ physical1280×720 và các phần legend/plot-top/plot-bottom theo internal scroller; ở400% không đòi cả biểu đồ vừa một viewport CSS320×180. Reviewer/Lead trực tiếp xem các ảnh mẫu mới, không tuyên bố mọi ảnh lịch sử đều settled. Collector Firefox kiểm/assert post-All snapshot, nhưng lời gọi kiểm ổn định trước từng PNG không assert error return; không dùng ảnh đơn lẻ làm chứng nhận mọi frame ổn định. Không khẳng định toàn bộ rectangle của endpoint dot nằm trong plot — actual check là center; toàn bộ glyph vẫn trong SVG.
+
+Gate Windows và phê duyệt cuối vẫn PENDING full/CI đúng head; WEB-09 chưa triển khai. Sau merge WEB-08, Lead sẽ bàn giao WEB-09 cho agent Claude phía người dùng thay vì viết trùng; không giả Claude đã được kết nối hay đã chạy trong phiên này. Các gate/diagnostic OPEN và thiết bị NOT_RUN ở §58.3 giữ nguyên.
+
+### 58.5. Full regression và backend-real analytics (2026-10-18)
+
+Trạng thái này tiếp nối snapshot PENDING ở §58.4, không hồi tố các attempt cũ. Source/fixture v3 vẫn nguyên hash. Lead chạy toàn bộ Playwright trên Chrome155.0.8059.82, một worker, retries0: **164/164 PASS, exit0 (5.2m)**; JSON expected164, unexpected/flaky/skipped0. Gồm159 fixture/hook và5 ca backend thật, không lấy fixture thay backend hoặc gán native Firefox cho suite Chrome.
+
+Diagnostic Analytics riêng dùng REST/Socket.IO thật với NestJS/Postgres/PostGIS trên DB test cô lập, routing/biometric mock. Lead tạo hai xe car/motorbike, hai chuyến ended, mỗi chuyến nhận hai GPS point có persistence ACK trước khi end. UI thật tại390×844 dùng token đăng nhập thật, không route stub: **3/3 filter All/car/motorbike PASS**; kiểm thứ tự/dòng disclosure, chart distance làm tròn2, tổng raw toFixed1, duration/warnings và không pageerror. Toàn bộ request phát từ màn quan sát là GET `/auth/me`, `/trips`, `/vehicles`; bước chuẩn bị dữ liệu có POST/WS thật riêng. Duration/warnings bằng0 do chuyến kiểm thử ngắn, không claim coverage nonzero thực nghiệm của diagnostic này; fixture/probe riêng phủ nonzero.
+
+Attempt smoke đầu bị backend từ chối VALIDATION_ERROR vì script ngoài Git thiếu `accuracy_m` bắt buộc trong LocationUpdateDto/API contract. Sửa payload test thêm5m, không sửa sản phẩm hoặc nới validation; tài khoản test dang dở không dùng làm evidence PASS. Lượt sau hoàn tất3filter như trên. Đây là dữ liệu GPS tổng hợp gửi qua backend thật, không phải chuyến đi thực địa/độ chính xác định vị hoặc provider sinh trắc thật.
+
+Lead đã xác minh PID/listener và dừng đúng backend test; xoá hai database tạm WEB-08 do lượt review tạo ngày17/18, xác nhận count0. Không xoá container/volume hoặc DB dev; checkout chính và Flutter dirty giữ nguyên. Reviewer cuối yêu cầu sửa provenance W08-R1: baseline không lưu browser version, đã ghi NOT_CAPTURED thay vì lấy version final điền ngược. Full/backend local đã PASS; **final independent approval và required CI đúng head vẫn PENDING**, chưa merge, WEB-09 chưa bắt đầu.

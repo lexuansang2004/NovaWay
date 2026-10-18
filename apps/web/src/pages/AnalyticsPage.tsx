@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
-  Legend,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -103,20 +102,21 @@ export default function AnalyticsPage() {
     <div className="relative min-h-full">
       <MapGridBackdrop className="opacity-70" withRadar={false} />
 
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-6 p-8">
+      <div className="relative z-10 mx-auto flex min-w-0 max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8 [overflow-wrap:anywhere]">
         <div>
           <h1 className="text-2xl font-semibold text-white">Lịch sử &amp; Phân tích chuyến đi</h1>
           <p className="mt-1 text-sm text-slate-400">Quãng đường, thời gian và cảnh báo theo phương tiện.</p>
         </div>
 
-        <div className="flex gap-2" role="group" aria-label="Lọc theo loại phương tiện">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc theo loại phương tiện">
           {FILTERS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => setFilter(value)}
+              aria-pressed={filter === value}
               className={cn(
-                'rounded-full border px-4 py-1.5 text-sm transition-colors',
+                'min-h-11 min-w-11 rounded-full border px-4 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300',
                 filter === value
                   ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-100'
                   : 'border-white/10 text-slate-400 hover:bg-white/5 hover:text-slate-100',
@@ -135,24 +135,34 @@ export default function AnalyticsPage() {
           <p className="text-sm text-slate-400">Chưa có chuyến đi nào đã kết thúc phù hợp bộ lọc.</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-4">
               <StatCard label="Tổng quãng đường" value={`${totals.distanceKm.toFixed(1)} km`} Icon={Route} accent="cyan" />
               <StatCard label="Tổng thời gian" value={`${totals.durationMinutes} phút`} Icon={Clock} accent="emerald" />
               <StatCard label="Cảnh báo an toàn" value={`${totals.warnings}`} Icon={TriangleAlert} accent="amber" />
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-4 backdrop-blur-xl">
+            <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-900/50 p-3 backdrop-blur-xl sm:p-4">
+              <ul aria-label="Chú giải biểu đồ" className="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-300">
+                <li className="flex min-w-0 items-start gap-2">
+                  <span aria-hidden="true" className="mt-1 h-3 w-3 shrink-0 rounded-sm bg-cyan-400" />
+                  <span>Quãng đường (km, trục trái)</span>
+                </li>
+                <li className="flex min-w-0 items-start gap-2">
+                  <span aria-hidden="true" className="mt-2 h-0.5 w-3 shrink-0 bg-emerald-400" />
+                  <span>Thời gian (phút, trục phải)</span>
+                </li>
+              </ul>
               <ResponsiveContainer width="100%" height={320}>
-                <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <ComposedChart data={chartData} margin={{ top: 32, right: 4, left: 4, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                  <XAxis dataKey="name" stroke="rgba(148,163,184,0.7)" fontSize={12} />
-                  <YAxis yAxisId="left" stroke={CYAN} fontSize={12} unit="km" />
-                  <YAxis yAxisId="right" orientation="right" stroke={EMERALD} fontSize={12} unit="p" />
+                  <XAxis dataKey="name" stroke="rgba(148,163,184,0.7)" fontSize="0.75rem" height={48} minTickGap={40} />
+                  <YAxis yAxisId="left" stroke={CYAN} fontSize="0.75rem" width="auto" tickFormatter={(value: number) => Math.abs(value) >= 10000 ? value.toExponential(1) : `${value}`} />
+                  <YAxis yAxisId="right" orientation="right" stroke={EMERALD} fontSize="0.75rem" width="auto" tickFormatter={(value: number) => Math.abs(value) >= 10000 ? value.toExponential(1) : `${value}`} />
                   <Tooltip
-                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}
+                    contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}
+                    wrapperStyle={{ maxWidth: '100%' }}
                     labelStyle={{ color: '#f8fafc' }}
                   />
-                  <Legend />
                   <Bar yAxisId="left" dataKey="distance_km" name="Quãng đường (km)" fill={CYAN} radius={[4, 4, 0, 0]}>
                     {chartData.map((entry, index) => (
                       <Cell key={index} fill={entry.mismatch_warning_count > 0 ? RED : CYAN} />
@@ -169,6 +179,29 @@ export default function AnalyticsPage() {
                 </ComposedChart>
               </ResponsiveContainer>
               <p className="mt-2 text-xs text-slate-500">Cột màu đỏ = chuyến đi có cảnh báo an toàn.</p>
+              <details className="mt-4 rounded-xl border border-white/10">
+                <summary className="min-h-11 cursor-pointer rounded-xl px-3 py-3 text-sm text-cyan-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
+                  Đọc số liệu từng chuyến ({chartData.length})
+                </summary>
+                <ol aria-label="Số liệu từng chuyến" className="space-y-3 p-3 pt-0">
+                  {chartData.map((entry, index) => (
+                    <li key={filteredTrips[index].id} className="min-w-0 rounded-lg bg-white/[0.03] p-3">
+                      <h2 className="text-sm font-medium text-white">Chuyến {index + 1} — {entry.name}</h2>
+                      <dl className="mt-2 grid gap-2 text-sm text-slate-300">
+                        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                          <dt>Quãng đường</dt><dd>{entry.distance_km} km</dd>
+                        </div>
+                        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                          <dt>Thời gian</dt><dd>{entry.duration_minutes} phút</dd>
+                        </div>
+                        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                          <dt>Số cảnh báo an toàn</dt><dd>{entry.mismatch_warning_count}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ol>
+              </details>
             </div>
           </>
         )}
