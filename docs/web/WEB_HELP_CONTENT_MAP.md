@@ -4,6 +4,8 @@
 >
 > Nội dung trên trang nằm ở `apps/web/src/pages/helpContent.ts`, mỗi câu có một id `H-xx`. Sửa một câu thì sửa cả ở đây, và chỉ khi hành vi sản phẩm mà câu đó mô tả đã đổi.
 >
+> Vòng review 1 (2026-10-19, PR #97): H-02, H-03 và H-23 được viết lại cho đúng mã nguồn (R02, R03, N01); quy tắc fragment thêm theo R01. Không đổi hành vi xác thực để khớp câu chữ. Chi tiết: `docs/REVIEW_NOTES.md` §64.
+>
 > Requirement: `docs/SRS.md:181–183` (FR-WEBHELP-01…03). AC: `docs/ACCEPTANCE_CRITERIA.md:382–407` (AC-WEBHELP-01…05). Ràng buộc nội dung: `docs/web/WEB_ACCOUNT_RWD_SPEC.md:181–194` (§4.5), WEB-G07 (`WEB_ACCOUNT_RWD_SPEC.md:42`), WEB-D05 (`:72`).
 
 ## 1. Khung trang
@@ -16,6 +18,7 @@
 | Đoạn mở đầu | "Hướng dẫn ngắn cho các chức năng đang có trên trang web NovaWay. Chọn một mục để đi tới phần tương ứng." | FR-WEBHELP-02 (chỉ nói chức năng đang có) | Spec §4.5 `WEB_ACCOUNT_RWD_SPEC.md:183` |
 | Mục lục | `nav` "Mục lục trợ giúp", danh sách đánh số 6 mục theo đúng thứ tự §4.5; mỗi mục là link `#id` tới heading của mục | AC-WEBHELP-05 | Spec §4.5 `WEB_ACCOUNT_RWD_SPEC.md:183, 185–192` |
 | Heading mục | 6 `h2`, mỗi `h2` là đích của link (focus được bằng chương trình, `tabIndex=-1`) | AC-WEBHELP-05 | Như trên |
+| Fragment trong URL | Chỉ id của 6 mục Help là đích; fragment hỏng (ví dụ `#%`, chuỗi UTF-8 bị cắt), rỗng hoặc id khác trong trang không phải đích: trang Help vẫn hiển thị, không đổi focus | AC-WEBHELP-05; review R01 | `apps/web/src/pages/HelpPage.tsx` (`sectionFromHash`); ErrorBoundary toàn app `apps/web/src/main.tsx:15–17`, `apps/web/src/components/ErrorBoundary.tsx:18–40` |
 | Link route | Một link mỗi chủ đề có "Route đích" trong §4.5; đi qua router và auth guard hiện có | FR-WEBHELP-01, AC-WEBHELP-02, -05 | `WEB_ACCOUNT_RWD_SPEC.md:187–191`; route `App.tsx:18, 23–25, 29` |
 
 ## 2. Từng câu
@@ -25,8 +28,8 @@
 | Id | Câu trên trang (tóm tắt) | Requirement/AC | Nguồn sự thật |
 |---|---|---|---|
 | H-01 | Đăng nhập bằng email và mật khẩu tại trang Đăng nhập | FR-WEBHELP-01 | `apps/web/src/components/auth/LoginForm.tsx:53, 60, 75`; route `App.tsx:18` |
-| H-02 | Mỗi lần mở trang cần đăng nhập, NovaWay kiểm tra lại phiên với máy chủ; phiên không còn hợp lệ → về trang Đăng nhập | FR-WEBHELP-01; AC-WEBHELP-03 (phiên hết hạn) | `AppLayout.tsx:7–9, 38`; `apps/web/src/services/authService.ts:59–63` (401 xoá phiên) |
-| H-03 | Chưa kiểm tra được phiên (mất mạng, máy chủ sự cố, chờ quá lâu) → thông báo + "Thử lại" và "Đăng nhập lại"; phiên vẫn được giữ tới khi chọn "Đăng nhập lại" | AC-WEBHELP-03 | `apps/web/src/components/auth/SessionCheckError.tsx:8–10, 33, 38, 41`; `AppLayout.tsx:27–35`; `apps/web/src/services/authSession.ts:24` (15 giây) |
+| H-02 | NovaWay kiểm tra phiên với máy chủ khi bạn mở hoặc tải lại trang web ở một trang cần đăng nhập, hoặc ngay sau khi đăng nhập; chuyển giữa các trang trong ứng dụng không kiểm tra lại mỗi lần; máy chủ báo phiên không còn hợp lệ → về trang Đăng nhập | FR-WEBHELP-01; AC-WEBHELP-03 (phiên hết hạn); review R02 | Kiểm khi `AppLayout` mount: `apps/web/src/services/useSessionCheck.ts:13–17, 27–32` (effect dependency rỗng), `AppLayout.tsx:17`; các route con dùng chung một `AppLayout`: `App.tsx:21–36`; sau đăng nhập `LoginPage.tsx:21–22` chuyển tới `/dashboard` (mount `AppLayout`); 401 → xoá phiên và về `/login`: `authService.ts:59–64`, `authSession.ts:135–141`, `AppLayout.tsx:37–38` |
+| H-03 | Chưa kiểm tra được phiên (ví dụ mất mạng, máy chủ sự cố, chờ quá lâu) → thông báo + "Thử lại" và "Đăng nhập lại"; các lỗi này tự chúng không đăng xuất; "Thử lại" mà máy chủ báo phiên không còn hợp lệ → về trang Đăng nhập; "Đăng nhập lại" là chủ động bỏ phiên hiện tại | AC-WEBHELP-03; review R03 | Màn lỗi và hai nút: `apps/web/src/components/auth/SessionCheckError.tsx:8–12, 33, 38, 41`, `AppLayout.tsx:27–35`; lỗi khác 401 giữ token: `authSession.ts:143–149`; quá 15 giây: `authSession.ts:24, 120–126`; "Thử lại" chạy lại kiểm tra: `authSession.ts:174–176`, kết quả 401 → xoá đúng token đó và `unauthenticated`: `authService.ts:59–64`, `authSession.ts:135–141`, `AppLayout.tsx:37–38`; "Đăng nhập lại" = `endLocalSession`: `authSession.ts:188–195` |
 | H-04 | Phiên còn hợp lệ thì mở trang Đăng nhập sẽ tự về Dashboard | FR-WEBHELP-01 (link `/login` đi qua hành vi auth hiện có) | `apps/web/src/pages/LoginPage.tsx:21–22` |
 | H-05 | Không gửi mật khẩu hoặc mã đăng nhập cho bất kỳ ai; chỉ nhập mật khẩu tại trang Đăng nhập | FR-WEBHELP-03; AC-WEBHELP-03; spec `:187` | Spec §4.5 `WEB_ACCOUNT_RWD_SPEC.md:187` |
 
@@ -66,7 +69,7 @@
 
 | Id | Câu trên trang | Requirement/AC | Nguồn sự thật |
 |---|---|---|---|
-| H-23 | "Thông tin về quyền riêng tư nằm ở trang Quyền riêng tư." | Spec `:191` (chỉ link; nội dung theo §4.3 / WEB-11, Privacy Content Gate còn mở) | Route `App.tsx:29`; menu `Sidebar.tsx:154–155` |
+| H-23 | "Mở trang Quyền riêng tư từ liên kết bên dưới." | Spec `:191` (chỉ link; nội dung theo §4.3 / WEB-11, Privacy Content Gate còn mở); review N01 | Route `App.tsx:29` (còn `ComingSoonPage`, `apps/web/src/pages/ComingSoonPage.tsx:11`); menu `Sidebar.tsx:154–155` |
 
 Không viết chính sách, thời hạn lưu, nhà cung cấp hay đầu mối liên hệ nào ở đây.
 

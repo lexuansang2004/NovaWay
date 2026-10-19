@@ -38,11 +38,11 @@ export const HELP_SECTIONS: HelpSection[] = [
       { id: 'H-01', text: 'Đăng nhập bằng email và mật khẩu tài khoản NovaWay tại trang Đăng nhập.' },
       {
         id: 'H-02',
-        text: 'Mỗi khi bạn mở một trang cần đăng nhập, NovaWay kiểm tra lại phiên đăng nhập với máy chủ. Nếu phiên không còn hợp lệ, bạn được đưa về trang Đăng nhập để đăng nhập lại.',
+        text: 'Khi bạn mở hoặc tải lại trang web NovaWay ở một trang cần đăng nhập, hoặc ngay sau khi đăng nhập, NovaWay kiểm tra phiên đăng nhập với máy chủ. Chuyển giữa các trang trong ứng dụng không kiểm tra lại mỗi lần. Nếu máy chủ báo phiên không còn hợp lệ, bạn được đưa về trang Đăng nhập để đăng nhập lại.',
       },
       {
         id: 'H-03',
-        text: 'Nếu chưa kiểm tra được phiên (mất mạng, máy chủ gặp sự cố hoặc phải chờ quá lâu), trang hiện thông báo kèm hai nút “Thử lại” và “Đăng nhập lại”. Phiên của bạn vẫn được giữ cho tới khi bạn chọn “Đăng nhập lại”.',
+        text: 'Nếu chưa kiểm tra được phiên (ví dụ mất mạng, máy chủ gặp sự cố hoặc phải chờ quá lâu), trang hiện thông báo kèm hai nút “Thử lại” và “Đăng nhập lại”. Những lỗi này tự chúng không đăng xuất bạn. Khi bạn chọn “Thử lại”, nếu máy chủ báo phiên không còn hợp lệ, bạn được đưa về trang Đăng nhập. Chọn “Đăng nhập lại” là chủ động bỏ phiên hiện tại để đăng nhập lại.',
       },
       { id: 'H-04', text: 'Nếu phiên vẫn còn hợp lệ, mở trang Đăng nhập sẽ tự đưa bạn về Dashboard.' },
       {
@@ -132,7 +132,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   {
     id: 'quyen-rieng-tu',
     title: 'Quyền riêng tư',
-    items: [{ id: 'H-23', text: 'Thông tin về quyền riêng tư nằm ở trang Quyền riêng tư.' }],
+    items: [{ id: 'H-23', text: 'Mở trang Quyền riêng tư từ liên kết bên dưới.' }],
     link: { to: '/account/privacy', label: 'Mở trang Quyền riêng tư' },
   },
   {

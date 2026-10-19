@@ -17,6 +17,23 @@ import { HELP_INTRO, HELP_SECTIONS } from '@/pages/helpContent';
 const linkClass =
   'inline-flex min-h-11 w-fit max-w-full items-center rounded-lg border border-cyan-400/30 px-4 py-2 text-sm font-medium text-cyan-200 [overflow-wrap:anywhere] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300';
 
+const SECTION_IDS = new Set(HELP_SECTIONS.map((section) => section.id));
+
+// The URL fragment is outside input. It names a target only if it decodes to
+// one of the help sections above; a malformed escape (`#%`, a cut UTF-8
+// sequence), an empty fragment or any other id is no target. The try covers
+// only the decoding, so a bad fragment cannot reach the global ErrorBoundary.
+function sectionFromHash(hash: string): string | null {
+  if (hash.length < 2) return null;
+  let id: string;
+  try {
+    id = decodeURIComponent(hash.slice(1));
+  } catch {
+    return null;
+  }
+  return SECTION_IDS.has(id) ? id : null;
+}
+
 function focusSection(id: string) {
   const heading = document.getElementById(id);
   if (!heading) return;
@@ -29,7 +46,8 @@ export default function HelpPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (hash) focusSection(decodeURIComponent(hash.slice(1)));
+    const id = sectionFromHash(hash);
+    if (id) focusSection(id);
   }, [hash]);
 
   const goToSection = useCallback(

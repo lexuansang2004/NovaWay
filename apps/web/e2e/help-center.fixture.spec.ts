@@ -36,12 +36,16 @@ const ALL_HREFS = [
   '/login', '/vehicles', '/start-trip', '/trip-history', '/account/privacy', '#vi-tri',
 ];
 
-// Spec §4.5 / AGENTS.md terminology: none of these may appear on the page.
-// Case-insensitive. "trên điện thoại" (the phone app) is allowed; a phone
-// number, email, contact channel, ticket/chat, a start-trip instruction,
-// internals/debug, Offline Sync or privacy-policy wording is not.
+// Spec §4.5: none of these may appear on the page. Case-insensitive.
+// "trên điện thoại" (the phone app) is allowed; a phone number, email, contact
+// channel, ticket/chat, a start-trip instruction, internals/debug, Offline Sync
+// or privacy-policy wording is not.
+//
+// AGENTS.md terminology is not checked by listing prohibited words here (the
+// rule forbids them in code too). Instead the whole visible text of <main> must
+// be exactly the approved copy: the headings, intro and labels written out in
+// APPROVED_FRAME below plus the H-01…H-26 items, so no other wording can appear.
 const FORBIDDEN = [
-  'gian lận', 'phạt nguội', 'novapay',
   'liên hệ', 'hotline', 'số điện thoại', 'tổng đài', 'hỗ trợ viên', 'gửi yêu cầu', 'ticket', 'chat', 'form', '@', 'http', 'www.',
   'khuôn mặt', 'chụp ảnh', 'gửi ảnh', 'selfie',
   'bắt đầu chuyến đi', 'nhấn bắt đầu', 'kết thúc chuyến đi trên web',
@@ -50,6 +54,16 @@ const FORBIDDEN = [
   'token', 'jwt', 'api', 'websocket', 'socket', 'debug', 'trip id', 'localhost', 'sessionstorage',
   'đã gửi thành công', 'chúng tôi sẽ phản hồi', 'khôi phục', 'cấp quyền',
 ];
+
+const INTRO = 'Hướng dẫn ngắn cho các chức năng đang có trên trang web NovaWay. Chọn một mục để đi tới phần tương ứng.';
+const SECTION_LINKS: Record<string, string> = {
+  'dang-nhap': 'Mở trang Đăng nhập',
+  'phuong-tien': 'Mở Quản lý phương tiện',
+  'vi-tri': 'Mở Vị trí trực tiếp',
+  'lich-su': 'Mở Lịch sử chuyến đi',
+  'quyen-rieng-tu': 'Mở trang Quyền riêng tư',
+  'loi-thuong-gap': 'Đi tới mục Xem vị trí chuyến đi',
+};
 
 // Statements the acceptance criteria rest on, written out here (not read from
 // helpContent.ts) so dropping or weakening one fails the test.
@@ -69,6 +83,15 @@ const REQUIRED = {
     'Chọn “Đặt đang dùng” để đặt một xe làm xe đang dùng; xe đó có nhãn “Đang hoạt động”. Mỗi lúc chỉ có một xe ở trạng thái này: xe đang dùng trước đó sẽ tự bỏ nhãn. Xe mới thêm chưa phải xe đang dùng.',
     'Nhãn “Đang hoạt động” chỉ cho biết xe bạn đã chọn để dùng. Nhãn này không có nghĩa xe đang di chuyển hay đang có chuyến đi.',
   ],
+  // H-02 / H-03 (review R02, R03): when the session is checked, and what a
+  // failed check does and does not do. Source: useSessionCheck.ts:13–32
+  // (on AppLayout mount), authSession.ts:131–149, 174–176, 192–195.
+  session: [
+    'Khi bạn mở hoặc tải lại trang web NovaWay ở một trang cần đăng nhập, hoặc ngay sau khi đăng nhập, NovaWay kiểm tra phiên đăng nhập với máy chủ. Chuyển giữa các trang trong ứng dụng không kiểm tra lại mỗi lần. Nếu máy chủ báo phiên không còn hợp lệ, bạn được đưa về trang Đăng nhập để đăng nhập lại.',
+    'Nếu chưa kiểm tra được phiên (ví dụ mất mạng, máy chủ gặp sự cố hoặc phải chờ quá lâu), trang hiện thông báo kèm hai nút “Thử lại” và “Đăng nhập lại”. Những lỗi này tự chúng không đăng xuất bạn. Khi bạn chọn “Thử lại”, nếu máy chủ báo phiên không còn hợp lệ, bạn được đưa về trang Đăng nhập. Chọn “Đăng nhập lại” là chủ động bỏ phiên hiện tại để đăng nhập lại.',
+  ],
+  // N01: privacy is a link only while WEB-11's content gate is open.
+  privacy: ['Mở trang Quyền riêng tư từ liên kết bên dưới.'],
   // AC-WEBHELP-03: network, expired session and a map without a position.
   errors: [
     'Không gửi mật khẩu hoặc mã đăng nhập của bạn cho bất kỳ ai. Chỉ nhập mật khẩu tại trang Đăng nhập.',
@@ -89,6 +112,8 @@ interface FixtureOptions {
   token?: string | null;
   me?: 'ok' | 401 | 'network';
   email?: string;
+  // Read on every /auth/me, so a test can change the answer mid-flow.
+  control?: { me: 'ok' | 401 | 'network' };
 }
 
 // Seeds the token once per context (addInitScript re-runs on every load, so
@@ -130,8 +155,9 @@ async function fixture(page: Page, options: FixtureOptions = {}) {
       route.fulfill({ status, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
     const authorised = bearer === `Bearer ${TOKEN}`;
     if (path === '/api/auth/me' && request.method() === 'GET') {
-      if (options.me === 'network') return route.abort('failed');
-      if (options.me === 401 || !authorised) return json(401, { error_code: 'UNAUTHORIZED', message: 'fixture' });
+      const me = options.control?.me ?? options.me;
+      if (me === 'network') return route.abort('failed');
+      if (me === 401 || !authorised) return json(401, { error_code: 'UNAUTHORIZED', message: 'fixture' });
       return json(200, { ...USER, email: options.email ?? USER.email });
     }
     // Read-only answers for the destination pages' own requests.
@@ -149,6 +175,20 @@ const tocLink = (page: Page, title: string) => toc(page).getByRole('link', { nam
 const sectionHeading = (page: Page, id: string) => main(page).locator(`h2#${id}`);
 const mainLink = (page: Page, name: string) => main(page).getByRole('link', { name, exact: true });
 const readToken = (page: Page) => page.evaluate((key) => sessionStorage.getItem(key), TOKEN_KEY);
+
+// Collects page errors and console errors. The global ErrorBoundary catches a
+// render/effect exception (so there is no pageerror) and logs it with
+// console.error, so both are watched.
+function watchErrors(page: Page) {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(`console: ${message.text().slice(0, 200)}`);
+  });
+  return errors;
+}
+
+const globalFallback = (page: Page) => page.getByRole('heading', { name: 'Đã có lỗi xảy ra', exact: true });
 
 async function expectHelp(page: Page) {
   await expect(heading(page)).toBeVisible();
@@ -299,7 +339,7 @@ test.describe('FR-WEBHELP-01…03 / AC-WEBHELP-01…04 — content', () => {
     await expectHelp(page);
 
     const items = await itemTexts(page);
-    for (const statement of REQUIRED.errors) expect(items).toContain(statement);
+    for (const statement of [...REQUIRED.session, ...REQUIRED.errors]) expect(items).toContain(statement);
     const text = (await main(page).innerText()).toLowerCase();
     for (const forbidden of ['gửi mật khẩu cho', 'cung cấp mật khẩu', 'jwt', 'token', 'khuôn mặt', 'chụp ảnh', 'gửi ảnh', 'selfie', 'khôi phục', 'cấp quyền', 'cho phép vị trí', 'camera']) {
       expect(text, `help must not contain "${forbidden}"`).not.toContain(forbidden);
@@ -350,6 +390,21 @@ test.describe('FR-WEBHELP-01…03 / AC-WEBHELP-01…04 — content', () => {
 
     const hrefs = await main(page).getByRole('link').evaluateAll((els) => els.map((el) => el.getAttribute('href')));
     expect(hrefs).toEqual(ALL_HREFS);
+
+    // Exact visible text: the approved frame written out in this file plus the
+    // H-xx items, nothing else (also the terminology check, see FORBIDDEN).
+    const expectedLines = [
+      'Trợ giúp', INTRO, 'Mục lục', ...SECTIONS.map(([, title]) => title),
+      ...SECTIONS.flatMap(([id, title]) => [
+        title,
+        ...HELP_SECTIONS.find((section) => section.id === id)!.items.map((item) => item.text),
+        SECTION_LINKS[id],
+      ]),
+    ];
+    const visibleLines = (await main(page).innerText()).split('\n').map((line) => line.trim()).filter(Boolean);
+    expect(visibleLines).toEqual(expectedLines);
+    const privacy = main(page).getByRole('region', { name: 'Quyền riêng tư', exact: true });
+    expect(await privacy.locator('[data-help-id]').allTextContents()).toEqual(REQUIRED.privacy);
 
     const area = main(page);
     await expect(area.locator('form, input, textarea, select, button, [contenteditable="true"], img, iframe')).toHaveCount(0);
@@ -484,6 +539,69 @@ test.describe('AC-WEBHELP-05 — TOC, anchors and keyboard', () => {
     expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('BODY');
     onlySessionChecks(calls);
   });
+
+  // Review R01: a fragment is outside input. A malformed percent escape or an
+  // incomplete UTF-8 sequence must be treated as "no target", not crash Help
+  // into the global error screen.
+  for (const fragment of ['%', '%E0%A4%A']) {
+    test(`malformed fragment #${fragment}: Help stays, no global error, focus and token untouched, anchors still work`, async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      const errors = watchErrors(page);
+      const calls = await fixture(page);
+
+      await page.goto(`/help#${fragment}`);
+      await expectHelp(page);
+      await expect(globalFallback(page)).toHaveCount(0);
+      expect(page.url().endsWith(`/help#${fragment}`)).toBe(true);
+      expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('BODY');
+      expect(await readToken(page)).toBe(TOKEN);
+
+      await tocLink(page, 'Lịch sử và thống kê chuyến đi').focus();
+      await page.keyboard.press('Enter');
+      await expectAtSection(page, 'lich-su');
+
+      await page.goBack();
+      await expectHelp(page);
+      await expect(globalFallback(page)).toHaveCount(0);
+      expect(page.url().endsWith(`/help#${fragment}`)).toBe(true);
+      await page.goForward();
+      await expectAtSection(page, 'lich-su');
+
+      await page.goto(`/help#${fragment}`);
+      await page.reload();
+      await expectHelp(page);
+      await expect(globalFallback(page)).toHaveCount(0);
+      expect(await readToken(page)).toBe(TOKEN);
+
+      expect(errors).toEqual([]);
+      onlySessionChecks(calls);
+    });
+  }
+
+  test('valid fragments: an encoded known section is focused; empty fragment and a non-help element id are not targets', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const errors = watchErrors(page);
+    const calls = await fixture(page);
+
+    // %76 is "v": #%76i-tri names the "vi-tri" section.
+    await page.goto('/help#%76i-tri');
+    await expectHelp(page);
+    await expect(sectionHeading(page, 'vi-tri')).toBeFocused();
+    await expectUncovered(sectionHeading(page, 'vi-tri'));
+
+    for (const fragment of ['', 'main-content']) {
+      await page.goto('/dashboard');
+      await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+      await page.goto(`/help#${fragment}`);
+      await expectHelp(page);
+      await expect(globalFallback(page)).toHaveCount(0);
+      expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('BODY');
+      expect(await main(page).evaluate((el) => el.scrollTop)).toBe(0);
+    }
+
+    expect(errors).toEqual([]);
+    onlySessionChecks(calls);
+  });
 });
 
 test.describe('FR-WEBHELP-01 / AC-WEBHELP-02, -05 — destinations go through the existing router and guard', () => {
@@ -535,6 +653,44 @@ test.describe('FR-WEBHELP-01 / AC-WEBHELP-02, -05 — destinations go through th
 });
 
 test.describe('auth guard on /help (WEB-01 semantics unchanged)', () => {
+  test('H-02: the session is checked when the protected area is opened or reloaded, not on every in-app page change', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const calls = await fixture(page);
+    const checks = () => calls.filter((call) => call.path === '/api/auth/me').length;
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+    const afterOpen = checks();
+    expect(afterOpen).toBeGreaterThan(0);
+
+    await openAccountMenu(page, USER.email);
+    await page.getByRole('menuitem', { name: 'Trợ giúp' }).click();
+    await expectHelp(page);
+    await mainLink(page, 'Mở Quản lý phương tiện').click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Quản lý phương tiện', exact: true })).toBeVisible();
+    expect(checks()).toBe(afterOpen);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Quản lý phương tiện', exact: true })).toBeVisible();
+    expect(checks()).toBeGreaterThan(afterOpen);
+  });
+
+  test('H-03: a network failure keeps the session; "Thử lại" that gets a current 401 ends it without "Đăng nhập lại"', async ({ page }) => {
+    const control: { me: 'ok' | 401 | 'network' } = { me: 'network' };
+    const calls = await fixture(page, { control });
+    await page.goto('/help');
+    await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
+    expect(await readToken(page)).toBe(TOKEN);
+
+    control.me = 401;
+    await page.getByRole('button', { name: 'Thử lại' }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
+    expect(await readToken(page)).toBeNull();
+    await expect(page.getByRole('heading', { name: 'Trợ giúp' })).toHaveCount(0);
+    // Only session checks were made; "Đăng nhập lại" was never pressed.
+    for (const call of calls) expect(call).toMatchObject({ method: 'GET', path: '/api/auth/me', body: null });
+  });
+
   test('no token: deep link goes to /login without a session check or help content', async ({ page }) => {
     const calls = await fixture(page, { token: null });
     await page.goto('/help#vi-tri');
