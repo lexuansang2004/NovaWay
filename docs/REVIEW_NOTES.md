@@ -1582,3 +1582,175 @@ Tiếp nối §60, không sửa lịch sử tác giả. Reviewer `/root/web09_in
 Reviewer độc lập đã kiểm code probe, JSON6ca và bốn ảnh mẫu Firefox; không tự chạy browser trong review này. Lead đã xem ảnh email/focus mới. Screenshots/probes/raw JSON ngoài Git, chỉ dữ liệu tổng hợp `example.com`; không ảnh/email cá nhân hoặc token vào repo. Native này kiểm đúng trang/điều kiện đã nêu, không chứng nhận toàn Firefox/Narrator/WCAG hoặc thiết bị thật.
 
 Local review/gates đã PASS; **final independent approval và required CI của head chứa đính chính mới vẫn PENDING**. Không dùng CI xanh `6d2ddef` để duyệt commit sau đó. PR #96 vẫn Draft, chưa merge; WEB-10…WEB-13 chưa bắt đầu. Text-only Firefox của tác giả vẫn NOT_RUN như lịch sử, nay được bổ sung bằng lượt Lead riêng. WEB-VH1/VH2, keyboard/safe area, screen reader và F1/các mục OPEN ở §60.6 giữ nguyên, không bật Narrator.
+
+## 62. WEB-09 — đóng bước theo bằng chứng merge/CI thật (ghi khi bắt đầu WEB-10, 2026-10-19)
+
+Mục này chỉ ghi nhận trạng thái WEB-09 đã kiểm lại từ GitHub và Git; không sửa §59–§61. Nhãn "chờ final CI/approval/merge" ở §60/§61 và trong plan là ảnh chụp trạng thái tại thời điểm viết, nay được đóng bằng bằng chứng dưới đây.
+
+| Mục | Bằng chứng (kiểm lại 2026-10-19) |
+|---|---|
+| PR | PR #96 `feat/web-account-profile-readonly` → `develop`: `MERGED` lúc 2026-10-18T13:43:38Z |
+| Head được duyệt | `96306b9821c4b732348270b7b17038779f8d47c9` (commit 2026-10-18T15:38:50+07:00) |
+| Phê duyệt | Comment "Independent final approval — WEB-09 Windows gate PASS" lúc 2026-10-18T08:47:55Z, duyệt đúng head `96306b9`, base `1fc5517`; nêu rõ không áp dụng cho head khác. PR không có review GitHub dạng "Approve" (`reviews` rỗng) — phê duyệt nằm ở comment này |
+| CI đúng head | Check runs của `96306b9`: Backend + Web + shared-types, Mobile, E2E (Playwright, golden path), Vercel Preview Comments đều `success`. Log job E2E `117630686090`: "Running 183 tests using 2 workers" → "183 passed (4.3m)", không có dòng retry |
+| Merge | Squash merge `fbed87272d4f32b29adcb35ef12a587925e11603`; tree của merge commit và của head `96306b9` cùng là `c4a8042857f36e01563617f2900a273cea24d484` (nội dung merge đúng bằng head đã duyệt) |
+| `develop` | `origin/develop` = `git ls-remote` = `fbed872` khi bắt đầu WEB-10 |
+| Gate trên `develop` (lượt WEB-10, tác giả) | Trên `fbed872` chưa sửa: `pnpm install --frozen-lockfile` OK; web unit 100/100; lint 0 lỗi (2 cảnh báo Fast Refresh có từ trước); full Playwright **183/183**, retries 0, 2 worker, Chromium 149.0.7827.55, backend thật trên DB test riêng `novaway_web10_e2e` |
+
+**Kết luận:** WEB-09 ✅ MERGED (PR #96, `fbed872`). Giữ nguyên các mục mở của §60.6/§61: F1 `ECONNRESET` OPEN/NOT_VERIFIED; thiết bị thật Android/iPhone, bàn phím ảo/safe area và screen reader NOT_RUN.
+
+## 63. WEB-10 — trang Trợ giúp theo flow sản phẩm thật: đã triển khai, chờ review độc lập (2026-10-19)
+
+Tác giả: agent Claude phía chủ dự án (Frontend Engineer, góc nhìn Technical Writer). Review/tích hợp: Lead Codex. Branch `feat/web-help-center`, base `origin/develop` = `fbed87272d4f32b29adcb35ef12a587925e11603` (kiểm bằng `git ls-remote`, §62). Chưa approved, chưa merge; WEB-11…WEB-13 chưa bắt đầu.
+
+### 63.1. Phạm vi và thiết kế
+
+- **`apps/web/src/pages/helpContent.ts` (mới, 154 dòng):** toàn bộ chữ trên trang, mỗi câu một id `H-01`…`H-26`, chia 6 mục theo đúng thứ tự spec §4.5. Mỗi mục có tối đa một link route (§4.5 "Route đích") hoặc một link trong trang.
+- **`apps/web/src/pages/HelpPage.tsx` (mới, 107 dòng):** `h1` "Trợ giúp", đoạn mở đầu, `nav` "Mục lục trợ giúp" (danh sách đánh số 6 link `#id`), 6 `section` có `h2`.
+  - Link mục lục và link trong trang đưa hash vào URL qua router; một effect theo `location.hash` cuộn heading lên đầu `main` và focus heading (`tabIndex=-1`). Vì vậy deep link, reload, Back/Forward và bấm lại đúng hash hiện tại đều tới đúng heading, và Tab tiếp theo vào link của mục đó.
+  - `main` là vùng cuộn và header mobile nằm ngoài `main` (`AppLayout.tsx:44`), nên heading đã cuộn tới không nằm dưới header.
+  - Link route dùng `Link` của router, đi qua `AppLayout` và guard hiện có. Link `/login` giữ hành vi sẵn có: phiên hợp lệ thì về Dashboard (`LoginPage.tsx:21–22`), không đăng xuất.
+  - Không gửi request riêng, không form/nút/ảnh, không kênh liên hệ. Link và đích 44px, có viền focus; chữ xuống dòng `overflow-wrap:anywhere`.
+- **`apps/web/src/App.tsx`:** chỉ đổi phần tử của route `/help` (placeholder → `HelpPage`) và thêm import. Route và ranh giới auth không đổi.
+- **Content map:** `docs/web/WEB_HELP_CONTENT_MAP.md` truy vết từng heading/đoạn/câu → FR/AC → `path:dòng` tại `fbed872`, kèm danh sách "cố ý không có" và GAP-H1.
+
+Không đổi: session store/context/service WEB-01, shell và component chung WEB-02…08, backend, API, schema, Flutter, Unity, dependency/lockfile, CI, cấu hình test. Không làm trang privacy/settings/offline.
+
+### 63.2. Test và điều chỉnh test cũ
+
+| Thay đổi | Nội dung và lý do |
+|---|---|
+| Mới `e2e/help-center.fixture.spec.ts` | 37 ca, **fixture UI** (app thật, chỉ REST transport là fixture; mọi request ghi method/path/Bearer/body; geolocation/getUserMedia bị chặn và ghi lại). Các câu mà AC dựa vào được ghi cứng trong test, không đọc từ `helpContent.ts`, nên xoá/sửa câu là fail. Danh sách từ cấm gồm cả hai thuật ngữ cấm của AGENTS.md dưới dạng assertion phủ định, cùng cách với `apps/backend/src/mismatch-detection/mismatch-detection.service.spec.ts:90`. |
+| `responsive-navigation.fixture.spec.ts` | 3 assertion đếm `getByRole('navigation')` trên `/help` thu hẹp về nav shell `{ name: 'Điều hướng chính' }` (cách đã dùng ở dòng 67 của chính file). Spec này dùng `/help` làm trang được bảo vệ đơn giản; mục lục mới là một landmark navigation thứ hai, làm 3 ca fail trong lượt full đầu (W10-R8). Ý định đếm nav của shell giữ nguyên; không bỏ assertion, không `.first()`. |
+
+Fixture email dài (chỉ để thử shell ở CSS stress): local-part 58, domain 48, tổng 107 ký tự — độ dài được assert ngay trong test, nằm trong giới hạn 64/255.
+
+Tự sửa trong lúc làm (trước khi chốt):
+
+- Nhãn AC trong bản spec đầu không khớp `ACCEPTANCE_CRITERIA.md:382–407`; đã gắn lại theo đúng AC-WEBHELP-01…05 và thêm ca riêng cho AC-01…04.
+- Điểm hit-test ban đầu ở góc trái-trên rơi ra ngoài bo góc 16px của link khi root 32px (đo sai, không phải bị che); đã đổi sang hai điểm trong dòng đầu. Bài touch đã chờ focus như các bài khác.
+- Hai câu được chỉnh cho đúng mã nguồn: H-15 thêm trường hợp "trang chưa tải được dữ liệu chuyến đi" (`useLiveTrip.ts:62–66` bỏ qua lỗi tải); H-24 chỉ nói "nếu trang có nút Thử lại" vì nút này chỉ có ở màn kiểm tra phiên (`SessionCheckError.tsx:38`), các trang khác chỉ báo lỗi.
+
+### 63.3. Requirement → AC → test → kết quả
+
+| Requirement | AC | Test (`help-center.fixture.spec.ts` trừ khi ghi khác) | Kết quả (tác giả) |
+|---|---|---|---|
+| FR-WEBHELP-01 | AC-WEBHELP-02, -05 | Deep link: mục lục và `h2` đúng thứ tự/nhãn, đủ H-01…H-26 đúng thứ tự, đúng 12 link (6 `#id`, `/login`, `/vehicles`, `/start-trip`, `/trip-history`, `/account/privacy`, `#vi-tri`); menu → Trợ giúp (1280 sidebar, 390 drawer); reload `#lich-su`; 10 ca link route (5 đích × 1280/390) tách request trang help khỏi request riêng của trang đích | PASS |
+| FR-WEBHELP-02 | AC-WEBHELP-01 | H-12 và câu WEB-G07 có mặt; không nút trong `main`; không "bắt đầu chuyến đi"/"bấm bắt đầu"…; không "offline"/"đồng bộ" | PASS |
+| FR-WEBHELP-02 | AC-WEBHELP-02 | 5 câu thêm/sửa/xoá/đặt đang dùng/nhãn không phải chuyến có mặt trong mục xe; mục có đúng một link `/vehicles`; bấm tới `/vehicles`, trang đích chỉ GET `/vehicles` | PASS |
+| FR-WEBHELP-03 | AC-WEBHELP-03 | 4 câu mất mạng/phiên hết hạn/bản đồ chưa có vị trí/không gửi mật khẩu có mặt; không "token", "jwt", "khuôn mặt", "khôi phục", "cấp quyền", "camera"…; link `#vi-tri`; không gọi geolocation/camera | PASS |
+| FR-WEBHELP-03 | AC-WEBHELP-04 | Không form/input/nút/ảnh/iframe; không href `mailto:`/`tel:`/`http`; không "liên hệ", "hotline", "ticket", "chat", "@", "đã gửi thành công"… | PASS |
+| FR-WEBHELP-01 | AC-WEBHELP-05 | Tab/Shift+Tab qua 6 link mục lục đúng thứ tự (1280, 390); Enter → `h2` được focus, hit-test không bị che, Tab tiếp vào link của mục, Enter tới route; mọi mục ở 320×568/844×390/1280×720; Back/Forward; link trong trang kể cả khi hash đã là hiện tại; hash lạ không đổi focus | PASS |
+| NFR-RWD / WEB-T11 | AC-WEBHELP-05 | 5 viewport: không cuộn ngang document/main, box và glyph của mọi `h1/h2/p/li/a` trong `main`, không truncate, mọi link tới được và ≥44px; CSS-root32 ở 320/1280; resize 1025/1024/1023/844×390/390×844/320 giữ route/hash/focus; touch DPR2 | PASS |
+| WEB-01 (không đổi) | — | Không token → `/login`, 0 request; 401 → xoá phiên, `/login`; lỗi mạng → màn lỗi WEB-01, giữ token và route | PASS |
+
+### 63.4. Bằng chứng trước/sau, lặp và độ nhạy
+
+Tất cả Chromium 149.0.7827.55 (Playwright 1.61.1), `retries=0`, 2 worker, trừ khi ghi khác.
+
+| Lượt | Kết quả |
+|---|---|
+| Full Playwright trên `fbed872` chưa sửa, backend thật | 183/183; unexpected/flaky/skipped 0 |
+| Spec mới trên routing base (`App.tsx` đúng như `HEAD`, `/help` là placeholder) | **34 fail / 3 pass**: 32 fail vì thiếu nav "Mục lục trợ giúp", 2 vì thiếu `h2#loi-thuong-gap`; 3 pass là ca auth WEB-01. (Bản spec sơ bộ 33 ca: 30 fail / 3 pass cùng lý do.) |
+| Spec mới sau thay đổi | 37/37; ×5 = **185/185** |
+| Độ nhạy (8 lỗi cấy, mỗi lỗi một lượt, khôi phục và kiểm hash sau cùng) | Xoá H-11 → 2 fail; thêm dòng liên hệ có email → 2; đảo thứ tự mục → 3; heading không nhận focus → 11; truncate câu → 8; trang tự gửi request → 32; link xe trỏ `/offline-sync` → 4; trang gọi geolocation → 15. Hash `HelpPage.tsx`/`helpContent.ts`/`App.tsx` sau khôi phục khớp trước khi cấy |
+| `responsive-navigation` sau khi thu hẹp | 15 ca ×3 = 45/45 |
+| Full Playwright sau thay đổi, lượt 1, backend thật | 217/220: 3 fail ở `responsive-navigation` (đếm landmark, xem 63.2). Đã sửa, không retry |
+| Full Playwright sau thay đổi, lượt cuối, backend thật | **220/220 (3.6m)**, unexpected/flaky/skipped 0; 215 fixture/hook + 5 backend thật |
+
+Backend thật chạy trên DB test mới `novaway_web10_e2e` (kiểm chưa tồn tại trước khi tạo, 11 migration). Số lần đăng ký mỗi lượt full giữ nguyên 4; các lượt full cách nhau hơn 60 giây; không nới throttling, không skip/retry.
+
+### 63.5. Zoom native, CSS stress và gate
+
+Probe ngoài Git (`scratchpad/web10-native/`): transport HTTP tổng hợp (Python, chỉ trả `GET /api/auth/me`), UI thật do Vite phục vụ ở cổng 5189 riêng. CSS-root32 trong spec là stress, **không** phải zoom native.
+
+| Chế độ | Trình duyệt | Môi trường đo được | Kết quả |
+|---|---|---|---|
+| Native zoom 200 (Preferences `default_zoom_level`) | Chrome 155.0.8059.82 | cửa sổ 1280×720 → CSS 631×312, DPR 2 | PASS: không cuộn ngang, không box/glyph ngoài `main`; Tab tới mục lục (5 lần Tab), Enter → `h2#lich-su` focus, hit-test 2/2, top 77 dưới `main` top 61; Tab tiếp vào link mục; 12/12 link hit-test |
+| Native zoom 400 | Chrome 155.0.8059.82 | CSS 315×156, DPR 4 | PASS, cùng tiêu chí |
+| Cỡ chữ mặc định 32px (không phải text-only zoom) | Chrome 155.0.8059.82 | CSS 1262×624, DPR 1, `h1` 48px | PASS, cùng tiêu chí |
+| Native text-only 200 (`ui.textScaleFactor=200`, `browser.display.os-zoom-behavior=2`; profile tạm) | Firefox 144.0 headless qua geckodriver 0.37.1 có sẵn, WebDriver HTTP thuần (không dùng/cài Selenium) | 1280×720 → CSS 1280×635, DPR 1, `h1` 24→48px, `li` 32px | PASS, cùng tiêu chí |
+| Như trên, cửa sổ yêu cầu 390×844 và 320×568 | Firefox 144.0 | Firefox headless không cho hẹp hơn: đo được CSS **500**×759 và **500**×483 | PASS ở 500 CSS px. Text-only ở 390/320 CSS px: **NOT_RUN** |
+
+Request trong mọi probe: chỉ `GET /api/auth/me` có Bearer, không body. Ảnh toàn khung (CDP với Chrome, WebDriver screenshot với Firefox) đã xem. Fake server ghi một `ConnectionAbortedError` khi trình duyệt huỷ một request giữa chừng lúc đóng; không ảnh hưởng kết quả đo.
+
+Gate root, chạy riêng từng lệnh: `npm run lint` exit 0 (2 cảnh báo Fast Refresh có từ trước), `npm run build` exit 0 (cảnh báo chunk-size có từ trước), `npm run test` exit 0 (web 100/100, backend 174/174).
+
+Sau khi chạy: dừng đúng tiến trình backend của lượt này (PID trên cổng 3000, đã đối chiếu command line và DB) và xoá đúng `novaway_web10_e2e` (count 0). DB dev `novaway`, container/volume, checkout chính và thay đổi Flutter có sẵn ở checkout chính không bị đụng.
+
+### 63.6. Finding, NOT_RUN và giới hạn
+
+- **GAP-H1 (cần chủ dự án/Lead quyết):** spec nói bắt đầu/kết thúc chuyến làm trên mobile, backend có `POST /trips/start` và `/trips/:id/end`, nhưng app mobile tại base chưa gọi chúng (chi tiết `WEB_HELP_CONTENT_MAP.md` §4). H-12 chỉ nêu phân vai, không mô tả các bước trên điện thoại và không nói luồng đó đã hoàn chỉnh.
+- **Quan sát ngoài phạm vi:** empty state hiện có của `LiveMapPage.tsx:21–23` nhắc xác thực khuôn mặt trên điện thoại, trong khi mobile còn hoãn bước này. Không sửa ở WEB-10.
+- **NOT_RUN:** Firefox text-only ở 320/390 CSS px (giới hạn cửa sổ); thiết bị thật Safari iPhone/Android Chrome (WEB-VH1/VH2), bàn phím ảo/safe area; screen reader (không bật Narrator); review độc lập và CI đúng head.
+- **F1 `ECONNRESET`:** không tái hiện trong các lượt full của WEB-10; vẫn **OPEN, nguyên nhân NOT_VERIFIED**. Không sửa HTTP/backend/test-infra.
+- Hash LF-normalized (12 ký tự đầu SHA-256): `App.tsx` `4905ec3da877`, `HelpPage.tsx` `4938e1298f38`, `helpContent.ts` `50b3fce718b3`, `help-center.fixture.spec.ts` `38c3a7a7b5ed`, `responsive-navigation.fixture.spec.ts` `9cb13b02288c`.
+
+## 64. WEB-10 — sửa theo review vòng 1 (CHANGES REQUIRED), chờ re-review độc lập (2026-10-19)
+
+Tác giả: agent Claude phía chủ dự án (implementation owner WEB-10). Quyết định vòng 1 của Review Manager tại head `f0f32b525b612fd29a5bdb9d92a7380a4e030a82`: **CHANGES REQUIRED** (R01–R04, N01). Sửa trên cùng branch `feat/web-help-center`, cùng Draft PR #97, base vẫn `fbed87272d4f32b29adcb35ef12a587925e11603`. Commit mới, không amend/force-push. Chưa approved, chưa merge; không bắt đầu WEB-11.
+
+### 64.1. Audit trước khi sửa
+
+- Worktree sạch, `HEAD` = `origin/feat/web-help-center` = PR #97 head = `f0f32b5`; `origin/develop` = `fbed872`; PR Draft/OPEN. Không có `.codegraph`.
+- Đã đọc: quyết định Review Manager, review độc lập, `lead-diagnostic-followup-results.json` + `lead-diagnostic.cjs`, `lead-native-firefox-final-results.json` + `help-native-firefox.py` và ghi chú về probe ban đầu (trong thư mục review của Lead). AGENTS.md đọc tại worktree: Baseline v1.0 đã đạt; quy tắc thuật ngữ ở `AGENTS.md:65` không có ngoại lệ.
+
+### 64.2. Phản hồi từng finding
+
+| ID | Vị trí mới | Cách sửa | Test trước (mã sản phẩm của `f0f32b5`) → sau |
+|---|---|---|---|
+| R01 | `apps/web/src/pages/HelpPage.tsx:20–35, 48–51` | `sectionFromHash`: fragment chỉ là đích khi giải mã được **và** là id của một trong 6 mục Help (`SECTION_IDS`). `try/catch` chỉ bọc `decodeURIComponent`; fragment hỏng, rỗng hoặc id khác trả về "không có đích" nên không focus, không throw. Không đổi auth/router/API. | Ca mới `malformed fragment #%` và `#%E0%A4%A`: **FAIL** — snapshot cho thấy heading toàn app "Đã có lỗi xảy ra" thay cho Help. Ca mới "valid fragments": **FAIL** — `#main-content` (id ngoài Help) làm code cũ focus phần tử `MAIN`. Sau sửa: PASS. Help còn hiển thị, không fallback, không console/page error, focus không đổi, token giữ nguyên; mục lục/Enter/Back/Forward/reload vẫn đúng; `#%76i-tri` (dạng mã hoá của `vi-tri`) vẫn focus đúng mục. |
+| R02 | `apps/web/src/pages/helpContent.ts:40–41`; content map dòng H-02 | H-02 nói rõ việc kiểm phiên xảy ra khi mở hoặc tải lại trang web ở một trang cần đăng nhập, hoặc ngay sau khi đăng nhập, và chuyển trang trong ứng dụng không kiểm tra lại mỗi lần. Không sửa WEB-01. | Câu kỳ vọng ghi cứng trong `REQUIRED.session`: FAIL trên copy cũ → PASS. Ca runtime mới "H-02": Dashboard → Help → Vehicles bằng điều hướng trong app không tăng số `GET /auth/me`; reload thì tăng. |
+| R03 | `helpContent.ts:44–45`; content map dòng H-03 | H-03 nói: các lỗi mạng/máy chủ/quá thời gian tự chúng không đăng xuất; "Thử lại" mà máy chủ báo phiên không còn hợp lệ thì về trang Đăng nhập; "Đăng nhập lại" là chủ động bỏ phiên hiện tại. Không đổi auth/store/service. | Câu kỳ vọng ghi cứng: FAIL → PASS. Ca runtime mới "H-03": lỗi mạng giữ token; đổi fixture sang 401 hiện hành rồi bấm "Thử lại" → `/login`, token bị xoá, không bấm "Đăng nhập lại", chỉ có `GET /auth/me`. Ca cũ "network failure" (giữ token) và "401" vẫn giữ. Nguồn cho từng vế câu ghi trong content map. |
+| R04 | `apps/web/e2e/help-center.fixture.spec.ts:39–56` (chú thích và danh sách cụm cấm), `:58–66` (`INTRO`, `SECTION_LINKS`), deep-link test | Bỏ dòng literal thuật ngữ bị cấm khỏi test WEB-10 (xoá theo vị trí, không ghép chuỗi/encode). Kiểm tra thay thế: toàn bộ chữ hiển thị trong `<main>` phải **đúng bằng** copy đã duyệt — khung heading/intro/nhãn link ghi cứng trong test cộng với các câu H-01…H-26 theo thứ tự id. | Xem 64.3 về phạm vi coverage. |
+| N01 | `helpContent.ts:135`; content map dòng H-23 | H-23 = "Mở trang Quyền riêng tư từ liên kết bên dưới." Không thêm nội dung chính sách. | Câu kỳ vọng `REQUIRED.privacy` ghi cứng: FAIL → PASS. |
+
+### 64.3. Đính chính §63.2 (R04)
+
+§63.2 ghi rằng danh sách từ cấm "gồm cả hai thuật ngữ cấm của AGENTS.md dưới dạng assertion phủ định", viện dẫn một test backend cũ làm tiền lệ. **Lý do đó không đúng và được rút lại:** AGENTS.md không có ngoại lệ cho assertion phủ định, tiền lệ cũ không cấp quyền ngoại lệ, và Review Manager không duyệt ngoại lệ. §63 giữ nguyên làm lịch sử; mục này là đính chính.
+
+Phạm vi coverage sau sửa, nói đúng mức:
+
+- **Có:** chữ hiển thị trong `<main>` chỉ được là copy đã duyệt (khung ghi cứng + H-xx). Bất kỳ chữ nào thêm vào trang ngoài các câu đó đều làm test fail. Các câu mà AC dựa vào vẫn ghi cứng độc lập (`REQUIRED.*`). Danh sách cụm cấm theo spec §4.5 (liên hệ, ticket, start-trip, offline, chính sách, debug…) vẫn giữ.
+- **Không còn:** quét tự động hai thuật ngữ cụ thể của AGENTS.md trong test. Nếu một câu H-xx được sửa thành có thuật ngữ đó, test không tự bắt; việc đó thuộc review nội dung (content map) và quét dòng thêm mới trước khi commit.
+- Không sửa AGENTS.md, không dọn file cũ (test backend cũ giữ nguyên).
+
+### 64.4. Bằng chứng (tác giả, lượt này)
+
+Chromium 149.0.7827.55 (Playwright 1.61.1), `retries=0`, 2 worker, trừ khi ghi khác. Artifact thô ngoài Git: `scratchpad/web10r-evidence/`, `scratchpad/web10r-native/`.
+
+| Lượt | Kết quả |
+|---|---|
+| Spec mới trên mã sản phẩm của `f0f32b5` (chỉ test đổi) | 37 pass / **5 fail**: 2 fragment hỏng (fallback toàn app), 1 id ngoài Help được focus (`MAIN`), 2 copy (H-02/H-03 trong AC-03; H-23 trong deep-link) |
+| Spec mới sau sửa | 42/42; ×5 = **210/210**, unexpected/flaky/skipped 0 |
+| Độ nhạy: 13 lỗi cấy (5 mới + 8 của vòng 1, điểm neo điều chỉnh theo mã mới), khôi phục và kiểm hash | Bỏ guard decode → 2 fail; mọi id là đích → 1; H-02 cũ → 1; H-03 cũ → 1; H-23 cũ → 1; xoá H-11 → 2; thêm liên hệ → 2; đảo mục → 3; heading không focus → 14; truncate → 8; tự gửi request → 35; link sai route → 5; geolocation → 15. Hash `HelpPage.tsx`/`helpContent.ts` sau khôi phục khớp |
+| Full Playwright, backend thật | **225/225 (3.9m)**, unexpected/flaky/skipped 0; 220 fixture/hook + 5 backend thật |
+| `npm run lint` / `npm run build` / `npm run test` (root, chạy riêng, thứ tự như CI) | Exit 0 cả ba. Lint 2 cảnh báo Fast Refresh có từ trước; build có cảnh báo chunk-size có từ trước; web 100/100, backend 174/174 |
+
+Backend thật chạy trên DB test mới `novaway_web10r_e2e` (kiểm count 0 trước khi tạo, 11 migration). Sau khi chạy: dừng đúng PID của lượt này (đối chiếu command line chứa tên DB) và xoá đúng DB (count 0). DB dev `novaway`, container/volume, checkout chính và thay đổi Flutter sẵn có không bị đụng. Số đăng ký mỗi lượt full vẫn 4; không nới throttling, không retry.
+
+### 64.5. Native (sau sửa)
+
+Transport HTTP tổng hợp (chỉ `GET /api/auth/me`), UI thật do Vite phục vụ từ cây đã sửa. CSS-root32 trong spec vẫn chỉ là stress.
+
+| Chế độ | Môi trường đo được | Kết quả (tác giả) |
+|---|---|---|
+| Chrome 155.0.8059.82, native zoom 200 / 400 (Preferences) | CSS 631×312/DPR2; 315×156/DPR4 | PASS: không tràn box/glyph, Tab → mục lục → Enter → heading focus và không bị che → Tab → link mục, 12/12 link hit-test; `#%` và `#%E0%A4%A` giữ Help, không fallback, focus ở `BODY` |
+| Chrome 155, cỡ chữ mặc định 32px | CSS 1262×624/DPR1, h1 48px | PASS, cùng tiêu chí |
+| Firefox 144.0 headless, native **text-only 200%** (`browser.zoom.full=false` + default zoom 200%, cùng cách Lead), viewport CSS chính xác qua WebDriver BiDi `browsingContext.setViewport`; geckodriver 0.37.1 có sẵn, BiDi qua WebSocket có sẵn của Node 24, không Selenium, không cài gì | 320×568, 390×844, 1280×720; DPR 1; h1 24→48px, mục 16→32px | **3/3 PASS**: không tràn, 12 link; 6 heading focus và hit-test; lượt chỉ bàn phím từ trang mới tải: Enter vào heading, Tab tới "Mở trang Đăng nhập" có `:focus-visible`, outline solid 2px, nằm trong `main`; `#%`/`#%E0%A4%A` giữ Help, `#%76i-tri` focus `vi-tri` |
+
+Lần chạy native đầu của lượt này fail vì lỗi của chính probe, không phải sản phẩm: key element WebDriver bị gõ sai, và ở Chrome, `goto` chỉ đổi hash là điều hướng trong cùng tài liệu nên focus còn ở link trước (đúng hành vi "fragment không phải đích thì không đổi focus"). Đã sửa probe (tải `/dashboard` trước mỗi fragment) và chạy lại; kết quả trên là lượt sau.
+
+**Provenance:**
+- Các lượt Firefox ở 320/390 CSS px trong bảng trên là **lượt của tác giả trên cây đã sửa**.
+- Kết quả 500 CSS px ở §63.5 vẫn là lịch sử của head cũ.
+- Các lượt Selenium/BiDi ở 320/390/1280 tại head `f0f32b5` là **lượt bổ sung của Lead** (`lead-native-firefox-final-results.json`), không phải của tác giả, và không được tính thay cho lượt này.
+
+### 64.6. Còn mở
+
+- **GAP-H1 OPEN:** H-12 giữ ở mức phân vai kiến trúc (web xem, mobile quản lý vòng đời chuyến), không suy ra mobile đã có luồng hoạt động; không thêm bước thao tác trên điện thoại, debug flag hay code Flutter. Thiếu luồng mobile theo dõi ở hồ sơ gap.
+- **F1 `ECONNRESET`:** không tái hiện trong lượt full 225/225; vẫn OPEN, nguyên nhân NOT_VERIFIED.
+- **Privacy Content Gate OPEN:** H-23 chỉ là câu điều hướng; WEB-11 chưa bắt đầu.
+- Giữ ba assertion landmark đã thu hẹp về nav "Điều hướng chính".
+- **NOT_RUN:** thiết bị thật iPhone Safari/Android Chrome, bàn phím ảo/safe area, screen reader (không bật Narrator); re-review độc lập và CI tại head mới.
+- Hash LF-normalized (12 ký tự đầu SHA-256) của cây commit này: `HelpPage.tsx` `c30293dac9ef`, `helpContent.ts` `2ea235a193e6`, `help-center.fixture.spec.ts` `14f17735bd44`. `App.tsx` và `responsive-navigation.fixture.spec.ts` không đổi so với §63.6.
