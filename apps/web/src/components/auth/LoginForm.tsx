@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Entrance } from '@/components/common/Entrance';
+import { useReducedMotionNow } from '@/contexts/motionPreferenceContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -28,6 +30,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const reducedMotion = useReducedMotionNow();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,11 +46,10 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
   }
 
   return (
-    <motion.div
+    <Entrance
       className="w-full min-w-0 rounded-2xl border border-cyan-400/20 bg-slate-900/60 p-4 shadow-[0_0_40px_rgba(34,211,238,0.12)] backdrop-blur-xl [overflow-wrap:anywhere] sm:p-6"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      from={{ opacity: 0, y: 16 }}
+      duration={0.4}
     >
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-white">Đăng nhập NovaWay</h1>
@@ -87,7 +89,13 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
         {error && <p className="min-w-0 text-sm font-medium text-red-400 [overflow-wrap:anywhere]">{error}</p>}
 
-        <motion.div tabIndex={-1} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+        {/* WEB-12: no hover/tap scaling while reduced motion applies (OS, live). */}
+        <motion.div
+          tabIndex={-1}
+          whileHover={reducedMotion ? undefined : { scale: 1.01 }}
+          whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+          transition={reducedMotion ? { duration: 0 } : undefined}
+        >
           <Button
             type="submit"
             disabled={submitting}
@@ -99,6 +107,6 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
         <p className="mt-1 text-center text-xs text-slate-500">NovaWay · Trợ lý định tuyến thông minh</p>
       </form>
-    </motion.div>
+    </Entrance>
   );
 }

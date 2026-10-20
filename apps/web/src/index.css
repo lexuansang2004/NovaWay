@@ -125,3 +125,21 @@
 .radar-ring {
   animation: radar-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* WEB-12 (spec §4.4, WEB-D13): decorative CSS motion stops when the OS asks
+   for reduced motion (any page, followed live by the browser) or when the
+   signed-in account chose "Giảm chuyển động" (data-motion on <html>, set only
+   inside the authenticated layout). Targets only the current decorations:
+   radar rings, the Online ping and the account menu's open/close animation.
+   Colour and focus transitions are kept; there is no global reset. */
+@media (prefers-reduced-motion: reduce) {
+  .radar-ring,
+  .animate-ping,
+  [data-slot='dropdown-menu-content'],
+  [data-slot='dropdown-menu-sub-content'] {
+    animation: none;
+  }
+}
+:root[data-motion='reduced'] :is(.radar-ring, .animate-ping, [data-slot='dropdown-menu-content'], [data-slot='dropdown-menu-sub-content']) {
+  animation: none;
+}

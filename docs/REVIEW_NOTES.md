@@ -1798,3 +1798,70 @@ Implementation owner: agent Claude phía chủ dự án (Frontend Engineer, ph�
 Các bước tiếp theo (tài liệu/scratchpad đã cập nhật, implementation, test) ghi ở §67 khi thực chạy. Tại thời điểm ghi mục này, **chưa** có mã sản phẩm WEB-12 và **chưa** có kết quả test tính năng: mọi Actual là NOT_RUN.
 
 GAP-H1, F1, Privacy Content Gate và các giới hạn thiết bị/screen reader vẫn OPEN/NOT_RUN. WEB-11 và WEB-13 chưa bắt đầu.
+
+## 67. WEB-12 — preference giảm chuyển động: đã triển khai, chờ review độc lập (2026-10-21)
+
+Tác giả: agent Claude phía chủ dự án (implementation owner). Branch `feat/web-reduced-motion-preference`, base `develop` `aaaa398`. Tài liệu được commit trước mã sản phẩm (commit docs-first `6f34cc9`, §65–§66); mã và test nằm ở commit tiếp theo, cùng message theo plan. Chưa approved, chưa merge; WEB-11/WEB-13 chưa bắt đầu.
+
+### 67.1. Phạm vi và thiết kế (theo WEB-D12/WEB-D13)
+
+| File | Nội dung |
+|---|---|
+| `apps/web/src/services/motionPreference.ts` (mới) | Adapter đồng bộ, không React. Key `novaway:web:motion-preference:<user.id>`, id được kiểm (≤128). Value v1 chỉ hợp lệ khi có đúng hai own key `version`=1 và `motion`∈{`system`,`reduced`}. Ba ca tách riêng: getter/`getItem` lỗi → `read-failed`; hỏng → `invalid`; `setItem` lỗi → `false`. Đọc không sửa/xoá. `resolveMotionPreference`: có override thì dùng toàn bộ override. |
+| `apps/web/src/contexts/motionPreferenceContext.ts` (mới) | Nguồn OS phản ứng (`matchMedia` change qua `useSyncExternalStore`), context, `useMotionPreference`, `useReducedMotionNow` (ngoài provider: chỉ OS). |
+| `apps/web/src/contexts/MotionPreferenceProvider.tsx` (mới) | Đọc đồng bộ trong render đầu của user. Override theo `user.id` ở mức module, sống tới khi document tải lại. Effective = OS OR `reduced`. `data-motion="reduced"` trên `<html>` đặt trước paint và gỡ khi unmount. `MotionConfig` theo effective. |
+| `apps/web/src/components/common/Entrance.tsx` (mới) | Entrance một lần theo reduced trực tiếp: reduced lúc mount thì không có entrance; reduced khi đang chạy thì `stop()` + `set()` trạng thái cuối, không remount; không chạy lại khi OS tắt. |
+| `apps/web/src/components/settings/MotionPreferenceStatus.tsx` (mới) | Một vùng `role="status"`/polite ở đầu `main` của khu đã xác thực; ba câu đúng văn bản baseline; luôn có trong DOM, không chiếm chỗ khi rỗng. |
+| `apps/web/src/pages/SettingsPage.tsx` (mới) | `fieldset`/`legend`, hai radio native, áp dụng và lưu khi `change`, câu phạm vi, dòng thông tin khi OS reduce. |
+| `App.tsx` | Chỉ đổi phần tử route `/settings`. |
+| `AppLayout.tsx` | Chỉ bọc nhánh authenticated bằng provider và chèn vùng trạng thái vào `main`; không đổi logic WEB-01. |
+| `main.tsx` | `MotionConfig reducedMotion="user"` ở gốc, chỉ làm lớp an toàn. |
+| `LoginForm.tsx`, `LoginPage.tsx`, `DashboardPage.tsx` | Entrance dùng `Entrance`. Hover/tap của nút đăng nhập bị chặn theo OS trực tiếp. `AnimatePresence` ở LoginPage bị bỏ vì form không bao giờ rời trang khi trang còn mount (không có exit nào). |
+| `AnalyticsPage.tsx` | `isAnimationActive` của `Tooltip`/`Bar`/`Line` = `false` khi reduce, còn lại `'auto'`. |
+| `index.css` | Rule có mục tiêu: radar, chấm Online, menu tài khoản → `animation: none` dưới `@media (prefers-reduced-motion: reduce)` và dưới `:root[data-motion='reduced']`. Không reset toàn cục. |
+
+Không đổi: store/service/guard WEB-01, shell navigation, `useLiveTrip`/socket/marker, API, schema, backend, Flutter, Unity, dependency/lockfile, CI, cấu hình test.
+
+### 67.2. Test
+
+- **Unit** `apps/web/src/services/motionPreference.spec.ts` (Vitest `node`, Storage giả): 37 ca. Key, id không hợp lệ, schema v1 (15 biến thể hỏng, kể cả trường thừa U12 và `__proto__`), getter/`getItem`/`setItem`/quota, A/B, sentinel không bị đụng, writer chỉ ghi đúng hai trường, override là toàn bộ trạng thái.
+- **Fixture UI** `apps/web/e2e/settings-motion.fixture.spec.ts`: 50 ca.
+  - Bao phủ: ma trận OS × lựa chọn × trạng thái đăng nhập; khung hình đầu; OS đổi trên `/login` đã mount (giá trị nhập, focus, vùng chọn, hover/tap) và trong lúc entrance đang chạy; trang đã xác thực; lưu/reload/logout/A→B→A; trình duyệt khác; không đồng bộ đa tab; ba ca storage tách riêng; vùng trạng thái trên deep link Dashboard/Help/Profile; marker realtime nhiều lần; payload; reflow 5 viewport; CSS-root32; menu ở viewport thấp; resize; touch DPR2.
+  - Oracle: `document.getAnimations()`, sự kiện `animationstart`, computed style lấy mẫu theo khung từ đầu trang, hình học SVG biểu đồ, nội dung `localStorage` (có sentinel), request ghi method/path/Bearer/body. Kỳ vọng ghi tay, không import từ mã sản phẩm.
+
+Tự sửa test trong lúc làm (đều là lỗi của test, không phải sản phẩm):
+1. Locator `has` của nhãn radio gắn với `main` thay vì tương đối.
+2. So sánh request chặt tới số lần gọi `/auth/me`. Ở bản dev, StrictMode khởi động kiểm phiên hai lần, và request bị huỷ có khi tới fixture có khi không (hành vi WEB-01 sẵn có). Giờ chỉ so chính xác request nghiệp vụ; session check được kiểm theo dạng.
+3. Bổ sung hai ca để mutation M06/M01 bị bắt chắc hơn (entrance của login theo OS khi storage có `reduced`; khung hình đầu dashboard khi OS reduce + `system`).
+
+### 67.3. Bằng chứng (tác giả)
+
+Chromium 149.0.7827.55 (Playwright 1.61.1), `retries=0`, 2 worker, trừ khi ghi khác. Artifact thô ngoài Git: `scratchpad/web12-evidence/`, `scratchpad/web12-native/`.
+
+| Lượt | Kết quả |
+|---|---|
+| Trước khi sửa mã (cây docs-first `6f34cc9`, test mới) | Unit: file fail vì chưa có module. E2E (49 ca lúc đó): **43 fail / 6 pass**. Fail đúng lý do: chưa có nhóm radio/vùng trạng thái, hoặc chuyển động không giảm (radar/ping/menu vẫn chạy, entrance không dừng, cột biểu đồ vẫn đổi hình). 6 ca pass là đối chứng full-motion và bất biến nghiệp vụ (marker, request), đúng là phải pass ở cả hai phía. |
+| Sau khi sửa | Unit 37/37. E2E cuối 50/50; ×5 = **250/250**, unexpected/flaky 0 |
+| Độ nhạy: 15 lỗi cấy, mỗi lỗi một lượt, khôi phục và kiểm hash | Mọi lỗi bị bắt (số ca E2E fail; unit nếu là adapter): M01 effective bỏ OS 1 (chạy lại sau khi bổ sung test: 2); M02 key không theo user 20 + unit 25; M03 ghi lỗi về system 7; M04 hỏng đọc thành reduced 5 + unit 16; M05 đọc không `try` 4 + unit 2; M06 login đọc preference 1; M07 không gỡ `data-motion` 1; M08 fallback `??` (R12-02) 5 + unit 2; M09 entrance đang chạy không dừng (R12-01) 2; M10 hover/tap không chặn (R12-01) 1; M11 biểu đồ không nối 1; M12 CSS bỏ lựa chọn tài khoản 11; M13 thông báo chỉ ở `/settings` (R12-03) 6; M14 chấp nhận trường thừa (U12) 2 + unit 4; M15 marker ngừng cập nhật 1 |
+| Full Playwright, backend thật (DB `novaway_web12_e2e`) | **275/275**, unexpected/flaky/skipped 0 (270 fixture/hook + 5 backend thật). Lượt đầu trước khi bổ sung 1 ca: 274/274 |
+| Golden path backend thật với `reducedMotion: 'reduce'` (config ngoài Git, không sửa spec, một lần đăng ký như spec) | **1/1 PASS** (start → vị trí → end giống lượt thường), retries 0, chạy cách lượt full hơn 70 giây |
+| Root `npm run lint` / `npm run build` / `npm run test` (thứ tự CI) | Exit 0 cả ba, trên cây cuối. Web 137/137 (100 cũ + 37 unit mới), backend 174/174. Cảnh báo chỉ là cảnh báo cũ: lint 2 Fast Refresh (`button.tsx`, `AuthContext.tsx`), build chunk-size |
+
+### 67.4. Native (tác giả, transport HTTP tổng hợp, UI thật)
+
+| Chế độ | Môi trường đo được | Kết quả |
+|---|---|---|
+| Chrome 155.0.8059.85, native zoom 200 / 400 (Preferences) | CSS 631×312/DPR2; 315×156/DPR4 | PASS: `/settings` không tràn box/glyph, không cuộn ngang. Tab tới nhóm, ArrowDown chọn "Giảm chuyển động", `:focus-visible` với outline 2px. Lưu đúng `{"version":1,"motion":"reduced"}`. Dashboard sau đó không còn radar/ping. |
+| Chrome 155, cỡ chữ mặc định 32px (không phải text-only zoom) | CSS 1262×624/DPR1, h1 48px | PASS, cùng tiêu chí |
+| Firefox 144.0 headless, native text-only 200% (`browser.zoom.full=false` + default zoom 200%), viewport chính xác qua WebDriver BiDi `setViewport` (geckodriver 0.37.1 có sẵn, WebSocket có sẵn của Node; không cài gì) | CSS 320×568, 390×844, 1280×720; DPR1; h1 24→48px, nhãn 16→32px | **3/3 PASS**: không tràn; nhãn ≥44px; bàn phím chọn được; `:focus-visible` outline 2px; lưu đúng; dashboard không còn radar/ping |
+| Firefox 144.0, pref `ui.prefersReducedMotion` = 1 / 0 (thiết lập native của trình duyệt, **không phải OS**) | — | PASS cả hai. Với 1: `matchMedia` true, login không còn radar, `/settings` hiện dòng thông tin OS dù đang chọn "Theo hệ thống", dashboard không còn radar/ping. Với 0: login có 2 radar, dashboard có 3 animation trang trí. |
+
+Request trong mọi probe: chỉ `GET /api/auth/me` có Bearer, không body.
+
+### 67.5. Còn mở, NOT_RUN, quan sát
+
+- **NOT_RUN:** OS reduce **thật của Windows** (chỉ có emulation Playwright và pref của Firefox); thiết bị thật Safari iPhone/Android Chrome, bàn phím ảo/safe area; screen reader (không bật Narrator): cách thông báo trạng thái được đọc chưa được xác minh bằng reader thật; review độc lập và CI tại head mới.
+- **Quan sát ngoài phạm vi:** với cỡ chữ mặc định 32px trong Chrome, chữ viết tắt trong avatar của shell tràn sang chữ "Tài khoản" ở sidebar (shell WEB-02, WEB-12 không đổi).
+- GAP-H1; F1 `ECONNRESET` (không tái hiện ở các lượt full của WEB-12, vẫn OPEN/NOT_VERIFIED); Privacy Content Gate — giữ nguyên.
+- Cảnh báo build/lint: chỉ có cảnh báo cũ (2 Fast Refresh, chunk-size). Context/hook tách sang `.ts` để không thêm cảnh báo Fast Refresh.
+- Hash LF-normalized (12 ký tự đầu SHA-256): `motionPreference.ts` `4749416259aa`, `motionPreferenceContext.ts` `988f185fce56`, `MotionPreferenceProvider.tsx` `8a341bf6f608`, `Entrance.tsx` `906e382334e3`, `MotionPreferenceStatus.tsx` `6d348cd4ad4f`, `SettingsPage.tsx` `70376ec9b207`, `motionPreference.spec.ts` `01b669c70028`, `settings-motion.fixture.spec.ts` `447f41f932d8` (sau khi bỏ một dòng trống thừa ở cuối file, không đổi nội dung test), `AppLayout.tsx` `be056a9cc49b`, `LoginForm.tsx` `d9188d5b4c5c`, `AnalyticsPage.tsx` `0f30bc0a27cb`, `index.css` `c2289f399b1e`.

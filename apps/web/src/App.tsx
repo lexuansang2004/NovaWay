@@ -6,6 +6,7 @@ import VehiclesPage from '@/pages/VehiclesPage';
 import LiveMapPage from '@/pages/LiveMapPage';
 import AnalyticsPage from '@/pages/AnalyticsPage';
 import AccountProfilePage from '@/pages/AccountProfilePage';
+import SettingsPage from '@/pages/SettingsPage';
 import HelpPage from '@/pages/HelpPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import NotFoundPage from '@/pages/NotFoundPage';
@@ -25,7 +26,7 @@ function App() {
         <Route path="/vehicles" element={<VehiclesPage />} />
         <Route path="/trip-history" element={<AnalyticsPage />} />
         <Route path="/offline-sync" element={<ComingSoonPage title="Offline Sync" />} />
-        <Route path="/settings" element={<ComingSoonPage title="Cài đặt" />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/account/profile" element={<AccountProfilePage />} />
         <Route path="/account/privacy" element={<ComingSoonPage title="Quyền riêng tư" />} />
         <Route path="/help" element={<HelpPage />} />
