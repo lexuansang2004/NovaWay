@@ -112,5 +112,13 @@
 | Giá trị preference đã lưu hỏng, enum lạ hoặc `version` không hỗ trợ | "Theo hệ thống", thông báo, lần lưu hợp lệ kế tiếp ghi đè (AC-WEBSETTINGS-08) |
 | Hai tài khoản dùng chung một trình duyệt | App chỉ áp dụng preference của tài khoản đang đăng nhập (AC-WEBSETTINGS-03). Namespace theo `user.id`, dù raw hay băm, **không** phải ranh giới quyền truy cập: ai dùng chung browser profile đều đọc được storage cùng origin. Vì vậy chỉ lưu giá trị không nhạy cảm; lựa chọn và định danh dùng làm key còn lại sau logout trên máy dùng chung |
 | OS đã bật giảm chuyển động | Mọi lựa chọn trong app đều giữ chuyển động không thiết yếu ở mức giảm (AC-WEBSETTINGS-02) |
+| OS bật/tắt giảm chuyển động khi form đăng nhập hoặc trang đã xác thực đang mở | Theo ngay: không có hover/tap/entrance chuyển động mới, animation không thiết yếu đang chạy dừng hoặc tới trạng thái cuối; nội dung đã nhập và focus giữ nguyên; entrance đã xong không chạy lại (WEB-D13) |
+| Truy cập `localStorage` bị chặn ngay ở getter (SecurityError) | Như "Storage bị chặn khi đọc" (AC-WEBSETTINGS-04); token trong `sessionStorage` không bị ảnh hưởng |
+| Đọc storage luôn lỗi nhưng ghi thành công | Lựa chọn áp dụng; thông báo lỗi đọc cũ bị xoá sau khi lưu thành công (WEB-D13) |
+| Lưu thất bại khi đã có lựa chọn bền trước đó | Lựa chọn mới áp dụng tới khi tải lại; sau khi tải lại đọc lại đúng lựa chọn bền cũ (WEB-D13) |
+| Bản ghi preference có trường thừa | Giá trị hỏng (ca c) → "Theo hệ thống", thông báo; đọc không sửa/xoá (WEB-D12) |
+| Mở thẳng Dashboard/Help/Profile khi preference đọc lỗi hoặc hỏng | Thông báo hiện ngay trên route đó trong một vùng trạng thái dùng chung, không trùng lặp khi sang Settings, không chuyển focus (WEB-D13) |
+| Hai tab cùng tài khoản, một tab đổi lựa chọn | Tab kia không tự đổi; chỉ khi tải lại mới đọc lại giá trị bền (không đồng bộ đa tab) |
+| Logout rồi tài khoản khác đăng nhập cùng tab | Tài khoản sau không nhận lựa chọn, kết quả lưu hay thông báo của tài khoản trước (WEB-D13) |
 | Resize qua 1024 CSS px khi drawer đang mở, hoặc xoay màn hình khi đang nhập form | Không mất form/route, không kẹt scroll lock/backdrop, không nhân đôi tab stop (AC-RWD-03) |
 | Chỉ có emulator, chưa có Safari iPhone/Android Chrome thật | Ghi NOT_RUN riêng cho từng thiết bị ở gate công bố hỗ trợ; không tính PASS; **không** chặn gate merge Windows của step; chặn việc tuyên bố hỗ trợ thiết bị đó (NFR-RWD-06, AC-RWD-11, spec §4.7) |

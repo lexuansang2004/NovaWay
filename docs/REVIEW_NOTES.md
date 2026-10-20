@@ -1754,3 +1754,47 @@ Lần chạy native đầu của lượt này fail vì lỗi của chính probe,
 - Giữ ba assertion landmark đã thu hẹp về nav "Điều hướng chính".
 - **NOT_RUN:** thiết bị thật iPhone Safari/Android Chrome, bàn phím ảo/safe area, screen reader (không bật Narrator); re-review độc lập và CI tại head mới.
 - Hash LF-normalized (12 ký tự đầu SHA-256) của cây commit này: `HelpPage.tsx` `c30293dac9ef`, `helpContent.ts` `2ea235a193e6`, `help-center.fixture.spec.ts` `14f17735bd44`. `App.tsx` và `responsive-navigation.fixture.spec.ts` không đổi so với §63.6.
+
+## 65. WEB-10 — đóng bước theo bằng chứng merge/CI thật (ghi khi bắt đầu WEB-12, 2026-10-21)
+
+Mục này chỉ ghi trạng thái WEB-10 đã kiểm lại; không sửa §63–§64. Nhãn "chờ re-review" ở §64 và trong plan là ảnh chụp lúc viết, được đóng bằng bằng chứng dưới đây. Mỗi dòng ghi rõ ai thực hiện.
+
+| Mục | Bằng chứng | Provenance |
+|---|---|---|
+| PR | PR #97 `feat/web-help-center` → `develop`: `MERGED` lúc 2026-10-19T16:09:03Z; merge commit `aaaa3987552f40345fb655eed5969696f720733a` | Tác giả WEB-12 tự kiểm bằng `gh pr view` và `git ls-remote` (2026-10-21) |
+| Head được duyệt | `2b600864f61fa843a575881a169c59bdcaf7e7cc`. Tree của head và của merge commit đều là `5334e6f0efda315f51e167aa29f427f216f0f4fa`, nên nội dung merge đúng bằng head đã duyệt | Tác giả tự kiểm bằng `git rev-parse` |
+| Phê duyệt | Comment "Independent final review — WEB-10 Windows gate APPROVED", 2026-10-19T16:08:56Z, https://github.com/lexuansang2004/NovaWay/pull/97#issuecomment-6271652043. Đăng qua tài khoản chủ repo; đây là review của agent độc lập, không phải GitHub review dạng "Approve" | Comment của Lead/Review Manager. Tác giả chỉ kiểm sự tồn tại và dòng tiêu đề |
+| CI đúng head | Run `39277158894`, `head_sha` = `2b60086`, completed/success. Backend + Web + shared-types, Mobile, E2E, Vercel Preview Comments đều success. Raw E2E "225 passed", không retry/flaky | Trạng thái run và check do tác giả đọc qua API. Con số 225 và việc không có retry/flaky là **theo hồ sơ Lead**; tác giả không tự đọc lại log |
+| Gate Lead chạy | `lint`/`build`/`test` (web 100, backend 174); Help Chrome 42×3 = 126; diagnostic 12 | **Lượt của Lead**, không phải của tác giả, và không phải lượt runtime đầy đủ sau merge |
+| Còn mở | GAP-H1 (vòng đời chuyến trên mobile); F1 `ECONNRESET`, nguyên nhân NOT_VERIFIED; Privacy Content Gate (WEB-11); thiết bị thật, bàn phím ảo, safe area, screen reader NOT_RUN | — |
+
+**Kết luận:** WEB-10 ✅ MERGED (PR #97, `aaaa398`), gate Windows theo phê duyệt độc lập ở trên. Không suy ra hỗ trợ thiết bị.
+
+## 66. WEB-12 — quyết định thiết kế đã duyệt (APPROVED DESIGN ONLY), bắt đầu implementation docs-first (2026-10-21)
+
+Implementation owner: agent Claude phía chủ dự án (Frontend Engineer, phối hợp UI/UX và QA). Lead/Review Manager: Root Codex. Branch `feat/web-reduced-motion-preference` tạo từ `develop` `aaaa398` (tree `5334e6f`), worktree riêng. Commit theo plan: `feat: add local reduced motion preference`.
+
+### 66.1. Nguồn phê duyệt (ngoài Git, hồ sơ Lead)
+
+- **Quyết định:** `WEB_12_DESIGN_APPROVAL.md`, "APPROVED DESIGN ONLY — DOCS-FIRST WEB-12 IMPLEMENTATION AUTHORIZED", 2026-10-21. Đây chỉ là phê duyệt thiết kế, chưa phải implementation/test/merge.
+- **Baseline được duyệt:** `WEB_12_LEAD_DESIGN_BASELINE.md` revision 1, SHA-256 `d2097f1675421e3f23a683561911a1da73cbee266727536223decc6fde9652ae`. Bản ứng viên đã được review độc lập: `4ef3fa860d2cd44841279859bd6dbae5a15e58f03e68c2ffe3faaf5828a76802`. Hai bản chỉ khác dòng 3 (metadata trạng thái); tác giả đã tự kiểm cả hai hash và kết quả `diff`.
+- **Review độc lập:**
+  - `WEB_12_INDEPENDENT_DESIGN_REVIEW.md`: bản đề xuất gốc của tác giả bị CHANGES NEEDED với ba lỗi thiết kế (R12-01…03 bên dưới). Đây là lỗi ở pseudocode/thiết kế, không phải lỗi của mã đã viết.
+  - `WEB_12_FINAL_DESIGN_REVIEW.md`: baseline hiệu chỉnh được PASS_DESIGN_SCOPE.
+- Bốn đề xuất gốc của tác giả **không** được duyệt nguyên trạng; baseline thay thế mọi câu trái ngược.
+
+### 66.2. Quyết định (áp vào spec trước khi sửa mã sản phẩm)
+
+| Quyết định | Nội dung | Nơi ghi trong repo |
+|---|---|---|
+| WEB-D12 — key và schema (đóng §35 mục 6) | `user.id` dạng thô: `novaway:web:motion-preference:<user.id>`; id phải là chuỗi khác rỗng, tối đa 128 ký tự, nếu không thì không đọc/ghi. Value v1 có **đúng hai own key** `version` (số 1) và `motion` (`system`/`reduced`), không phụ thuộc thứ tự. **U12:** trường thừa → không hợp lệ (ca c), không lặng lẽ chấp nhận hay cắt bỏ. Đọc không sửa/xoá. Chọn "Theo hệ thống" ghi `system`; logout không xoá. Id thô còn nhìn thấy/liên kết được trên profile dùng chung; namespace không phải kiểm soát truy cập. | Spec §3, §4.4 |
+| WEB-D13 — vòng đời và hiển thị | Nguồn OS phản ứng theo thay đổi thật, dùng cả trước và sau đăng nhập; trước đăng nhập không đọc preference tài khoản. Provider chỉ trong nhánh authenticated của `AppLayout`, với user mà chính mount đó đã xác thực; `AppLayout` chỉ thêm wrapper và một vùng trạng thái, không đổi logic WEB-01. Effective reduce = OS reduce OR lựa chọn `reduced`. Override theo `user.id` tồn tại tới khi tải lại document/đóng tab; khi có override thì **toàn bộ** override quyết định, kể cả `problem: null`. Một vùng trạng thái nonmodal/polite trong `main` của khu đã xác thực, hiện trên route đang mở. Đổi OS giữa phiên: không có chuyển động mới, animation JS đang chạy dừng hoặc nhảy tới trạng thái cuối, không remount, không mất nhập liệu/focus; entrance đã xong không chạy lại. | Spec §3, §4.4 |
+| R12-01 | Thay câu chấp nhận snapshot Framer lúc mount (G5 cũ) | WEB-D13; AC-02 ghi chú; TEST_STRATEGY |
+| R12-02 | Thay `override?.problem ?? stored.problem` bằng "override là toàn bộ trạng thái" | WEB-D13; AC-07 ghi chú |
+| R12-03 | Thay "thông báo chỉ trên `/settings`" bằng vùng trạng thái dùng chung trong `main` của khu đã xác thực | WEB-D13; AC-04 ghi chú |
+| D4 | Danh sách hiệu ứng mục tiêu: radar; chấm Online; entrance login/dashboard (kể cả fade); scale hover/tap nút đăng nhập; mở/đóng menu tài khoản; animation Bar/Line/Tooltip của Analytics. Không reset CSS toàn cục. Giữ transition màu/focus, dữ liệu biểu đồ, realtime/marker và cảnh báo. | Spec §4.4 |
+| D5 | Radio native trong `fieldset`/`legend`, hai lựa chọn, áp dụng và lưu khi `change`, không có nút Lưu. Có câu phạm vi và dòng thông tin OS thắng. Ba thông báo theo đúng văn bản baseline. | Spec §4.4 |
+
+Các bước tiếp theo (tài liệu/scratchpad đã cập nhật, implementation, test) ghi ở §67 khi thực chạy. Tại thời điểm ghi mục này, **chưa** có mã sản phẩm WEB-12 và **chưa** có kết quả test tính năng: mọi Actual là NOT_RUN.
+
+GAP-H1, F1, Privacy Content Gate và các giới hạn thiết bị/screen reader vẫn OPEN/NOT_RUN. WEB-11 và WEB-13 chưa bắt đầu.
