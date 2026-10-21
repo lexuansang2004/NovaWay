@@ -347,6 +347,8 @@
 - When chọn "Giảm chuyển động"
 - Then hiệu ứng trang trí giảm ngay trên các route thuộc phạm vi
 
+> Ghi chú làm rõ (WEB-12, Lead baseline 2026-10-21, §66; không thay đổi hay hạ nghĩa vụ của AC): OS được theo dõi trực tiếp, kể cả khi trang `/login` hoặc route đã xác thực đang mở. Sau khi OS bật giảm chuyển động: không có hover/tap/entrance chuyển động mới; animation JS không thiết yếu đang chạy dừng hoặc nhảy tới trạng thái cuối; không remount route/form, không mất nội dung đã nhập hay focus. Entrance đã xong không cần chạy lại khi OS tắt (WEB-D13).
+
 **AC-WEBSETTINGS-03** — Lưu và cô lập
 - Given tài khoản A đổi lựa chọn
 - When reload hoặc A đăng nhập lại trên cùng trình duyệt
@@ -358,6 +360,8 @@
 - Given storage bị chặn hoặc ném lỗi khi đọc, nên không có giá trị đọc hợp lệ
 - When mở app sau khi phiên đã xác thực
 - Then áp dụng "Theo hệ thống" (vẫn tôn trọng OS), thông báo không đọc/lưu được lựa chọn trên trình duyệt này, không crash, không đụng token
+
+> Ghi chú làm rõ (WEB-12, Lead baseline 2026-10-21, §66; không thay đổi hay hạ nghĩa vụ của AC): "Mở app" gồm vào bất kỳ route đã xác thực nào, kể cả deep link tới Dashboard/Help/Profile. Thông báo nằm trong một vùng trạng thái nonmodal dùng chung trong nội dung chính, hiện ngay trên route đang mở; không bắt người dùng sang `/settings`, không chuyển focus (WEB-D13).
 
 **AC-WEBSETTINGS-05** — Không ảnh hưởng nghiệp vụ
 - Given đã chọn "Giảm chuyển động"
@@ -374,10 +378,14 @@
 - When lỗi ghi xảy ra
 - Then lựa chọn "Giảm chuyển động" vẫn được giữ và áp dụng trong phiên trang đang mở, animation không bật lại, có thông báo không lưu được (sẽ mất khi reload), không crash, không đụng token
 
+> Ghi chú làm rõ (WEB-12, Lead baseline 2026-10-21, §66; không thay đổi hay hạ nghĩa vụ của AC): Lựa chọn và kết quả lưu của tài khoản hiện tại là toàn bộ trạng thái, kể cả khi lưu thành công sau một lỗi đọc trước đó (thông báo cũ bị xoá). Nếu đã có lựa chọn bền từ trước, sau khi tải lại sẽ đọc lại đúng lựa chọn bền đó (WEB-D13).
+
 **AC-WEBSETTINGS-08** — Giá trị đã lưu hỏng (thêm sau review vòng 1, R03)
 - Given giá trị đã lưu sai định dạng, enum lạ hoặc `version` không hỗ trợ
 - When đọc preference
 - Then áp dụng "Theo hệ thống" (vẫn tôn trọng OS), thông báo lựa chọn đã lưu không đọc được, lần lưu hợp lệ kế tiếp ghi đè, không crash, không đụng token
+
+> Ghi chú làm rõ (WEB-12, Lead baseline 2026-10-21, §66; không thay đổi hay hạ nghĩa vụ của AC): Bản ghi v1 hợp lệ có đúng hai trường `version` (số 1) và `motion` (`system`/`reduced`); trường thừa cũng là giá trị hỏng. Việc đọc không sửa hay xoá bản ghi (WEB-D12).
 
 ### 12.5. Trợ giúp (FR-WEBHELP) — micro-step `WEB-10`
 

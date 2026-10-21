@@ -1,6 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { ResponsiveNavigation } from '@/components/layout/ResponsiveNavigation';
 import { SessionCheckErrorScreen } from '@/components/auth/SessionCheckError';
+import { MotionPreferenceStatus } from '@/components/settings/MotionPreferenceStatus';
+import { MotionPreferenceProvider } from '@/contexts/MotionPreferenceProvider';
 import { endLocalSession, retrySessionCheck } from '@/services/authSession';
 import { useSessionCheck } from '@/services/useSessionCheck';
 
@@ -38,12 +40,17 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  // WEB-12 (WEB-D13): the account's motion preference applies only here, for
+  // the user this mount has verified; checking/error/login above stay OS-only.
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-950 text-slate-100 min-[1024px]:flex-row">
-      <ResponsiveNavigation />
-      <main id="main-content" className="relative min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
-    </div>
+    <MotionPreferenceProvider userId={session.user.id}>
+      <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-950 text-slate-100 min-[1024px]:flex-row">
+        <ResponsiveNavigation />
+        <main id="main-content" className="relative min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <MotionPreferenceStatus />
+          <Outlet />
+        </main>
+      </div>
+    </MotionPreferenceProvider>
   );
 }

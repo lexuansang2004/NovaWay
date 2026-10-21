@@ -112,6 +112,14 @@
   - Cùng tình huống, A trả `200`: user vẫn là B, không điều hướng, không có dữ liệu A.
   - Response cũ về sau logout, unmount, timeout hoặc retry mới: không có side effect.
 - Adapter preference — mỗi ca một test riêng: namespace theo `user.id`, `version`, enum; (a) đọc lỗi khi khởi tạo → "Theo hệ thống" (AC-WEBSETTINGS-04); (b) ghi lỗi/quota sau khi chọn → giữ lựa chọn trong phiên (AC-WEBSETTINGS-07); (c) giá trị hỏng/`version` lạ → "Theo hệ thống" (AC-WEBSETTINGS-08). Test cô lập A/B chỉ kiểm app không áp dụng lựa chọn của A cho B; không coi đó là kiểm thử kiểm soát truy cập.
+- Bổ sung khi bắt đầu `WEB-12` (Lead baseline 2026-10-21, §66; WEB-D12/WEB-D13). Chưa có kết quả nào dưới đây — NOT_RUN cho tới khi thực chạy:
+  - Adapter: trường thừa là không hợp lệ (U12); lỗi ở getter `localStorage`, `getItem`, `setItem`/quota là các ca riêng; có một key `localStorage` không liên quan (sentinel) để chứng minh không bị đụng; không chạm `sessionStorage`/token.
+  - OS đổi hai chiều khi `/login` **đã mount** (giữ nội dung đã nhập, focus, vùng chọn; hover/tap sau khi đổi) và khi trang đã xác thực đang mở; đổi OS khi entrance đang chạy. Không dùng remount để né.
+  - Ma trận OS × lựa chọn × trạng thái đăng nhập; khung hình đầu không có chuyển động khi đã lưu `reduced`; A→B→A, logout, reload, không đồng bộ đa tab.
+  - Đọc luôn lỗi nhưng ghi thành công → lựa chọn áp dụng, thông báo cũ xoá; ghi lỗi rồi ghi thành công → xoá; ghi lỗi khi đã có lựa chọn bền → reload đọc lại đúng giá trị bền cũ.
+  - Deep link Dashboard/Help/Profile với đọc lỗi/giá trị hỏng: thông báo hiện ngay, sang Settings rồi quay lại không mất/không trùng; logout/đổi tài khoản không mang thông báo cũ.
+  - Oracle: đo hành vi thật (`document.getAnimations()`, lấy mẫu computed style theo khung, hình học SVG biểu đồ sau khi dữ liệu về, request ghi method/path/Bearer/body). Attribute DOM, ảnh chụp hay hằng số import từ mã sản phẩm không đủ làm oracle.
+  - Không ảnh hưởng nghiệp vụ: nhiều `location:broadcast` liên tiếp vẫn cập nhật marker; số liệu/disclosure biểu đồ giữ; payload REST/socket không đổi; menu tài khoản ở viewport thấp vẫn nằm đúng, đóng/unmount đúng.
 - `WEB-01` phải **tái hiện bằng test UI** việc kẹt màn hình chờ khi `/me` lỗi mạng/`500` trước khi sửa (hiện mới là suy luận tĩnh từ source).
 - E2E/Playwright mục tiêu theo từng PR (không dồn tới `WEB-13`): route tài khoản, drawer/sidebar quanh 1024 CSS px, reflow 320, keyboard/focus, accessibility tree, `reducedMotion` emulation, logout/login A→B và Browser Back.
 - Fixture vs backend thật: trạng thái lỗi/layout hiếm có thể dùng response fixture nhưng evidence phải ghi **fixture UI**; giữ ít nhất một lượt regression với backend thật cho auth + vehicle + quan sát trip + analytics.

@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { useReducedMotionNow } from '@/contexts/motionPreferenceContext';
 import { cn } from '@/lib/utils';
 import { listTrips, type Trip } from '@/services/tripsService';
 import { listVehicles, type Vehicle, type VehicleType } from '@/services/vehiclesService';
@@ -37,6 +38,9 @@ export default function AnalyticsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filter, setFilter] = useState<TypeFilter>('all');
+  // WEB-12: no chart animation while reduced motion applies (OS or the
+  // account's choice); 'auto' keeps Recharts' own OS check otherwise.
+  const chartAnimation = useReducedMotionNow() ? false : 'auto';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -159,11 +163,12 @@ export default function AnalyticsPage() {
                   <YAxis yAxisId="left" stroke={CYAN} fontSize="0.75rem" width="auto" tickFormatter={(value: number) => Math.abs(value) >= 10000 ? value.toExponential(1) : `${value}`} />
                   <YAxis yAxisId="right" orientation="right" stroke={EMERALD} fontSize="0.75rem" width="auto" tickFormatter={(value: number) => Math.abs(value) >= 10000 ? value.toExponential(1) : `${value}`} />
                   <Tooltip
+                    isAnimationActive={chartAnimation}
                     contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}
                     wrapperStyle={{ maxWidth: '100%' }}
                     labelStyle={{ color: '#f8fafc' }}
                   />
-                  <Bar yAxisId="left" dataKey="distance_km" name="Quãng đường (km)" fill={CYAN} radius={[4, 4, 0, 0]}>
+                  <Bar yAxisId="left" dataKey="distance_km" name="Quãng đường (km)" fill={CYAN} radius={[4, 4, 0, 0]} isAnimationActive={chartAnimation}>
                     {chartData.map((entry, index) => (
                       <Cell key={index} fill={entry.mismatch_warning_count > 0 ? RED : CYAN} />
                     ))}
@@ -175,6 +180,7 @@ export default function AnalyticsPage() {
                     name="Thời gian (phút)"
                     stroke={EMERALD}
                     strokeWidth={2}
+                    isAnimationActive={chartAnimation}
                   />
                 </ComposedChart>
               </ResponsiveContainer>

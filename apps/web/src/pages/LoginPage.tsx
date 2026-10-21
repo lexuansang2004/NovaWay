@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Navigation } from 'lucide-react';
 import { LoginForm, type LoginSubmitPayload } from '@/components/auth/LoginForm';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
+import { Entrance } from '@/components/common/Entrance';
 import { SessionCheckNotice, SessionCheckProgress } from '@/components/auth/SessionCheckError';
 import { endLocalSession, retrySessionCheck, signIn } from '@/services/authSession';
 import { useSessionCheck } from '@/services/useSessionCheck';
@@ -65,18 +65,11 @@ export default function LoginPage() {
               onRelogin={endLocalSession}
             />
           )}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key="login-form"
-              className="w-full min-w-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <LoginForm onSubmit={handleSubmit} />
-            </motion.div>
-          </AnimatePresence>
+          {/* The form never leaves while this page is mounted, so only the
+              entrance remains (WEB-12: follows reduced motion live). */}
+          <Entrance className="w-full min-w-0" from={{ opacity: 0 }} duration={0.25}>
+            <LoginForm onSubmit={handleSubmit} />
+          </Entrance>
         </div>
       </main>
     </div>

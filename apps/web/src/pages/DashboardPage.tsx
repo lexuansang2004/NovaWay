@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { MapPin, Route, Car, CloudUpload, TriangleAlert } from 'lucide-react';
 import { MapGridBackdrop } from '@/components/common/MapGridBackdrop';
+import { Entrance } from '@/components/common/Entrance';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/button';
 
@@ -41,11 +41,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Hero: Vị trí trực tiếp */}
-        <motion.div
+        <Entrance
           className="relative min-w-0 overflow-hidden rounded-2xl border border-cyan-400/20 bg-slate-900/50 p-4 backdrop-blur-xl sm:p-6"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
+          from={{ opacity: 0, y: 14 }}
+          duration={0.4}
         >
           <div className="relative z-10 min-w-0 max-w-md">
             <h2 className="text-xl font-semibold text-white">Vị trí trực tiếp</h2>
@@ -64,7 +63,7 @@ export default function DashboardPage() {
           <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 md:block">
             <MapGridBackdrop />
           </div>
-        </motion.div>
+        </Entrance>
 
         {/* Stat cards */}
         <div className="grid min-w-0 grid-cols-1 gap-4 @min-[28rem]:grid-cols-2 @min-[56rem]:grid-cols-4">
