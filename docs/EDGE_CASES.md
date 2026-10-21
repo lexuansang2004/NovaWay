@@ -76,6 +76,13 @@
 | Case | Hành vi kỳ vọng |
 |---|---|
 | Bảng raw GPS events phát triển quá nhanh | Cần partitioning theo thời gian + TTL cleanup job 30 ngày (AC-RETENTION-01) |
+| Event offline được gửi lại sau khi tombstone dedup hết hạn (RET-0) | Cửa sổ nhận P-ADM từ chối bản phát lại cùng payload; không tạo raw mới (AC-RETENTION-02; `docs/retention/RAW_GPS_RETENTION_SPEC.md` §3) |
+| Writer bị chờ qua mốc expiry tombstone (RET-0) | Điểm nhận dùng `clock_timestamp()` sau unique check; kiểm theo `now()` cũ không được dùng (AC-RETENTION-02) |
+| Mất kết nối trong lúc COMMIT (RET-0) | Kết quả không xác định; client gửi lại cùng `client_event_id`, dedup chống trùng. Không coi client timeout là đã rollback |
+| Đồng hồ client lệch hoặc `event_timestamp` ở tương lai (RET-0) | Chỉ nhận trong `[c_adm − W, now + F]`; W/F **[OPEN]** (D-11b) |
+| Partition tháng hiện tại có dòng quá hạn (RET-0) | K1 vẫn xoá theo dòng; K2 không được DETACH/DROP partition đó (AC-RETENTION-04) |
+| K2 bị khoá kéo dài (RET-0) | `lock_timeout`, retry ≤ N, fallback K1 trong cùng lượt; lượt không xoá hết thì không successful |
+| Phép đo tuổi trễ sau COMMIT hoặc lấy mẫu lâu (RET-0) | Chỉ cận trên vượt TTL → bất định đo lường (không phải breach đã xác nhận), vẫn chặn công bố (AC-RETENTION-05) |
 | Tile provider (Protomaps/Mapbox Free Tier) vượt quota | **[OPEN]** — cần chốt phương án dự phòng (fallback provider hoặc giới hạn tính năng bản đồ) trước khi chọn final ở D0.3 |
 | Developer Mode vô tình bị bật trên bản production | Phải được ngăn bằng build flag/env, không expose qua UI thường (AC-DEVMODE-03) |
 

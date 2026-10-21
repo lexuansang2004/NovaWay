@@ -236,6 +236,8 @@ Server validate: `trip_id` thuộc user đã auth qua handshake, toạ độ h�
 
 `error_code` không phải enum đóng — các giá trị hiện có: `VALIDATION_ERROR`, `TRIP_NOT_FOUND`, `TRIP_NOT_ACTIVE`, `RATE_LIMITED` (rate limit GPS event, R1-4 07/2026 — `apps/backend/src/realtime/gps-rate-limiter.service.ts`, tối đa 10 event/giây/user, xem `docs/roadmap/OPEN_ITEMS_AFTER_MVP.md` §5).
 
+> **PROPOSED — chưa phải contract (RET-0, 2026-10-21):** thiết kế retention (`docs/retention/RAW_GPS_RETENTION_SPEC.md` §3–§4) cần thêm cho `location:update` hai lớp kết quả: "ngoài cửa sổ nhận" và "lỗi tạm thời, có thể gửi lại". **Tên `error_code`, field và hành vi ack chưa duyệt (D-23b)**; contract hiện hành ở trên không đổi cho tới khi một PR riêng chốt D-23b.
+
 ## 7. Offline Batch Sync
 
 ### `POST /api/trips/sync`
@@ -277,6 +279,13 @@ Response `200`:
 `status` có thể là `success` (100% accepted, không lỗi/trùng), `partial_success`, hoặc `all_failed`. `error_code` của từng `failed_events` hiện chỉ có `VALIDATION_ERROR` (không phân biệt lý do cụ thể — toạ độ sai, thiếu field, v.v. — cùng quy ước với `location:rejected` ở §6) — không phải enum đóng.
 
 **Implemented (R2-2, 07/2026):** `apps/backend/src/sync/`. Rate limit: 20 request/60s/IP (`ThrottlerGuard`, giá trị ban đầu thận trọng chưa qua benchmark tải thật, cùng phong cách R1-4). `vehicle_id` trong mỗi event luôn bị bỏ qua khi ghi — server luôn dùng `vehicle_id` của chính trip (cùng nguyên tắc với `location:update` ở §6, vốn không nhận `vehicle_id` từ client). Body parser JSON limit nâng lên 1MB (mặc định Express là 100KB, quá nhỏ cho batch 500 events thực tế) — xem `apps/backend/src/main.ts`.
+
+> **PROPOSED — chưa phải contract (RET-0, 2026-10-21):** request/response hiện hành (status `200`, format FR-SYNC-07, nhận chuyến đã kết thúc) **giữ nguyên**. Thiết kế retention cần:
+> - lỗi DB của **một** event chỉ thành một mục `failed_events` của event đó, không làm hỏng cả request;
+> - hai lớp kết quả mới: "ngoài cửa sổ nhận" và "lỗi tạm thời, có thể gửi lại";
+> - lớp "COMMIT không xác định" xử lý bằng gửi lại cùng `client_event_id`.
+>
+> **Tên `error_code`, field và status chưa duyệt (D-23b)** — xem `docs/retention/RAW_GPS_RETENTION_SPEC.md` §4.
 
 ## 8. Error Format (áp dụng toàn hệ thống)
 

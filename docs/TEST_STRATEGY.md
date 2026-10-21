@@ -96,6 +96,18 @@
 - Unit (mock `DataSource`, `apps/backend/src/database/partition-maintenance/partition-maintenance.service.spec.ts`): (a) bootstrap thành công gọi routine 1 lần và lên lịch interval định kỳ; (b) bootstrap thất bại reject và **không** lên lịch interval; (c) lỗi ở lần gọi định kỳ (sau khi app đã chạy) chỉ log, không throw, không unhandled rejection, và không làm dừng các lần retry định kỳ tiếp theo; (d) `onApplicationShutdown` clear timer; (e) `unref()` được gọi trên timer định kỳ.
 - **Ngoài phạm vi `9.3`** (chưa test, chưa implement): DROP partition cũ >30 ngày, dọn `gps_event_dedup` theo partition đã DROP — vẫn theo dõi riêng, chưa đóng, **không được coi là TTL/retention policy (FR-RETENTION-02) đã hoàn thành** chỉ vì partition availability đã fix.
 
+**Bổ sung RET-0 (2026-10-21) — thiết kế đã review cho phạm vi tài liệu; test sản phẩm chưa chạy.** Ma trận đầy đủ: `docs/retention/RETENTION_ACCEPTANCE_TEST_MATRIX.md`. Lớp bằng chứng phải ghi tách biệt, không thay nhau:
+
+| Lớp | Nội dung | Trạng thái |
+|---|---|---|
+| [S] | Đọc mã/tài liệu | Dùng cho thiết kế |
+| [M] | Mô hình toán thuần (ngoài repo, hash trong `docs/retention/RETENTION_EVIDENCE_SUMMARY.md`) | Không phải compliance, không phải benchmark |
+| [P] | Prototype PostgreSQL 16.4 local (RET-SPIKE-01, ngoài repo, **không** phải CI) | Run-1: **20 PASS / 1 FAIL** (B4a giữ FAIL; 4 quan sát D0–D3 không tính) |
+| [I] | Tích hợp sản phẩm: T-ADM-*-APP, T-ADM-06, T-PART-DB, T-R2-*, T-MEAS-01 (mốc BEGIN + `transaction_timestamp()`) | NOT_RUN — thuộc RET-1/RET-2 |
+| [O] | Vận hành/phát hành: T-R3-*, T-MEAS-04, T-XMAX-02 | NOT_RUN — thuộc RET-3 |
+
+Quy tắc: không dùng kết quả [P] hay [M] để báo PASS cho [I]/[O]; không dùng timeout của harness để thiết lập X_max.
+
 ### 2.11. Developer Mode / Simulator (FR-DEVMODE)
 
 - Integration: nạp mock GPS route file → marker web di chuyển đúng theo route (đây chính là cơ chế dùng để test 2.4–2.9 ở trên, nên bản thân nó cần test trước).

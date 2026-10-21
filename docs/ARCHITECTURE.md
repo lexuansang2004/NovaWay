@@ -76,6 +76,13 @@ Nguyên tắc: `Module` gọi qua interface, không import trực tiếp impleme
    -> trips.status = ended, tạo trip_logs summary, dừng foreground/background tracking
 ```
 
+**Retention raw GPS (RET-0, 2026-10-21 — thiết kế đã review cho phạm vi tài liệu, chưa triển khai):** bước 4 và 5 ghi GPS qua cùng một write path. Thiết kế đề xuất thêm cửa sổ nhận P-ADM (câu `clock_timestamp()` riêng sau INSERT dedup) và một job retention trong backend:
+- K1 DELETE qua bảng cha là đường bảo đảm TTL; K2 DETACH + DROP partition hết hạn hoàn toàn là tối ưu.
+- Job tuần tự hoá bằng advisory key chung với maintenance partition.
+- Xoá raw GPS **không** xoá `trip_logs.route_geometry`.
+
+Chi tiết và phần OPEN (W/F, index, ngân sách, X_max): `docs/retention/RAW_GPS_RETENTION_SPEC.md`.
+
 ## 4. Web Dashboard (React)
 
 Tái sử dụng có chọn lọc từ `feature/quick-demo` theo `docs/demo/DEMO_TO_PRODUCTION_BRIDGE.md` — không viết lại từ đầu phần đã có:
