@@ -62,6 +62,8 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-SYNC-07 | Server trả kết quả partial success: `200 OK` kèm `{ status, accepted, duplicate_count, failed_count, failed_events[] }`. `207 Multi-Status` là lựa chọn thay thế, không bắt buộc. |
 | FR-SYNC-08 | Server validate quyền sở hữu (`trip_id`/`vehicle_id` phải thuộc người gửi request). |
 
+> **Ghi chú RET-0 (2026-10-21, thiết kế đã review cho phạm vi tài liệu, chưa triển khai):** cửa sổ nhận theo `event_timestamp` (P-ADM, áp dụng cho cả realtime `location:update` và REST sync) được đặc tả tại `docs/retention/RAW_GPS_RETENTION_SPEC.md` §3. Giá trị W/F (D-11b) và tên mã lỗi/field (D-23b) còn **OPEN**, nên đây **chưa** là requirement đã chốt và không đổi hành vi hiện tại của FR-SYNC-01…08. Sync vẫn nhận chuyến đã kết thúc.
+
 ### 1.6. Vehicle Mismatch Detection (FR-MISMATCH)
 
 | ID | Yêu cầu |
@@ -121,6 +123,8 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-RETENTION-02 | Raw GPS events chỉ được lưu tối đa **30 ngày** (TTL), sau đó bị dọn dẹp tự động. |
 | FR-RETENTION-03 | Dữ liệu công khai/cộng đồng (cảnh báo địa hình) chỉ dùng dữ liệu đã giảm định danh hoặc tổng hợp (aggregate), không dùng raw GPS định danh trực tiếp người dùng. |
 
+> **Làm rõ FR-RETENTION-02 (RET-0, 2026-10-21; câu requirement không đổi):** 30 ngày là **thời gian lưu trên máy chủ** tính theo `raw_gps_events.received_at` (S = `now − received_at`; đúng 30 ngày còn hạn). **Không** có requirement theo tuổi sự kiện `event_timestamp`. Xoá raw GPS không xoá `trip_logs.route_geometry` (FR-RETENTION-01). Đặc tả, quyết định và phần còn mở: `docs/retention/RAW_GPS_RETENTION_SPEC.md`, `docs/retention/RETENTION_DECISIONS.md`. Cleanup **chưa** được triển khai.
+
 ### 1.12. Vehicle Authorization (FR-AUTHZ)
 
 > Đưa vào MVP theo quyết định D0.6 — xem `REVIEW_NOTES.md` §1. Thứ tự triển khai: sau khi Auth/Vehicle/Trip nền tảng đã ổn định (`PRD.md` §5.1).
@@ -171,7 +175,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | FR-WEBPROFILE-03 | Sau logout rồi đăng nhập tài khoản khác (hoặc dùng Browser Back), không hiển thị email của tài khoản trước. |
 | FR-WEBPRIVACY-01 | `/account/privacy` là trang thông tin (không phải chứng nhận pháp lý) mô tả nhóm dữ liệu, mục đích, cách dừng tracking trên mobile và phạm vi xử lý của bên thứ ba; mỗi cam kết dữ liệu phải trace được tới requirement + implementation có bằng chứng hoặc quyết định vận hành đã xác nhận. |
 | FR-WEBPRIVACY-02 | Trang không có công tắc consent/GPS giả, không xin quyền camera/geolocation, không bắt đầu/kết thúc chuyến, không ghi consent. Dừng tracking được mô tả là thao tác kết thúc chuyến trên mobile (FR-TRIP-04); đăng xuất web không được mô tả là dừng tracking mobile. |
-| FR-WEBPRIVACY-03 | Nội dung về thời hạn lưu GPS và chính sách nhà cung cấp phải qua gate nội dung riêng (Privacy Content Gate) trước khi phát hành; không khẳng định raw GPS "tự xoá sau 30 ngày" khi chưa có bằng chứng cleanup. FR-RETENTION-02 giữ nguyên, không bị hạ thấp vì implementation chưa đáp ứng. |
+| FR-WEBPRIVACY-03 | Nội dung về thời hạn lưu GPS và chính sách nhà cung cấp phải qua gate nội dung riêng (Privacy Content Gate) trước khi phát hành; không khẳng định raw GPS "tự xoá sau 30 ngày" khi chưa có bằng chứng cleanup. FR-RETENTION-02 giữ nguyên, không bị hạ thấp vì implementation chưa đáp ứng. Điều kiện mở câu thời hạn: `docs/retention/RAW_GPS_RETENTION_SPEC.md` §7.6 (G-TTL PASS **và** G-OBS PASS cùng phạm vi/cửa sổ/provenance, đủ cửa sổ quan sát lại, policy liên quan đã chốt). |
 | FR-WEBPRIVACY-04 | Phần sinh trắc tách giới hạn xử lý tại NovaWay (FR-BIOMETRIC-04, NFR-PRIVACY-03) khỏi chính sách của nhà cung cấp; không hứa "không có bên thứ ba xử lý". |
 | FR-WEBSETTINGS-01 | `/settings` chỉ có một lựa chọn hiệu ứng giao diện web: "Theo hệ thống" (mặc định) / "Giảm chuyển động"; áp dụng ngay; ghi rõ chỉ áp dụng cho tài khoản này trên trình duyệt này. |
 | FR-WEBSETTINGS-02 | Cả hai lựa chọn tôn trọng thiết lập giảm chuyển động của hệ điều hành; không có lựa chọn ép animation bất chấp OS. |
@@ -199,7 +203,7 @@ SRS này bao phủ **MVP** của NovaWay: Backend (NestJS), Web Dashboard (React
 | NFR-TEST-01 | Mỗi micro-step (theo `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`) phải có test gate riêng; các kịch bản khó tái hiện ngoài đời thật (mất mạng, thermal, low-light) bắt buộc test được qua Developer Mode/Simulator. |
 | NFR-SEC-01 | Mọi payload ghi dữ liệu (đặc biệt GPS, batch sync) phải được validate và kiểm tra quyền sở hữu (ownership) trước khi xử lý. |
 | NFR-SEC-02 | Offline sync phải có cơ chế idempotency theo `client_event_id` để chống ghi trùng khi client gửi lại. |
-| NFR-SEC-03 | Ràng buộc idempotency `(user_id, client_event_id)` phải được enforce ở tầng database (unique constraint trên `raw_gps_events`), áp dụng cho **mọi** đường ghi dữ liệu — cả GPS event gửi qua WebSocket lẫn qua REST batch sync — không chỉ ở logic riêng của endpoint `/api/trips/sync` (phát hiện ở `REVIEW_NOTES.md` §3). |
+| NFR-SEC-03 | Ràng buộc idempotency `(user_id, client_event_id)` phải được enforce ở tầng database (*đính chính RET-0, 2026-10-21:* bằng PRIMARY KEY `(user_id, client_event_id)` của bảng riêng `gps_event_dedup`, ghi trong cùng transaction sau INSERT `raw_gps_events` — không phải unique constraint trên chính `raw_gps_events` vốn partition theo `received_at`; xem `docs/DATA_MODEL.md` §2.7; idempotency có hiệu lực trong thời gian tombstone dedup còn tồn tại), áp dụng cho **mọi** đường ghi dữ liệu — cả GPS event gửi qua WebSocket lẫn qua REST batch sync — không chỉ ở logic riêng của endpoint `/api/trips/sync` (phát hiện ở `REVIEW_NOTES.md` §3). |
 | NFR-API-01 | `POST /api/trips/sync` phải enforce giới hạn batch tối đa 500 events/payload và trả lỗi rõ ràng nếu vượt. |
 | NFR-UX-01 | Cảnh báo hiển thị khi đang lái phải tối giản, không yêu cầu thao tác phức tạp (xem FR-WARNUI). |
 | NFR-OBS-01 | Backend phải có health check, structured logging, và metrics cơ bản (đủ để debug realtime/location issues) — tương ứng step `9.1 chore/observability-baseline` trong `NovaWay_COMPLETE_MICRO_STEP_PLAN.md`. |

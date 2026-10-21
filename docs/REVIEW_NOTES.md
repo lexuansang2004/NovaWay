@@ -1865,3 +1865,44 @@ Request trong mọi probe: chỉ `GET /api/auth/me` có Bearer, không body.
 - GAP-H1; F1 `ECONNRESET` (không tái hiện ở các lượt full của WEB-12, vẫn OPEN/NOT_VERIFIED); Privacy Content Gate — giữ nguyên.
 - Cảnh báo build/lint: chỉ có cảnh báo cũ (2 Fast Refresh, chunk-size). Context/hook tách sang `.ts` để không thêm cảnh báo Fast Refresh.
 - Hash LF-normalized (12 ký tự đầu SHA-256): `motionPreference.ts` `4749416259aa`, `motionPreferenceContext.ts` `988f185fce56`, `MotionPreferenceProvider.tsx` `8a341bf6f608`, `Entrance.tsx` `906e382334e3`, `MotionPreferenceStatus.tsx` `6d348cd4ad4f`, `SettingsPage.tsx` `70376ec9b207`, `motionPreference.spec.ts` `01b669c70028`, `settings-motion.fixture.spec.ts` `447f41f932d8` (sau khi bỏ một dòng trống thừa ở cuối file, không đổi nội dung test), `AppLayout.tsx` `be056a9cc49b`, `LoginForm.tsx` `d9188d5b4c5c`, `AnalyticsPage.tsx` `0f30bc0a27cb`, `index.css` `c2289f399b1e`.
+
+## 68. RET-0 — đặc tả retention raw GPS: tích hợp tài liệu (2026-10-21)
+
+Mục mới, append-only; không sửa §1–§67.
+
+**Trạng thái:**
+- Thiết kế đã qua review độc lập cho **phạm vi tài liệu**.
+- Tích hợp tài liệu đang **IN PROGRESS** trong PR nhánh `docs/raw-gps-retention-spec`, chờ review PR độc lập và merge.
+- **Không** phải implementation baseline, không chứng nhận retention đang chạy, không cho phép bắt đầu RET-1/2/3.
+- Privacy Content Gate (WEB-11), WEB-13 và device gate không đổi. Không đụng closure WEB-12.
+
+| Mục | Nội dung | Provenance |
+|---|---|---|
+| Tác giả | Claude (R22 BA/Technical Writer phối hợp Backend/Data Architect và Database QA) | — |
+| Reviewer độc lập | Lead Codex, không phải tác giả. Quyết định cuối: `PASS_FOR_RET0_DOCS_PR_SCOPE`, RET0-R01…R03 CLOSED trong phạm vi re-review | File review ngoài repo `RET_0_CANDIDATE_2_RE_REVIEW.md`, SHA-256 `e8d717f20cf45eb55b74629de0c49335f24ff551c8ddeabc3e9a7397ecae9cb4`; validation `RET_0_CANDIDATE_2_VALIDATION.json` `171e08ef734e633c7177dd772ead1008e5052814492ac009bba02da33a1ea2fc` |
+| Chuỗi review trước | Revision-3 → spike (`PASS_DIRECTION_CONDITIONAL_SPIKE`); RET-SPIKE-01 (`SCOPED_PASS_FOR_RET0_DRAFT`); candidate-1 (`CHANGES_REQUIRED_TARGETED`) | Hash trong `docs/retention/RETENTION_EVIDENCE_SUMMARY.md` §2 |
+| Base | `origin/develop` `5fc9c91f443945fb4d2c519381a68e843c993eca`, tree `ffe5c441554704d25760c7ec8f6f051e21fd4038` | Tác giả tự kiểm `git ls-remote` |
+| Bằng chứng DB | RET-SPIKE-01 run-1 do Claude chạy (PostgreSQL 16.4 local, schema thử nghiệm, DB riêng): **20 PASS / 1 FAIL** (B4a giữ FAIL; D0–D3 là 4 quan sát, không tính PASS). Lead review artifact/hash/static/model, **không** chạy lại DB | Evidence summary §3 |
+| Mô hình | Chỉ [M]; không phải compliance hay benchmark | Evidence summary §4 |
+| [I]/[O] | NOT_RUN | — |
+
+**Nội dung trong repo** (nguồn sự thật):
+- `docs/retention/RAW_GPS_RETENTION_SPEC.md`;
+- `docs/retention/RETENTION_DECISIONS.md`;
+- `docs/retention/RETENTION_ACCEPTANCE_TEST_MATRIX.md`;
+- `docs/retention/RETENTION_EVIDENCE_SUMMARY.md`.
+
+Đồng bộ ghi chú vào SRS (làm rõ FR-RETENTION-02 — câu requirement không đổi; đính chính NFR-SEC-03; ghi chú FR-SYNC, FR-WEBPRIVACY-03), DATA_MODEL (thứ tự raw → dedup; thay thế thiết kế job §4, giữ lịch sử), ARCHITECTURE, API_CONTRACT (mục PROPOSED, contract hiện hành không đổi), ACCEPTANCE_CRITERIA (AC-RETENTION-02…06), EDGE_CASES, TEST_STRATEGY và plan (dòng RET-0…RET-3).
+
+**Ghi chú tích hợp N1–N3 của review:**
+- N1: bảng thứ tự commit chỉ minh hoạ synchronous commit (spec §8.2).
+- N2: X1/G5/G6 nằm ở phụ lục nghiên cứu, không dùng để chứng nhận PASS.
+- N3: mô hình công bố không phải validator sản phẩm (spec §7.6).
+
+**Còn mở và khoá step:**
+- X_max (D-20) OPEN — mặc định không chứng nhận PASS; breach đã xác nhận hợp lệ vẫn FAIL.
+- W/F (D-11b), T1/T2 (D-12), tên mã/field/status (D-23b), timeout kết nối ghi, index (D-26), ngân sách (D-14a), cửa sổ quan sát lại (D-14b).
+- Policy chủ dự án: D-04, D-05, D-10b, D-16, D-17.
+- Vận hành: D-01/02/03/09/19, D-22.
+
+Kể cả khi PR này merge, **RET-1 chưa được bắt đầu** cho tới khi D-11b, D-12, D-23b và timeout tương ứng được chốt.

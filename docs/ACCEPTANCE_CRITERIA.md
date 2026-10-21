@@ -203,6 +203,40 @@
 - When cơ chế dọn dẹp chạy
 - Then các event đó bị xoá khỏi bảng raw GPS, trong khi trip logs/summary liên quan vẫn còn nguyên
 
+*Bổ sung RET-0 (2026-10-21) — thiết kế đã review cho phạm vi tài liệu, chưa triển khai.* "Cũ hơn 30 ngày" tính theo `received_at` (thời gian lưu trên máy chủ), không theo `event_timestamp`. Chi tiết từng AC, test và lớp bằng chứng ở `docs/retention/RETENTION_ACCEPTANCE_TEST_MATRIX.md`; giá trị còn OPEN ở `docs/retention/RETENTION_DECISIONS.md`.
+
+**AC-RETENTION-02** — Ghi GPS theo P-ADM (nhóm AC-RET1-*)
+- Given một GPS event qua realtime hoặc REST sync
+- When server ghi raw rồi dedup trong cùng transaction
+- Then điểm nhận event là một câu riêng lấy `clock_timestamp()` **sau** khi INSERT dedup trả về. Bản phát lại cùng payload không tạo raw mới, kể cả khi đồng thời với expiry tombstone. Mỗi lỗi DB của một event thành kết quả của riêng event đó (W/F và tên mã lỗi còn OPEN)
+
+**AC-RETENTION-03** — Tombstone có thời hạn (nhóm AC-RET2a-*, chỉ khi chọn T1)
+- Given tombstone dedup có `admitted_at`
+- When expiry chạy
+- Then chỉ xoá khi `admitted_at < c_exp − T_tomb` với `T_tomb ≥ W + F`
+
+**AC-RETENTION-04** — Cleanup K1/K2 và successful coverage (nhóm AC-RET2b-*)
+- Given dòng có `received_at ≤ C`, kể cả trong partition biên hoặc tháng hiện tại
+- When lượt cleanup chạy
+- Then K1 xoá các dòng đó qua bảng cha đã xác minh danh tính, không xoá dòng `> C`. K2 chỉ DETACH + DROP partition hết hạn hoàn toàn (không tháng hiện tại/sau), fallback K1 trong cùng lượt. Lượt chỉ successful khi kiểm sau lượt không còn dòng `≤ C`. `trip_logs` không bị đụng
+
+**AC-RETENTION-05** — Đo lường và G-TTL (nhóm AC-RET3-01…05)
+- Given bằng chứng mẫu/bản ghi xoá với cận dưới L và cận trên U
+- When đánh giá một cửa sổ quan sát
+- Then:
+  - bằng chứng hỏng không tạo breach, chặn PASS và làm G-OBS FAIL;
+  - breach đã xác nhận hợp lệ trong cửa sổ là FAIL, kể cả khi X_max chưa established;
+  - chưa có X_max thì không chứng nhận PASS
+
+**AC-RETENTION-06** — Điều kiện công bố (nhóm AC-RET3-06/07)
+- Given kết quả G-TTL và G-OBS của một cửa sổ quan sát lại
+- When xét mở câu thời hạn
+- Then chỉ mở khi:
+  - G-TTL PASS **và** G-OBS PASS;
+  - cùng phạm vi/cửa sổ/provenance;
+  - cửa sổ đủ độ dài đã chốt;
+  - policy liên quan (gồm backup) đã chốt
+
 ## 11. Developer Mode / Simulator (FR-DEVMODE)
 
 **AC-DEVMODE-01** — Mock route chạy được
@@ -311,6 +345,7 @@
 - Given cleanup TTL raw GPS chưa có bằng chứng vận hành
 - When duyệt nội dung trước phát hành
 - Then câu "dữ liệu tự xoá sau 30 ngày" bị chặn; phải viết đúng thực tế hoặc hoàn thành dependency retention trước
+- *(RET-0, 2026-10-21)* "Có bằng chứng" nghĩa là đạt AC-RETENTION-06: G-TTL PASS **và** G-OBS PASS cho cùng phạm vi/cửa sổ quan sát lại/provenance, cửa sổ đủ độ dài đã chốt, policy liên quan đã chốt
 
 **AC-WEBPRIVACY-03** — Không tác dụng phụ
 - Given người dùng mở trang quyền riêng tư trên web

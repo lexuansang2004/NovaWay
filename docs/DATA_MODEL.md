@@ -177,12 +177,16 @@ CREATE TABLE gps_event_dedup (
   PRIMARY KEY (user_id, client_event_id)
 );
 
--- Insert 1 GPS event = 2 thao tác trong cùng transaction:
---   1. INSERT INTO gps_event_dedup (...) VALUES (...) ON CONFLICT (user_id, client_event_id) DO NOTHING;
---   2. Nếu bước 1 thực sự insert được dòng mới (không bị conflict) -> INSERT vào raw_gps_events.
---      Nếu bước 1 bị conflict (đã tồn tại) -> bỏ qua, tăng duplicate_count, không insert raw_gps_events.
--- Bảng gps_event_dedup nhỏ (chỉ 2 UUID + 1 bigint/dòng), TTL cùng nhịp 30 ngày với raw_gps_events
--- (xoá theo raw_gps_event_id khi partition tương ứng bị DROP) để không phình vô hạn.
+-- Insert 1 GPS event = 2 thao tác trong cùng transaction.
+-- Đính chính RET-0 (2026-10-21) theo code thật (apps/backend/src/realtime/gps-events.service.ts):
+-- thứ tự là RAW TRƯỚC, DEDUP SAU, vì gps_event_dedup.raw_gps_event_id NOT NULL cần id của raw:
+--   1. INSERT INTO raw_gps_events (...) RETURNING id;
+--   2. INSERT INTO gps_event_dedup (...) ON CONFLICT (user_id, client_event_id) DO NOTHING RETURNING ...;
+--      Không trả dòng (đã tồn tại) -> ROLLBACK cả transaction (raw của bước 1 không còn), tính duplicate.
+-- (Bản trước ghi "dedup trước, raw sau" — không khớp code; migration cũ không bị sửa.)
+-- Thiết kế P-ADM (cửa sổ nhận sau bước 2) và thời hạn tombstone dedup (T1/T2, D-12 OPEN):
+-- docs/retention/RAW_GPS_RETENTION_SPEC.md §3. Câu "TTL cùng nhịp 30 ngày, xoá theo
+-- raw_gps_event_id khi partition bị DROP" của bản trước bị thay bởi đặc tả đó.
 
 -- Ví dụ partition theo tháng (job tạo partition mới + xoá partition cũ >30 ngày chạy định kỳ):
 CREATE TABLE raw_gps_events_2026_07 PARTITION OF raw_gps_events
@@ -265,9 +269,20 @@ Dùng `DROP PARTITION` thay vì `DELETE ... WHERE`, đúng khuyến nghị ở `
 
 > **⚠️ Đính chính trạng thái thật (08/2026, step `9.3 fix/raw-gps-partition-availability`):** job "raw_gps_cleanup" mô tả ở trên **chưa từng được implement** trong `apps/backend` — đây luôn chỉ là mô tả thiết kế/tài liệu, không phải code đang chạy. Migration gốc (`1721260000006-CreateRawGpsEventsTable.ts`, step `3.1`) chỉ tạo **đúng một** partition tĩnh, `raw_gps_events_2026_07` (`2026-07-01` → `2026-08-01`). Hậu quả thật đã xác nhận: mọi insert GPS có `received_at` từ `2026-08-01` trở đi (bao gồm CI thật, PR #73, 24/08/2026) đều lỗi `no partition of relation "raw_gps_events" found for row` — xem `docs/REVIEW_NOTES.md` §17 cho log/bằng chứng đầy đủ. Step `9.3` bổ sung migration mới + `PartitionMaintenanceService` để **chỉ đảm bảo partition tháng hiện tại + kế tiếp luôn tồn tại** (phần "tạo partition" của job mô tả ở trên) — **không** implement phần "DROP partition cũ >30 ngày" / dọn `gps_event_dedup` ở step này; hai việc đó vẫn hoàn toàn chưa có code, tiếp tục được theo dõi riêng (không được coi là đã xong). Do đó: **chưa thể tuyên bố TTL 30 ngày/retention policy (FR-RETENTION-02, TDR-006) đã "implemented"** cho tới khi phần dọn dẹp/DROP partition thật sự được xây và verify — step `9.3` chỉ đóng phần "partition availability", không đóng toàn bộ mục 4 này.
 
+> **Thay thế thiết kế job ở trên (RET-0, 2026-10-21 — thiết kế đã review cho phạm vi tài liệu, chưa triển khai):** khối `raw_gps_cleanup` ở đầu mục này được giữ làm lịch sử nhưng **không còn là thiết kế hiệu lực**. Chỉ DROP partition có upper bound < now − 30 ngày không đáp ứng FR-RETENTION-02: với partition theo tháng, dòng có thể sống khoảng 61–62 ngày, và đó chưa phải trần vì còn cộng độ trễ lịch.
+>
+> Thiết kế hiệu lực: `docs/retention/RAW_GPS_RETENTION_SPEC.md` §5–§7.
+> - **K1** DELETE theo dòng `received_at ≤ C` qua bảng cha đã xác minh, gồm partition biên và tháng hiện tại; đây là đường bảo đảm TTL.
+> - **K2** DETACH + DROP trong một transaction, chỉ cho partition hết hạn hoàn toàn; fallback K1 trong cùng lượt.
+> - Allowlist qua catalog; successful coverage; đo lường L/U; G-TTL/G-OBS.
+>
+> Index, ngân sách, `lock_timeout`/retry và X_max còn **OPEN** (`docs/retention/RETENTION_DECISIONS.md`).
+
 ## 5. Open Items for D0.7
 
 - Xác nhận extension `btree_gist` khả dụng trên môi trường hosting đã chọn (ảnh hưởng constraint ở §2.3).
 - Xác nhận chiến lược partition `raw_gps_events`: theo tháng (đề xuất ở đây) hay theo tuần nếu ước tính insert rate cao hơn dự kiến.
 - Benchmark chi phí ghi phụ vào `gps_event_dedup` cho mỗi GPS event (đặc biệt qua đường realtime tần suất cao) — nếu quá tốn, cân nhắc phương án khác ở step migrate `raw_gps_events` (vd. batch dedup theo cửa sổ thời gian ngắn thay vì mọi write).
 - Cách xử lý race condition idempotency ở biên partition (§2.7) — cần benchmark trước khi coi là "đã giải quyết".
+- (RET-0, 2026-10-21) Index cho batch DELETE theo `received_at` (D-26), ngân sách cleanup B/P/D_max và L/N (D-14a) — OPEN, đo trước khi chốt; không tự chọn schema khi code.
+- (RET-0, 2026-10-21) X_max (D-20) — OPEN, chưa established. Commit timestamp **không** dùng để thiết lập X_max. Khi chưa có X_max thì không chứng nhận PASS cho TTL.
